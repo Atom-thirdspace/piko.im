@@ -123,3 +123,11 @@ br{
     color: rgb(251, 246, 244);
     font-size: 1.5vw;
 }
+
+#log:hover {
+    transform: scale(1.05);
+}
+#log:active {
+    transform: scale(0.95);
+    transition: 0.1s;
+}
