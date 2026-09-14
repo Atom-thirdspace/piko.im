@@ -1,0 +1,22 @@
+header {
+   height: 10vh; 
+   position: fixed;
+    padding-left: 40px;
+}
+body {
+    margin: 0;
+}
+#logo {
+    position: absolute;
+    width: 150px;
+    top: -35px;
+}
+
+main {
+    background-color: rgb(251, 246, 244);
+    background-image:
+    linear-gradient(white 1px, transparent 1px),
+    linear-gradient(90deg, white 1px, transparent 1px);
+  background-size: 40px 40px;
+  height: 100vh;
+}
