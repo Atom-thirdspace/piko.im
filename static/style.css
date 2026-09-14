@@ -1,10 +1,12 @@
 header {
-    height: 10vh;
-    width: 100%;
+    top: 4.2vh;
+    width:50%;
     position: fixed;
-    top: 0;
-    left: 0;
-    padding-left: 40px;
+    right: 28vh;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
 
 }
 body {
@@ -15,6 +17,7 @@ body {
     position: absolute;
     width: 14.20vw;
     top: -4.41vh;
+    left: 40px;
 }
 
 body {
@@ -128,4 +131,28 @@ br{
 #log:active {
     transform: scale(0.95);
     transition: 0.1s;
+}
+
+
+header a {
+    position: relative;
+    font-size: 1.3vw;
+    font-family: face;
+    text-decoration: none;
+    color: black;
+}
+
+header a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -6px;
+    width: 0;
+    height: 3px;
+    background-color: #703e18;
+    transition: width 0.3s ease;
+}
+
+header a:hover::after {
+    width: 100%;
 }
