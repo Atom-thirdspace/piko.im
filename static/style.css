@@ -185,3 +185,15 @@ body{
 img {
     user-select: none;
 }
+/* --- auth pages --- */
+.auth { max-width: 380px; margin: 4rem auto; }
+.auth-form { display: flex; flex-direction: column; gap: .4rem; }
+.auth-form input, .auth-form select { padding: .6rem; font: inherit; }
+.auth-form button { margin-top: .8rem; padding: .7rem; cursor: pointer; }
+.oauth-btn { display: block; padding: .7rem; margin-top: .5rem;
+             text-align: center; text-decoration: none; border: 1px solid currentColor; }
+.auth-divider { margin: 1.4rem 0 .6rem; text-align: center; opacity: .6; }
+.auth-alt { margin-top: 1.4rem; text-align: center; }
+.field-error { color: #c0392b; font-size: .85rem; margin: 0 0 .4rem; }
+.flashes { list-style: none; padding: 0; max-width: 380px; margin: 1rem auto; }
+.flash-error { color: #c0392b; }

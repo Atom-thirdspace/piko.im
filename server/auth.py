@@ -4,7 +4,7 @@ import secrets
 from flask import (
     Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 )
-from .oauth import oauth, PROVIDERS
+from .oauth import oauth, enabled_providers
 from .profile import fetch_profile
 from .models import upsert_user, mark_welcome_sent
 from .mailer import send_welcome_email
@@ -14,10 +14,9 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login/")
 def login_page():
-    enabled = current_app.config.get("ENABLED_PROVIDERS", [])
     return render_template(
         "login.html",
-        providers=[(n, PROVIDERS[n]["label"]) for n in enabled],
+        providers=enabled_providers(),
         next=request.args.get("next", "/"),
     )
 

@@ -2,7 +2,7 @@ from flask import (
     Blueprint, current_app, flash, redirect, render_template,
     request, session, url_for,
 )
-
+from .oauth import enabled_providers
 from .mailer import send_welcome_email
 from .models import (
     complete_profile, create_email_user, find_by_email, find_by_login,

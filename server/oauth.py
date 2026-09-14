@@ -1,6 +1,6 @@
 import os
 from authlib.integrations.flask_client import OAuth
-
+from flask import current_app
 oauth = OAuth()
 
 PROVIDERS = {
@@ -50,3 +50,9 @@ def init_oauth(app):
         enabled.append(name)
     app.config["ENABLED_PROVIDERS"] = enabled
     return enabled
+
+def enabled_providers():
+    return[
+        (name, PROVIDERS[name]["label"])
+        for name in current_app.config.get("ENABLED_PROVIDERS",[])
+    ]
