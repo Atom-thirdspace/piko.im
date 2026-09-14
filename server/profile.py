@@ -28,7 +28,7 @@ def fetch_profile(provider, client , token):
 
     if provider == "discord":
         user = client.get("users/@me", token=token).json()
-        avatar = token.get("avatar")
+        avatar = user.get("avatar")
         return {
             "provider" : "discord",
             "provider_user_id" : str(user["id"]),

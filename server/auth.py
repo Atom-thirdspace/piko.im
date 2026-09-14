@@ -7,6 +7,8 @@ from flask import (
 )
 from .oauth import oauth, PROVIDERS
 from .profile import fetch_profile
+from .models import upsert_user, mark_welcome_sent
+from .mailer import send_welcome_email
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -30,7 +32,6 @@ def login_page():
 def login(provider):
     if provider not in current_app.config.get("ENABLED_PROVIDERS", []):
         abort(404)
-    redirect_uri = url_for("auth.auth_callback", provider=provider, _external=True)
     session["oauth_next"] = request.args.get("next", "/")
     session["oauth_nonce"] = secrets.token_urlsafe(16)
 
@@ -49,8 +50,8 @@ def callback(provider):
     try:
         token = client.authorize_access_token()
         if provider == "google":
-            token["userinfo"] = client.parse_id_token(token, nonce=session.get("oauth_nonce", None))
-            profile = fetch_profile(provider, client, token)
+            token["userinfo"] = client.parse_id_token(token, nonce=session.pop("oauth_nonce", None))
+        profile = fetch_profile(provider, client, token)
     except Exception:
         current_app.logger.exception("OAuth callback error for %s", provider)
         flash("Authentication failed. Please try again.", "error")
@@ -60,20 +61,24 @@ def callback(provider):
         flash("Your account has no verified email we can use.", "error")
         return redirect(url_for("auth.login_page"))
 
-    user = upsert_user(profile)
+    user, is_new = upsert_user(profile)
 
+    if is_new:
+        if send_welcome_email(user.email, user.name):
+            mark_welcome_sent(user.id)
+        else:
+            current_app.logger.warning("welcome email failed for user %s", user.id)
+
+    # Read `next` before clear() wipes it, then rotate the session on login.
+    nxt = session.get("oauth_next", "/")
     session.clear()
-    session["user_id"] = user["id"]
+    session["user_id"] = user.id
     session.permanent = True
 
-
-    nxt = session.pop("oauth_next", "/")
     return redirect(nxt if _is_safe_next(nxt) else "/")
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     session.clear()
-    session.redirect("/")
+    return redirect("/")
 
-def upsert_user(profile):
-    raise NotImplementedError("User upsert logic is not implemented. Please implement this function to save or update the user in your database.")
