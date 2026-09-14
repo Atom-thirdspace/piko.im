@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
 
@@ -17,6 +17,9 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     name = db.Column(db.String(255))
+    username = db.Column(db.String(32), unique = True, index= True)
+    password_hash = db.Column(db.Text)
+    interest = db.Column(db.String(64))
     avatar_url = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -27,6 +30,18 @@ class User(db.Model):
 
     def __repr__(self):
         return f"<User {self.id} {self.email}>"
+    
+    def set_password(self, raw):
+        self.password_hash = generare_password_hash(raw)
+    
+    def check_password(self, raw):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, raw)
+    
+    @property
+    def needs_onboarding(self):
+        return not self.username or not self.interest
 
 
 class OAuthIdentity(db.Model):
@@ -126,3 +141,41 @@ def mark_welcome_sent(user_id):
     if user is not None:
         user.welcome_email_sent_at = _utcnow()
         db.session.commit()
+
+def find_by_email(email):
+    return db.session.execute(
+        db.select(User).filter_by(email=email.lower())
+    ).scalar_one_or_none()
+
+def find_by_username(username):
+    return db.session.execute(
+        db.select(User).filter_by()
+    )
+
+def find_by_login(identifier):
+    ident = identifier.strip().lower()
+    if "@" in ident:
+        return find_by_email(ident)
+    return find_by_username(ident)
+
+def create_email_user(email,username,name,interest,password):
+    user = User(
+        email=email.lower(),
+        username=username.lower(),
+        name=name,
+        interest=interest,
+    )
+    user.set_password(password)
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+def complete_profile(user, username, interest):
+    user.username = username.lower()
+    user.interest = interest
+    db.session.commit()
+    return user
+
+def touch_login(user):
+    user.last_login_at = _utcnow()
+    db.session.commit()

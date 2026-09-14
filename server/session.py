@@ -1,5 +1,7 @@
 from functools import wraps
 from flask import g, redirect, request, session, url_for
+import requests
+from urllib.parse import urlparse, urljoin
 
 from .models import load_user
 
@@ -16,3 +18,10 @@ def login_required(view):
             return redirect(url_for("auth.login_page", next=request.full_path))
         return view(*args, **kwargs)
     return wrapped
+
+def is_safe_next(target):
+    if not target:
+        return False
+    ref = urlparse(request.host_url)
+    test = urlparse(urljoin(request.host_url, target))
+    return test.scheme in ("http", "https") and ref.netloc == test.netloc

@@ -9,15 +9,9 @@ from .oauth import oauth, PROVIDERS
 from .profile import fetch_profile
 from .models import upsert_user, mark_welcome_sent
 from .mailer import send_welcome_email
+from .session import is_safe_next
 
 auth_bp = Blueprint("auth", __name__)
-
-def _is_safe_next(target):
-    if not target:
-        return False
-    ref = urlparse(request.host_url)
-    test = urlparse(urljoin(request.host_url, target))
-    return test.scheme in ("http", "https") and ref.netloc == test.netloc
 
 @auth_bp.route("/login/")
 def login_page():
