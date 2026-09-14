@@ -9,10 +9,10 @@
 <main>
 <header>
     <img id="logo" src="https://cdn.hackclub.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
-    <div id="log" >
-    <img id="login" src="https://cdn.hackclub.com/01a0a001-634a-7f66-b2e9-3716df2d76b5/Untitled%20design%20(56).avif" alt="">
-    <p id="textl" >Login</p>
-    </div>
+    <a id="log" href="{{ url_for('auth.login_page') }}">
+        <img id="login" src="https://cdn.hackclub.com/01a0a001-634a-7f66-b2e9-3716df2d76b5/Untitled%20design%20(56).avif" alt="">
+        <p id="textl">Login</p>
+    </a>
 </header>
 <div class="hero">
     <h1>
