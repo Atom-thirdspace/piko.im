@@ -9,4 +9,4 @@ def home():
 
 @app.route("/login")
 def login():
-    
+     return "login page"
