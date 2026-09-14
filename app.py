@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from flask import Flask, redirect, url_for, render_template
 import os 
 from datetime import timedelta
@@ -27,3 +28,5 @@ def create_app():
         return "this is home page"
 
 app = create_app()
+=======
+>>>>>>> 4579d30628472c70e3295467b7b4edba201c0ca7
