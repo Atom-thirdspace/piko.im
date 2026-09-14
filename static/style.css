@@ -1,14 +1,18 @@
 header {
-   height: 10vh; 
-   position: fixed;
+    height: 10vh;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
     padding-left: 40px;
+
 }
 body {
     margin: 0;
 }
 #logo {
     position: absolute;
-    width: 150px;
+    width: 200px;
     top: -35px;
 }
 
