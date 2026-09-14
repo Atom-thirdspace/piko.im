@@ -98,3 +98,26 @@ br{
     user-select: none;
     pointer-events: none;
 }
+
+#login {
+    top: 0;
+    left: 4%;
+    position: absolute;
+    width: 10vw;
+}
+
+#log {
+    top: 2vh;
+    right: 2vw;
+    position: fixed;
+    width: 10vw;
+    height: 7.9vh;
+}
+#textl {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    top: 11%;
+    color: rgb(251, 246, 244);
+    font-size: 1.5vw;
+}
