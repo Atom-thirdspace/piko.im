@@ -38,7 +38,7 @@ body {
     font-weight: 1;
     font-size: 9vw;
     position: absolute;
-    left: 2vw;
+    left: 3vw;
     right: 50%;
 }
 
@@ -91,3 +91,10 @@ h2::selection{
     }
 }
 
+
+
+
+br{
+    user-select: none;
+    pointer-events: none;
+}
