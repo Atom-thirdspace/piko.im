@@ -156,3 +156,9 @@ header a::after {
 header a:hover::after {
     width: 100%;
 }
+
+#girl {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
