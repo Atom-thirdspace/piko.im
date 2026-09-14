@@ -1,6 +1,8 @@
 from functools import wraps
 from flask import g, redirect, request, session, url_for
 
+from .models import load_user
+
 def current_user():
     if "user" not in g:
         uid = session.get("user_id")

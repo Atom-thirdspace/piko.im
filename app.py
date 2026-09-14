@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from server.auth import auth_bp
 from server.oauth import init_oauth
 from server.session import current_user
+from server.models import init_db
 
 load_dotenv()
 
@@ -18,6 +19,7 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 
+init_db(app)
 init_oauth(app)
 app.register_blueprint(auth_bp)
 app.jinja_env.globals["current_user"] = current_user
