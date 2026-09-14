@@ -26,6 +26,5 @@ app.jinja_env.globals["current_user"] = current_user
 
 @app.route("/")
 def home(): 
-    return "this is home page"
-
+    return render_template("index.html")
 
