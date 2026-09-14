@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="auth">
+  <h1>Almost there, {{ user.name or 'friend' }}</h1>
+  <p>Pick a username and tell us what you're here for.</p>
+
+  <form class="auth-form" method="post" action="{{ url_for('accounts.onboarding', next=next) }}">
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" required autofocus
+           value="{{ user.username or '' }}">
+    {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
+
+    <label for="interest">What do you want to focus on?</label>
+    <select id="interest" name="interest" required>
+      <option value="" disabled selected>Choose one...</option>
+      {% for key, label in interests %}
+        <option value="{{ key }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.interest %}<p class="field-error">{{ errors.interest }}</p>{% endif %}
+
+    <button type="submit">Finish</button>
+  </form>
+</main>
+{% endblock content %}

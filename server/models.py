@@ -32,7 +32,7 @@ class User(db.Model):
         return f"<User {self.id} {self.email}>"
     
     def set_password(self, raw):
-        self.password_hash = generare_password_hash(raw)
+        self.password_hash = generate_password_hash(raw)
     
     def check_password(self, raw):
         if not self.password_hash:
@@ -149,8 +149,8 @@ def find_by_email(email):
 
 def find_by_username(username):
     return db.session.execute(
-        db.select(User).filter_by()
-    )
+        db.select(User).filter_by(username=username.lower())
+    ).scalar_one_or_none()
 
 def find_by_login(identifier):
     ident = identifier.strip().lower()

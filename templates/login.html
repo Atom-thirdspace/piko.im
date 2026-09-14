@@ -1,6 +1,39 @@
-{% for name, label in providers %}
-  <a class="oauth-btn oauth-{{ name }}"
-     href="{{ url_for('auth.login', provider=name, next=request.args.get('next', '/')) }}">
-    Continue with {{ label }}
-  </a>
-{% endfor %}
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="auth">
+  <h1>Log in to Piko</h1>
+
+  <form class="auth-form" method="post" action="{{ url_for('accounts.password_login') }}">
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <label for="identifier">Email or username</label>
+    <input id="identifier" name="identifier" type="text"
+           autocomplete="username" required autofocus>
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password"
+           autocomplete="current-password" required>
+
+    <button type="submit">Log in</button>
+  </form>
+
+  {% if providers %}
+    <div class="auth-divider"><span>or</span></div>
+    {% for name, label in providers %}
+      <a class="oauth-btn oauth-{{ name }}"
+         href="{{ url_for('auth.login', provider=name, next=next) }}">
+        Continue with {{ label }}
+      </a>
+    {% endfor %}
+  {% endif %}
+
+  <p class="auth-alt">
+    New here? <a href="{{ url_for('accounts.signup', next=next) }}">Create an account</a>
+  </p>
+</main>
+{% endblock content %}

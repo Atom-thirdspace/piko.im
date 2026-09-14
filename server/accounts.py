@@ -9,27 +9,32 @@ from .models import (
     find_by_username, mark_welcome_sent, touch_login,
 )
 from .session import current_user, is_safe_next, login_required
-from .validators import INTERESTS, validate_signup, validate_username
+from .validators import INTERESTS, INTEREST_KEYS, validate_signup, validate_username
 
 accounts_bp = Blueprint("accounts", __name__)
 
+
 def start_session(user):
+    """Rotate the session on every login - prevents session fixation."""
     session.clear()
     session["user_id"] = user.id
     session.permanent = True
 
+
 def _email_taken(email):
     return find_by_email(email) is not None
+
 
 def _username_taken(username):
     return find_by_username(username) is not None
 
-@accounts_bp.route("/signup/", methods=["GET","POST"])
+
+@accounts_bp.route("/signup/", methods=["GET", "POST"])
 def signup():
     if current_user():
         return redirect("/")
 
-    nxt = request.args.get("next","/")
+    nxt = request.args.get("next", "/")
 
     if request.method == "GET":
         return render_template(
@@ -51,7 +56,7 @@ def signup():
     if errors:
         return render_template(
             "signup.html", interests=INTERESTS, errors=errors, form=form, next=nxt
-        ),400
+        ), 400
 
     user = create_email_user(
         email=form["email"].strip(),
@@ -66,7 +71,7 @@ def signup():
     else:
         current_app.logger.warning("welcome email failed for user %s", user.id)
 
-    _start_session(user)
+    start_session(user)
     return redirect(nxt if is_safe_next(nxt) else "/")
 
 
@@ -79,21 +84,22 @@ def password_login():
     user = find_by_login(identifier) if identifier else None
 
     if user is None or not user.check_password(password):
-        # One message for both cases — don't leak which emails are registered.
+        # One message for both cases - don't leak which emails are registered.
         flash("Wrong email/username or password.", "error")
         return redirect(url_for("auth.login_page", next=nxt))
 
-
     touch_login(user)
-    _start_session(user)
+    start_session(user)
 
     if user.needs_onboarding:
         return redirect(url_for("accounts.onboarding", next=nxt))
-    return redirect(next if is_safe_next(nxt) else "/")
+    return redirect(nxt if is_safe_next(nxt) else "/")
+
 
 @accounts_bp.route("/onboarding/", methods=["GET", "POST"])
 @login_required
 def onboarding():
+    """Collect username + interest from users who arrived via OAuth."""
     user = current_user()
     nxt = request.args.get("next", "/")
 
@@ -114,15 +120,16 @@ def onboarding():
     )
     if err:
         errors["username"] = err
-        interest = request.form.get("interest")
-        if interest not in (key for key, _ in INTERESTS):
-            errors["interest"] = "Pick what you want to focus on"
 
-        if errors:
-            return render_template(
-                "onboarding.html", interests = INTERESTS, errors= errors,
-                user=user, next=nxt
-            ), 400
+    interest = request.form.get("interest")
+    if interest not in INTEREST_KEYS:
+        errors["interest"] = "Pick what you want to focus on."
 
-        complete_profile(user,username, interest)
-        return redirect(nxt if is_safe_next(next) else "/")    
+    if errors:
+        return render_template(
+            "onboarding.html", interests=INTERESTS, errors=errors,
+            user=user, next=nxt,
+        ), 400
+
+    complete_profile(user, username, interest)
+    return redirect(nxt if is_safe_next(nxt) else "/")

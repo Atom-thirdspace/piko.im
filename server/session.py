@@ -1,6 +1,5 @@
 from functools import wraps
 from flask import g, redirect, request, session, url_for
-import requests
 from urllib.parse import urlparse, urljoin
 
 from .models import load_user
