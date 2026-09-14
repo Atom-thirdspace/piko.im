@@ -9,18 +9,85 @@ header {
 }
 body {
     margin: 0;
+    
 }
 #logo {
     position: absolute;
-    width: 200px;
-    top: -35px;
+    width: 14.20vw;
+    top: -4.41vh;
 }
 
-main {
+body {
     background-color: rgb(251, 246, 244);
     background-image:
     linear-gradient(white 1px, transparent 1px),
     linear-gradient(90deg, white 1px, transparent 1px);
   background-size: 40px 40px;
-  height: 100vh;
 }
+.hero {
+    height: 80vh;
+    position: relative;
+    top: 12vh;
+    color: white;
+}
+
+
+
+.hero h1 {
+    font-family: face;
+    font-weight: 1;
+    font-size: 9vw;
+    position: absolute;
+    left: 2vw;
+    right: 50%;
+}
+
+
+.highlight {
+    background-color: #0FBF3E;
+}
+
+.highlight1 {
+    background-color: #8534F3;
+}
+
+.highlight2{
+    background-color: white;
+}
+
+.highlight3 {
+    color: black;
+}
+
+.highlight4 {
+    background-color: white;
+    color: black;
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+h1::selection,
+h2::selection{
+    background-color: rgb(255, 255, 255);
+    color: black;
+}
+
+
+@font-face {
+    font-family: face;
+    src: url("https://cdn.hackclub.com/01a09f6d-388e-7b00-bc97-f496aba42ac6/safiro-medium-webfont%20(2).ttf");
+}
+
+@keyframes blink {
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
