@@ -1,0 +1,6 @@
+{% for name, label in providers %}
+  <a class="oauth-btn oauth-{{ name }}"
+     href="{{ url_for('auth.login', provider=name, next=request.args.get('next', '/')) }}">
+    Continue with {{ label }}
+  </a>
+{% endfor %}
