@@ -116,6 +116,7 @@ br{
     text-decoration: none;
     color: inherit;
     border-radius: 60px;
+    z-index: 10;
 }
 #textl {
     position: absolute;
@@ -166,6 +167,7 @@ header a:hover::after {
     opacity: 0;
     animation: fadeIn 0.5s ease forwards;
     animation-delay: 200ms;
+    z-index: -10000;
 }
 
 @keyframes fadeIn {
