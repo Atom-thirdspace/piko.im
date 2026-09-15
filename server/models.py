@@ -179,3 +179,75 @@ def complete_profile(user, username, interest):
 def touch_login(user):
     user.last_login_at = _utcnow()
     db.session.commit()
+
+
+class Problem(db.Model):
+    __tablename__ = "problems"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    statement_md = db.Column(db.Text, nullable=False)
+    difficulty = db.Column(db.String(16), nullable=False, default="easy")
+    topic = db.Column(db.String(64), index=True)      # pairs with User.interest
+    xp = db.Column(db.Integer, nullable=False, default=10)
+    time_limit_sec = db.Column(db.Float, nullable=False, default=2.0)
+    memory_mb = db.Column(db.Integer, nullable=False, default=256)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    tests = db.relationship("ProblemTest", back_populates="problem",
+                            cascade="all, delete-orphan", order_by="ProblemTest.position")
+
+
+class ProblemTest(db.Model):
+    __tablename__ = "problem_tests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    stdin = db.Column(db.Text, nullable=False, default="")
+    expected_stdout = db.Column(db.Text, nullable=False, default="")
+    is_sample = db.Column(db.Boolean, nullable=False, default=False)
+
+    problem = db.relationship("Problem", back_populates="tests")
+
+
+class Submission(db.Model):
+    __tablename__ = "submissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    language = db.Column(db.String(16), nullable=False)
+    source = db.Column(db.Text, nullable=False)
+    verdict = db.Column(db.String(32), nullable=False, index=True)
+    passed = db.Column(db.Integer, nullable=False, default=0)
+    total = db.Column(db.Integer, nullable=False, default=0)
+    max_time_ms = db.Column(db.Integer, nullable=False, default=0)
+    compile_output = db.Column(db.Text)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+    problem = db.relationship("Problem")
+
+
+def record_submission(user_id, problem, language, source, result):
+    sub = Submission(
+        user_id=user_id, problem_id=problem.id, language=language, source=source,
+        verdict=result.verdict, passed=result.passed, total=result.total,
+        max_time_ms=result.max_time_ms, compile_output=result.compile_output or None,
+    )
+    db.session.add(sub)
+    db.session.commit()
+    return sub
+
+
+def first_accepted(user_id, problem_id):
+    return db.session.execute(
+        db.select(Submission.id).filter_by(
+            user_id=user_id, problem_id=problem_id, verdict="accepted"
+        ).limit(1)
+    ).scalar_one_or_none() is None
