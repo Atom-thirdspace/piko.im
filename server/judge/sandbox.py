@@ -9,6 +9,7 @@ DOCKER = "docker"
 MAX_CAPTURE_BYTES=64*1024
 
 class SandboxError(RuntimeError):
+    """Docker itself failed - not the user's code."""
 
 
 @dataclass
@@ -21,7 +22,7 @@ class ExecResult:
     oom_killed: bool = False
 
 
-def tar_bytes(name,data,mode=0o644):
+def _tar_bytes(name, data, mode=0o644):
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w") as tf:
         info = tarfile.TarInfo(name)
@@ -123,7 +124,7 @@ class Sandbox:
             oom_killed=proc.returncode == 137,
         )
 
-    def destory(self):
+    def destroy(self):
         if self.cid:
             subprocess.run([DOCKER, "rm", "-f", self.cid], capture_output=True, timeout=30)
             self.cid = None

@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
-from . import verdicts as v
+from . import verdicts as V
 from .languages import get_language
 from .sandbox import Sandbox, SandboxError
 
 @dataclass
 class TestCase:
     stdin: str
-    excepted_stdout:str
+    expected_stdout: str
     is_sample: bool = False
 
 @dataclass
@@ -15,7 +15,7 @@ class TestOutcome:
     index: int
     verdict: str
     time_ms: int
-    stdout: str
+    stdout: str = ""
     stderr: str = ""
     is_sample: bool = False
 
@@ -29,7 +29,8 @@ class JudgeResult:
     total: int = 0
     message: str = ""
 
-def judge(source, language_key, test, time_limit_sec=2.0,memory_mb=None,stop_on_first_failure=True):
+def judge(source, language_key, tests, time_limit_sec=2.0, memory_mb=None,
+          stop_on_first_failure=True):
     try:
         lang = get_language(language_key)
     except KeyError as exc:

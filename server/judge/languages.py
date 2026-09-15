@@ -7,10 +7,10 @@ class Language:
     label:str
     image:str
     source_name:str
-    run_cmd:str
+    run_cmd: Sequence[str]
     compile_cmd: Optional[Sequence[str]] = None
-    default_memory_mb = 256
-    compile_timeout_sec = 15
+    default_memory_mb: int = 256
+    compile_timeout_sec: int = 15
 
 LANGUAGES = {
     "python": Language(
@@ -44,5 +44,5 @@ LANGUAGES = {
 def get_language(key):
     lang = LANGUAGES.get(key)
     if lang is None:
-        raise KeyError("unsupported language")
-    return 
+        raise KeyError("unsupported language: %r" % key)
+    return lang
