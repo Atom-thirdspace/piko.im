@@ -7,7 +7,7 @@ class Question:
     id: str
     tier: int
     prompt: str
-    choics: Tuple[Tuple[str, str], ...]
+    choices: Tuple[Tuple[str, str], ...]
     answer: str
 
     def public(self):
@@ -37,7 +37,7 @@ def pick_questions(per_tier=2, rng=random):
     picked = []
     for tier in (1,2,3):
         pool = [q for q in BANK if q.tier == tier]
-        picked.extend(rng.sample(pool, min(per_tier), len(pool)))
+        picked.extend(rng.sample(pool, min(per_tier, len(pool))))
     return [q.id for q in picked]
 
 def score(question_ids, responses):

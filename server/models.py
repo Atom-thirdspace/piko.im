@@ -24,6 +24,14 @@ class User(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     welcome_email_sent_at = db.Column(db.DateTime(timezone=True), nullable =True)
+    xp_total = db.Column(db.Integer, nullable=False, default=0)
+    daily_goal_xp = db.Column(db.Integer, nullable=False, default=30)
+    streak_days = db.Column(db.Integer, nullable=False, default=0)
+    streak_best = db.Column(db.Integer, nullable=False, default=0)
+    last_active_date = db.Column(db.Date)
+    timezone = db.Column(db.String(64), nullable=False, default="UTC")
+    preferred_language = db.Column(db.String(16))
+    onboarded_at = db.Column(db.DateTime(timezone=True))
     identities = db.relationship(
         "OAuthIdentity", back_populates="user", cascade="all, delete-orphan"
     )
@@ -42,6 +50,10 @@ class User(db.Model):
     @property
     def needs_onboarding(self):
         return not self.username or not self.interest
+
+    @property
+    def needs_questionnaire(self):
+        return self.onboarded_at is None
 
 
 class OAuthIdentity(db.Model):
@@ -251,3 +263,135 @@ def first_accepted(user_id, problem_id):
             user_id=user_id, problem_id=problem_id, verdict="accepted"
         ).limit(1)
     ).scalar_one_or_none() is None
+
+
+class OnboardingSession(db.Model):
+    """One in-progress questionnaire per user; survives a refresh mid-flow."""
+
+    __tablename__ = "onboarding_sessions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, unique=True)
+    answers = db.Column(db.JSON, nullable=False, default=dict)
+    placement_question_ids = db.Column(db.JSON)
+    placement_score = db.Column(db.Integer)
+    placement_possible = db.Column(db.Integer)
+    level = db.Column(db.String(16))
+    recommendation = db.Column(db.JSON)
+    started_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           onupdate=_utcnow, nullable=False)
+    completed_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+
+
+class Track(db.Model):
+    __tablename__ = "tracks"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(64), unique=True, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False, default="")
+    position = db.Column(db.Integer, nullable=False, default=0)
+
+    units = db.relationship("Unit", back_populates="track",
+                            cascade="all, delete-orphan", order_by="Unit.position")
+
+
+class Unit(db.Model):
+    __tablename__ = "units"
+    __table_args__ = (
+        UniqueConstraint("track_id", "slug", name="uq_unit_track_slug"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    track_id = db.Column(db.Integer, db.ForeignKey("tracks.id", ondelete="CASCADE"),
+                         nullable=False, index=True)
+    slug = db.Column(db.String(64), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    level = db.Column(db.String(16), nullable=False, default="beginner")
+    topic = db.Column(db.String(64))
+    position = db.Column(db.Integer, nullable=False, default=0)
+
+    track = db.relationship("Track", back_populates="units")
+    lessons = db.relationship("Lesson", back_populates="unit",
+                              cascade="all, delete-orphan", order_by="Lesson.position")
+
+
+class Lesson(db.Model):
+    __tablename__ = "lessons"
+    __table_args__ = (
+        UniqueConstraint("unit_id", "slug", name="uq_lesson_unit_slug"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    unit_id = db.Column(db.Integer, db.ForeignKey("units.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    slug = db.Column(db.String(64), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    kind = db.Column(db.String(16), nullable=False, default="reading")   # reading | quiz | code
+    xp = db.Column(db.Integer, nullable=False, default=10)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    # SET NULL, not CASCADE: deleting a problem must not delete the lesson around it.
+    problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="SET NULL"))
+
+    unit = db.relationship("Unit", back_populates="lessons")
+    problem = db.relationship("Problem")
+
+
+class Enrollment(db.Model):
+    __tablename__ = "enrollments"
+    __table_args__ = (
+        UniqueConstraint("user_id", "track_id", name="uq_enrollment"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    track_id = db.Column(db.Integer, db.ForeignKey("tracks.id", ondelete="CASCADE"),
+                         nullable=False)
+    current_lesson_id = db.Column(db.Integer, db.ForeignKey("lessons.id", ondelete="SET NULL"))
+    is_primary = db.Column(db.Boolean, nullable=False, default=False)
+    started_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+    track = db.relationship("Track")
+    current_lesson = db.relationship("Lesson")
+
+
+class LessonProgress(db.Model):
+    __tablename__ = "lesson_progress"
+    __table_args__ = (
+        UniqueConstraint("user_id", "lesson_id", name="uq_lesson_progress"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    lesson_id = db.Column(db.Integer, db.ForeignKey("lessons.id", ondelete="CASCADE"),
+                          nullable=False)
+    completed_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+    lesson = db.relationship("Lesson")
+
+
+class XpEvent(db.Model):
+    """Ledger of every XP award. The unique constraint is what makes awards idempotent."""
+
+    __tablename__ = "xp_events"
+    __table_args__ = (
+        UniqueConstraint("user_id", "reason", "ref", name="uq_xp_award"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    amount = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.String(32), nullable=False)      # lesson | problem | streak
+    ref = db.Column(db.String(64), nullable=False)         # e.g. the lesson or problem id
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
