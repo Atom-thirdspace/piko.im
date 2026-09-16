@@ -7,6 +7,9 @@ from server.accounts import accounts_bp
 from server.oauth import init_oauth
 from server.session import current_user
 from server.models import init_db
+from server.onboarding.routes import onboarding_bp
+from server.problems import problems_bp
+from server.learning.seed import register_cli
 
 load_dotenv()
 
@@ -24,6 +27,9 @@ init_db(app)
 init_oauth(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(accounts_bp)
+app.register_blueprint(onboarding_bp)
+app.register_blueprint(problems_bp)
+register_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 
 @app.route("/")

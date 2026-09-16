@@ -93,6 +93,8 @@ def password_login():
 
     if user.needs_onboarding:
         return redirect(url_for("accounts.onboarding", next=nxt))
+    if user.needs_questionnaire:
+        return redirect(url_for("onboarding.page"))
     return redirect(nxt if is_safe_next(nxt) else "/")
 
 
@@ -132,4 +134,6 @@ def onboarding():
         ), 400
 
     complete_profile(user, username, interest)
+    if user.needs_questionnaire:
+        return redirect(url_for("onboarding.page"))
     return redirect(nxt if is_safe_next(nxt) else "/")

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="quiz" id="quiz"
+      data-state-url="{{ url_for('onboarding.state') }}"
+      data-answer-url="{{ url_for('onboarding.answer') }}"
+      data-back-url="{{ url_for('onboarding.back') }}"
+      data-placement-url="{{ url_for('onboarding.placement_route') }}"
+      data-preview-url="{{ url_for('onboarding.preview') }}"
+      data-complete-url="{{ url_for('onboarding.complete') }}"
+      data-home-url="{{ url_for('home') }}">
+
+  <div class="quiz-bar"><span class="quiz-bar-fill" id="quiz-progress"></span></div>
+
+  <h1 id="quiz-title">Let's set you up, {{ user.name or user.username }}</h1>
+  <p class="quiz-error" id="quiz-error" hidden></p>
+
+  <section id="quiz-body" class="quiz-body">
+    <p class="quiz-loading">Loading...</p>
+  </section>
+
+  <div class="quiz-actions">
+    <button type="button" id="quiz-back" class="quiz-secondary" hidden>Back</button>
+    <button type="button" id="quiz-next" class="quiz-primary" hidden>Continue</button>
+  </div>
+</main>
+{% endblock content %}
+
+{% block js %}
+  <script src="{{ url_for('static', filename='js/onboarding.js') }}"></script>
+{% endblock js %}
