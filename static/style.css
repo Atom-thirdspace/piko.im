@@ -229,3 +229,53 @@ img {
 .quiz-goal { margin: .8rem 0 0; font-weight: 600; }
 .quiz-score { margin: 0 0 1rem; }
 .quiz-loading { opacity: .6; }
+
+/* --- profile & settings --- */
+.profile, .settings { max-width: 640px; margin: 3rem auto; padding: 0 1rem; }
+.profile-head { display: flex; align-items: center; gap: 1rem; }
+.profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+.profile-avatar-blank { display: grid; place-items: center; font-size: 1.8rem;
+                        background: #6c5ce7; color: #fff; }
+.profile-id h1 { margin: 0; font-size: 1.4rem; }
+.profile-handle { margin: .1rem 0; opacity: .7; }
+.profile-joined { margin: 0; font-size: .85rem; opacity: .55; }
+.profile-edit { margin-left: auto; padding: .5rem .9rem; border-radius: 8px;
+                background: rgba(0,0,0,.08); text-decoration: none; color: inherit; }
+.profile-level { margin: 1.6rem 0 .4rem; }
+.profile-level-line { display: flex; justify-content: space-between; font-size: .9rem; }
+.profile-bar { height: 8px; margin-top: .4rem; border-radius: 4px;
+               background: rgba(0,0,0,.12); overflow: hidden; }
+.profile-bar-fill { display: block; height: 100%; background: #6c5ce7; }
+.profile-stats { display: grid; grid-template-columns: repeat(3, 1fr);
+                 gap: .8rem; margin: 1.6rem 0; }
+.stat { padding: .8rem; border-radius: 10px; background: #f3f0ff; text-align: center; }
+.stat b { display: block; font-size: 1.3rem; }
+.stat span { font-size: .8rem; opacity: .7; }
+.profile-track, .profile-activity { margin-top: 1.8rem; }
+.profile-track h2, .profile-activity h2 { font-size: 1.1rem; margin: 0 0 .5rem; }
+.activity-list { list-style: none; padding: 0; margin: 0; }
+.activity-list li { display: flex; gap: .8rem; padding: .5rem 0;
+                    border-bottom: 1px solid rgba(0,0,0,.08); }
+.activity-xp { margin-left: auto; font-weight: 600; }
+.activity-at { opacity: .55; font-size: .85rem; }
+.profile-empty { opacity: .6; }
+
+.settings-back { margin: 0 0 1.4rem; }
+.settings-card { padding: 1.2rem; margin-bottom: 1.2rem;
+                 border: 1px solid rgba(0,0,0,.1); border-radius: 12px; }
+.settings-card h2 { margin: 0 0 .8rem; font-size: 1.1rem; }
+.settings-card .auth-form { max-width: none; }
+.settings-hint { font-size: .85rem; opacity: .65; }
+.settings-list { list-style: none; padding: 0; margin: 0; }
+.settings-list li { display: flex; align-items: center; gap: .8rem;
+                    padding: .5rem 0; border-bottom: 1px solid rgba(0,0,0,.08); }
+.settings-list form { margin-left: auto; }
+.settings-link { border: none; background: none; padding: 0; font: inherit;
+                 color: #6c5ce7; cursor: pointer; text-decoration: underline; }
+.settings-danger { border-color: rgba(192,57,43,.4); }
+.settings-danger h2 { color: #c0392b; }
+.settings-danger-btn { background: #c0392b; color: #fff; border: none;
+                       border-radius: 8px; padding: .7rem; cursor: pointer; }
+.topnav { display: flex; align-items: center; gap: 1rem; justify-content: flex-end;
+          max-width: 640px; margin: 1rem auto 0; padding: 0 1rem; font-size: .9rem; }
+.topnav a { color: inherit; }

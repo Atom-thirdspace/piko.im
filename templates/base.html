@@ -10,6 +10,15 @@
     {% endblock head %}
 </head>
 <body>
+    {% if current_user() %}
+      <nav class="topnav">
+        <a href="{{ url_for('profile.me') }}">Profile</a>
+        <a href="{{ url_for('profile.settings') }}">Settings</a>
+        <form method="post" action="{{ url_for('auth.logout') }}">
+          <button type="submit" class="settings-link">Log out</button>
+        </form>
+      </nav>
+    {% endif %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <ul class="flashes">

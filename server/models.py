@@ -266,7 +266,6 @@ def first_accepted(user_id, problem_id):
 
 
 class OnboardingSession(db.Model):
-    """One in-progress questionnaire per user; survives a refresh mid-flow."""
 
     __tablename__ = "onboarding_sessions"
 
@@ -395,3 +394,35 @@ class XpEvent(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user = db.relationship("User")
+
+def update_profile(user, name, username,interest, avatar_url):
+    user.name = name.strip()
+    user.username = username.strip().lower()
+    user.interest = interest
+    user.avatar_url = (avatar_url or "").strip() or None
+    db.session.commit()
+    return user
+
+def update_preferences(user, daily_goal_xp, preferred_language, timezone):
+    user.daily_goal_xp = int(daily_goal_xp)
+    user.preferred_language = preferred_language or None
+    user.timezone = timezone
+    db.session.commit()
+    return user
+
+def set_user_password(user, raw):
+    user.set_password(raw)
+    db.session.commit()
+    return user
+
+def unlink_identity(user, provider):
+    db.session.execute(
+        db.delete(OAuthIdentity).where(
+            OAuthIdentity.user_id == user.id, OAuthIdentity.provider == provider
+        )
+    )
+    db.session.commit()
+
+def delete_account(user):
+    db.session.execute(db.delete(User).where(User.id == user.id))
+    db.session.commit()
