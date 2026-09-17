@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="settings">
+  <h1>Settings</h1>
+  <p class="settings-back">
+    <a href="{{ url_for('profile.public_profile', username=user.username) }}">
+      Back to your profile
+    </a>
+  </p>
+
+  <section class="settings-card">
+    <h2>Profile</h2>
+    <form class="auth-form" method="post" action="{{ url_for('profile.save_profile') }}">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text"
+             value="{{ form.get('name', user.name or '') }}" required>
+      {% if errors.name %}<p class="field-error">{{ errors.name }}</p>{% endif %}
+
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text"
+             value="{{ form.get('username', user.username or '') }}" required>
+      {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
+
+      <label for="interest">Focus</label>
+      <select id="interest" name="interest" required>
+        {% for key, label in interests %}
+          <option value="{{ key }}"
+            {{ 'selected' if form.get('interest', user.interest) == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.interest %}<p class="field-error">{{ errors.interest }}</p>{% endif %}
+
+      <label for="avatar_url">Avatar URL <span class="settings-hint">(optional)</span></label>
+      <input id="avatar_url" name="avatar_url" type="url"
+             value="{{ form.get('avatar_url', user.avatar_url or '') }}">
+      {% if errors.avatar_url %}<p class="field-error">{{ errors.avatar_url }}</p>{% endif %}
+
+      <button type="submit">Save profile</button>
+    </form>
+  </section>
+
+  <section class="settings-card">
+    <h2>Learning</h2>
+    <form class="auth-form" method="post" action="{{ url_for('profile.save_learning') }}">
+      <label for="daily_goal_xp">Daily goal</label>
+      <select id="daily_goal_xp" name="daily_goal_xp" required>
+        {% for goal in goals %}
+          <option value="{{ goal }}"
+            {{ 'selected' if (form.get('daily_goal_xp', user.daily_goal_xp)|int) == goal }}>
+            {{ goal }} XP a day
+          </option>
+        {% endfor %}
+      </select>
+      {% if errors.daily_goal_xp %}<p class="field-error">{{ errors.daily_goal_xp }}</p>{% endif %}
+
+      <label for="preferred_language">Preferred language</label>
+      <select id="preferred_language" name="preferred_language">
+        <option value="">No preference</option>
+        {% for key, label in languages %}
+          <option value="{{ key }}"
+            {{ 'selected' if form.get('preferred_language', user.preferred_language) == key }}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+      {% if errors.preferred_language %}<p class="field-error">{{ errors.preferred_language }}</p>{% endif %}
+
+      <label for="timezone">Timezone <span class="settings-hint">(decides when your day rolls over)</span></label>
+      <select id="timezone" name="timezone" required>
+        {% for tz in timezones %}
+          <option value="{{ tz }}"
+            {{ 'selected' if form.get('timezone', user.timezone or 'UTC') == tz }}>{{ tz }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.timezone %}<p class="field-error">{{ errors.timezone }}</p>{% endif %}
+
+      <button type="submit">Save preferences</button>
+    </form>
+  </section>
+
+  <section class="settings-card">
+    <h2>{{ 'Change password' if user.password_hash else 'Set a password' }}</h2>
+    <form class="auth-form" method="post" action="{{ url_for('profile.save_password') }}">
+      {% if user.password_hash %}
+        <label for="current_password">Current password</label>
+        <input id="current_password" name="current_password" type="password"
+               autocomplete="current-password" required>
+        {% if errors.current_password %}
+          <p class="field-error">{{ errors.current_password }}</p>
+        {% endif %}
+      {% else %}
+        <p class="settings-hint">
+          You signed in with a provider. Setting a password gives you a second way in.
+        </p>
+      {% endif %}
+
+      <label for="new_password">New password</label>
+      <input id="new_password" name="new_password" type="password"
+             autocomplete="new-password" minlength="8" required>
+      {% if errors.new_password %}<p class="field-error">{{ errors.new_password }}</p>{% endif %}
+
+      <label for="confirm_password">Confirm new password</label>
+      <input id="confirm_password" name="confirm_password" type="password"
+             autocomplete="new-password" minlength="8" required>
+      {% if errors.confirm_password %}
+        <p class="field-error">{{ errors.confirm_password }}</p>
+      {% endif %}
+
+      <button type="submit">{{ 'Update password' if user.password_hash else 'Set password' }}</button>
+    </form>
+  </section>
+
+  <section class="settings-card">
+    <h2>Connected accounts</h2>
+    {% if identities %}
+      <ul class="settings-list">
+        {% for identity in identities %}
+          <li>
+            <span>{{ identity.provider.title() }}</span>
+            {% if can_unlink %}
+              <form method="post"
+                    action="{{ url_for('profile.unlink', provider=identity.provider) }}">
+                <button class="settings-link" type="submit">Disconnect</button>
+              </form>
+            {% else %}
+              <span class="settings-hint">Set a password to disconnect</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="settings-hint">No provider accounts connected.</p>
+    {% endif %}
+  </section>
+
+  <section class="settings-card settings-danger">
+    <h2>Delete account</h2>
+    <p>This erases your XP, streak, submissions and progress. It can't be undone.</p>
+    <form class="auth-form" method="post" action="{{ url_for('profile.delete') }}">
+      <label for="confirm_username">Type <b>{{ user.username }}</b> to confirm</label>
+      <input id="confirm_username" name="confirm_username" type="text" autocomplete="off" required>
+      {% if errors.confirm_username %}
+        <p class="field-error">{{ errors.confirm_username }}</p>
+      {% endif %}
+      <button class="settings-danger-btn" type="submit">Delete my account</button>
+    </form>
+  </section>
+</main>
+{% endblock content %}

@@ -10,6 +10,7 @@ from server.models import init_db
 from server.onboarding.routes import onboarding_bp
 from server.problems import problems_bp
 from server.learning.seed import register_cli
+from server.userprofile import profile_bp
 
 load_dotenv()
 
@@ -29,6 +30,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(accounts_bp)
 app.register_blueprint(onboarding_bp)
 app.register_blueprint(problems_bp)
+app.register_blueprint(profile_bp)
 register_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 

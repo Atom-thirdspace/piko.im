@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="profile">
+  <header class="profile-head">
+    {% if profile_user.avatar_url %}
+      <img class="profile-avatar" src="{{ profile_user.avatar_url }}"
+           alt="{{ profile_user.name or profile_user.username }}">
+    {% else %}
+      <div class="profile-avatar profile-avatar-blank">
+        {{ (profile_user.name or profile_user.username)[0]|upper }}
+      </div>
+    {% endif %}
+
+    <div class="profile-id">
+      <h1>{{ profile_user.name or profile_user.username }}</h1>
+      <p class="profile-handle">@{{ profile_user.username }}</p>
+      <p class="profile-joined">
+        Joined {{ profile_user.created_at.strftime('%B %Y') }}
+      </p>
+    </div>
+
+    {% if is_self %}
+      <a class="profile-edit" href="{{ url_for('profile.settings') }}">Settings</a>
+    {% endif %}
+  </header>
+
+  <section class="profile-level">
+    <div class="profile-level-line">
+      <strong>Level {{ progress.level }}</strong>
+      <span>{{ progress.into_level }} / {{ progress.level_span }} XP</span>
+    </div>
+    <div class="profile-bar">
+      <span class="profile-bar-fill"
+            style="width: {{ (100 * progress.into_level / progress.level_span)|round|int }}%"></span>
+    </div>
+  </section>
+
+  <section class="profile-stats">
+    <div class="stat"><b>{{ profile_user.xp_total or 0 }}</b><span>total XP</span></div>
+    <div class="stat"><b>{{ profile_user.streak_days or 0 }}</b><span>day streak</span></div>
+    <div class="stat"><b>{{ profile_user.streak_best or 0 }}</b><span>best streak</span></div>
+    <div class="stat"><b>{{ stats.lessons_done }}</b><span>lessons</span></div>
+    <div class="stat"><b>{{ stats.problems_solved }}</b><span>problems solved</span></div>
+    <div class="stat"><b>{{ stats.submissions }}</b><span>submissions</span></div>
+  </section>
+
+  {% if current %}
+    <section class="profile-track">
+      <h2>{{ current.track.title }}</h2>
+      {% if current.lesson %}
+        <p>Up next: <strong>{{ current.lesson.title }}</strong>
+           {% if current.unit %}in {{ current.unit.title }}{% endif %}</p>
+      {% else %}
+        <p>No lesson queued up.</p>
+      {% endif %}
+    </section>
+  {% elif is_self %}
+    <section class="profile-track">
+      <p>You're not on a track yet.
+         <a href="{{ url_for('onboarding.page') }}">Take the questionnaire</a>.</p>
+    </section>
+  {% endif %}
+
+  <section class="profile-activity">
+    <h2>Recent activity</h2>
+    {% if activity %}
+      <ul class="activity-list">
+        {% for row in activity %}
+          <li>
+            <span class="activity-label">{{ row.label }}</span>
+            <span class="activity-xp">+{{ row.amount }} XP</span>
+            <span class="activity-at">{{ row.at.strftime('%d %b') }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="profile-empty">Nothing yet.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock content %}
