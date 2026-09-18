@@ -1,4 +1,17 @@
 body {
     background-color: rgb(251, 246, 244);
     background-image:url("https://camo.githubusercontent.com/c42c83df2fd1e442ef1e0ed69cc20d21f65308fc2f0dca2a8035360738d49c8c/68747470733a2f2f7765622e77686174736170702e636f6d2f696d672f62672d636861742d74696c652d6461726b5f61346265353132653731393562366237333364393131306234303866303735642e706e67");
+    margin: 0;
+}
+
+.topnav {
+    position: fixed;
+    right: 0;
+    display: flex;
+    gap: 1vw;
+    padding-right:1vw;
+}
+
+p,a,button {
+    font-size: 1.3vw;
 }

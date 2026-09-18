@@ -8,7 +8,6 @@
 <main class="dashboard" data-api-url="{{ url_for('dashboard.api') }}">
   <header class="dashboard-header">
     <div>
-      <p class="dashboard-eyebrow">Your dashboard</p>
       <h1>Welcome, {{ user.name or user.username }}</h1>
       <p>@{{ user.username }}{% if user.interest %} · {{ user.interest }}{% endif %}</p>
     </div>
