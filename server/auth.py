@@ -17,14 +17,14 @@ def login_page():
     return render_template(
         "login.html",
         providers=enabled_providers(),
-        next=request.args.get("next", "/"),
+        next=request.args.get("next", url_for("dashboard.index")),
     )
 
 @auth_bp.route("/login/<provider>/")
 def login(provider):
     if provider not in current_app.config.get("ENABLED_PROVIDERS", []):
         abort(404)
-    session["oauth_next"] = request.args.get("next", "/")
+    session["oauth_next"] = request.args.get("next", url_for("dashboard.index"))
     session["oauth_nonce"] = secrets.token_urlsafe(16)
 
     client = oauth.create_client(provider)
@@ -62,7 +62,7 @@ def callback(provider):
             current_app.logger.warning("welcome email failed for user %s", user.id)
 
     # Read `next` before clear() wipes it, then rotate the session on login.
-    nxt = session.get("oauth_next", "/")
+    nxt = session.get("oauth_next", url_for("dashboard.index"))
     session.clear()
     session["user_id"] = user.id
     session.permanent = True
@@ -72,7 +72,7 @@ def callback(provider):
     if user.needs_questionnaire:
         return redirect(url_for("onboarding.page"))
 
-    return redirect(nxt if is_safe_next(nxt) else "/")
+    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():

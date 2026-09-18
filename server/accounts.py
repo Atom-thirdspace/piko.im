@@ -32,9 +32,9 @@ def _username_taken(username):
 @accounts_bp.route("/signup/", methods=["GET", "POST"])
 def signup():
     if current_user():
-        return redirect("/")
+        return redirect(url_for("dashboard.index"))
 
-    nxt = request.args.get("next", "/")
+    nxt = request.args.get("next", url_for("dashboard.index"))
 
     if request.method == "GET":
         return render_template(
@@ -72,14 +72,14 @@ def signup():
         current_app.logger.warning("welcome email failed for user %s", user.id)
 
     start_session(user)
-    return redirect(nxt if is_safe_next(nxt) else "/")
+    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
 
 
 @accounts_bp.route("/login/password/", methods=["POST"])
 def password_login():
     identifier = (request.form.get("identifier") or "").strip()
     password = request.form.get("password") or ""
-    nxt = request.form.get("next", "/")
+    nxt = request.form.get("next", url_for("dashboard.index"))
 
     user = find_by_login(identifier) if identifier else None
 
@@ -95,7 +95,7 @@ def password_login():
         return redirect(url_for("accounts.onboarding", next=nxt))
     if user.needs_questionnaire:
         return redirect(url_for("onboarding.page"))
-    return redirect(nxt if is_safe_next(nxt) else "/")
+    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
 
 
 @accounts_bp.route("/onboarding/", methods=["GET", "POST"])
@@ -103,10 +103,10 @@ def password_login():
 def onboarding():
     """Collect username + interest from users who arrived via OAuth."""
     user = current_user()
-    nxt = request.args.get("next", "/")
+    nxt = request.args.get("next", url_for("dashboard.index"))
 
     if not user.needs_onboarding:
-        return redirect("/")
+        return redirect(url_for("dashboard.index"))
 
     if request.method == "GET":
         return render_template(
@@ -136,4 +136,4 @@ def onboarding():
     complete_profile(user, username, interest)
     if user.needs_questionnaire:
         return redirect(url_for("onboarding.page"))
-    return redirect(nxt if is_safe_next(nxt) else "/")
+    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
