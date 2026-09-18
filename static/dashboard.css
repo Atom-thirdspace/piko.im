@@ -1,0 +1,20 @@
+body {
+    cursor: url("https://cdn.hackclub.com/01a0b3a5-c4e2-7144-a788-b4ca2b26e7a8/Cursor_01.png"), auto;
+
+}
+a,
+button,
+[role="button"] {
+    cursor: url("https://cdn.hackclub.com/01a0b3a7-18a1-7c3a-ad2e-692f9dc1b244/Cursor_02.png"), pointer;
+}
+
+body {
+    margin: 0;
+    background-color: #9bd4c3;
+
+    background-image:
+        url("https://cdn.hackclub.com/01a0b421-9489-7f88-ae2a-e4e9ccb0aa4e/sprite-animation%20(3).gif");
+
+    background-size: 7vw;
+
+}
