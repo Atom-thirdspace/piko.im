@@ -8,12 +8,14 @@ from .oauth import oauth, enabled_providers
 from .profile import fetch_profile
 from .models import upsert_user, mark_welcome_sent
 from .mailer import send_welcome_email
-from .session import is_safe_next
+from .session import current_user, is_safe_next
 
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login/")
 def login_page():
+    if current_user():
+        return redirect(url_for("dashboard.index"))
     return render_template(
         "login.html",
         providers=enabled_providers(),
@@ -22,6 +24,8 @@ def login_page():
 
 @auth_bp.route("/login/<provider>/")
 def login(provider):
+    if current_user():
+        return redirect(url_for("dashboard.index"))
     if provider not in current_app.config.get("ENABLED_PROVIDERS", []):
         abort(404)
     session["oauth_next"] = request.args.get("next", url_for("dashboard.index"))

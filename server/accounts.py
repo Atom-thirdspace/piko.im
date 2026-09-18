@@ -77,6 +77,8 @@ def signup():
 
 @accounts_bp.route("/login/password/", methods=["POST"])
 def password_login():
+    if current_user():
+        return redirect(url_for("dashboard.index"))
     identifier = (request.form.get("identifier") or "").strip()
     password = request.form.get("password") or ""
     nxt = request.form.get("next", url_for("dashboard.index"))

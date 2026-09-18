@@ -149,10 +149,11 @@ def _json_data(data):
     }
 
 
-@dashboard_bp.route("/dashboard/")
-@login_required
+@dashboard_bp.route("/")
 def index():
     user = current_user()
+    if user is None:
+        return render_template("index.html")
     if user.needs_onboarding:
         return redirect(url_for("accounts.onboarding", next=url_for("dashboard.index")))
     if user.needs_questionnaire:
