@@ -1,20 +1,4 @@
 body {
-    cursor: url("https://cdn.hackclub.com/01a0b3a5-c4e2-7144-a788-b4ca2b26e7a8/Cursor_01.png"), auto;
-
-}
-a,
-button,
-[role="button"] {
-    cursor: url("https://cdn.hackclub.com/01a0b3a7-18a1-7c3a-ad2e-692f9dc1b244/Cursor_02.png"), pointer;
-}
-
-body {
-    margin: 0;
-    background-color: #9bd4c3;
-
-    background-image:
-        url("https://cdn.hackclub.com/01a0b421-9489-7f88-ae2a-e4e9ccb0aa4e/sprite-animation%20(3).gif");
-
-    background-size: 7vw;
-
+    background-color: rgb(251, 246, 244);
+    background-image:url("https://camo.githubusercontent.com/c42c83df2fd1e442ef1e0ed69cc20d21f65308fc2f0dca2a8035360738d49c8c/68747470733a2f2f7765622e77686174736170702e636f6d2f696d672f62672d636861742d74696c652d6461726b5f61346265353132653731393562366237333364393131306234303866303735642e706e67");
 }
