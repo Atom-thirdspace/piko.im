@@ -25,7 +25,7 @@
 
 > [!NOTE]
 > ### Aryan :
-> ### Adhyys :
+> ### Adhyys : Hey there! I am Adhdhyan aka Adhyys, I worked on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend. In future, I intend to extend my support for the backend of game like DSA problems.
 
 ## Screenshot
 ![screenshot](assets/ss.png)
