@@ -1,17 +1,24 @@
+from datetime import datetime, timedelta, timezone
+
 from flask import (
-    Blueprint, current_app, flash, redirect, render_template,
+    Blueprint, current_app, flash, make_response, redirect, render_template,
     request, session, url_for,
 )
+from .devices import notify_new_device, remember_device
 from .oauth import enabled_providers
-from .mailer import send_welcome_email
+from .mailer import send_verification_email
 from .models import (
     complete_profile, create_email_user, find_by_email, find_by_login,
-    find_by_username, mark_welcome_sent, touch_login,
+    find_by_username, load_user, mark_email_verified, mark_welcome_sent,
+    touch_login, touch_verification_sent,
 )
 from .session import current_user, is_safe_next, login_required
+from .tokens import make_verify_token, read_verify_token
 from .validators import INTERESTS, INTEREST_KEYS, validate_signup, validate_username
 
 accounts_bp = Blueprint("accounts", __name__)
+
+RESEND_COOLDOWN = timedelta(minutes=2)
 
 
 def start_session(user):
@@ -27,6 +34,27 @@ def _email_taken(email):
 
 def _username_taken(username):
     return find_by_username(username) is not None
+
+
+def _age(dt):
+    """SQLite hands back naive datetimes; treat those as UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - dt
+
+
+def _send_verification(user, welcome=False):
+    token = make_verify_token(user)
+    url = url_for("accounts.verify_email", token=token, _external=True)
+    if send_verification_email(user.email, url, user.name, welcome=welcome):
+        touch_verification_sent(user)
+        if welcome:
+            mark_welcome_sent(user.id)
+        return True
+    current_app.logger.warning("verification email failed for user %s", user.id)
+    return False
 
 
 @accounts_bp.route("/signup/", methods=["GET", "POST"])
@@ -68,13 +96,14 @@ def signup():
         password=form["password"],
     )
 
-    if send_welcome_email(user.email, user.name):
-        mark_welcome_sent(user.id)
-    else:
-        current_app.logger.warning("welcome email failed for user %s", user.id)
-
+    _send_verification(user, welcome=True)      # welcome and confirm in one email
     start_session(user)
-    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
+
+    response = make_response(
+        redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
+    )
+    remember_device(response, user)             # signing up isn't a sign-in worth warning about
+    return response
 
 
 @accounts_bp.route("/login/password/", methods=["POST"])
@@ -96,10 +125,65 @@ def password_login():
     start_session(user)
 
     if user.needs_onboarding:
-        return redirect(url_for("accounts.onboarding", next=nxt))
-    if user.needs_questionnaire:
-        return redirect(url_for("onboarding.page"))
-    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
+        target = url_for("accounts.onboarding", next=nxt)
+    elif user.needs_questionnaire:
+        target = url_for("onboarding.page")
+    else:
+        target = nxt if is_safe_next(nxt) else url_for("dashboard.index")
+
+    response = make_response(redirect(target))
+    notify_new_device(user, response)
+    return response
+
+
+@accounts_bp.route("/verify/<token>/")
+def verify_email(token):
+    data, problem = read_verify_token(token)
+    if problem == "expired":
+        flash("That confirmation link has expired. Sign in and we'll send a fresh one.", "error")
+        return redirect(url_for("auth.login_page"))
+    if problem:
+        flash("That confirmation link isn't valid.", "error")
+        return redirect(url_for("auth.login_page"))
+
+    user = load_user(data["uid"])
+    # The token carries the address it was sent to, so an email change kills old links.
+    if user is None or user.email != data["email"]:
+        flash("That confirmation link isn't valid any more.", "error")
+        return redirect(url_for("auth.login_page"))
+
+    if user.email_verified:
+        flash("Your email is already confirmed.", "success")
+    else:
+        mark_email_verified(user)
+        flash("Email confirmed - thanks.", "success")
+
+    # Confirming never signs anyone in: these links get forwarded.
+    viewer = current_user()
+    if viewer is not None and viewer.id == user.id:
+        return redirect(url_for("dashboard.index"))
+    return redirect(url_for("auth.login_page"))
+
+
+@accounts_bp.route("/verify/resend/", methods=["POST"])
+@login_required
+def resend_verification():
+    user = current_user()
+    back = request.form.get("next") or url_for("profile.settings")
+    if not is_safe_next(back):
+        back = url_for("profile.settings")
+
+    if user.email_verified:
+        return redirect(back)
+
+    since = _age(user.verification_sent_at)
+    if since is not None and since < RESEND_COOLDOWN:
+        flash("We just sent one - give it a minute, and check spam.", "error")
+    elif _send_verification(user):
+        flash("Confirmation email sent to %s." % user.email, "success")
+    else:
+        flash("We couldn't send that email just now. Try again shortly.", "error")
+    return redirect(back)
 
 
 @accounts_bp.route("/onboarding/", methods=["GET", "POST"])

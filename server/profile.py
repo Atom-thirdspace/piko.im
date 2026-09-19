@@ -7,11 +7,13 @@ def fetch_profile(provider, client , token):
             "email" : info.get("email"),
             "name" : info.get("name") or info.get("email"),
             "avatar_url" : info.get("picture"),
+            "email_verified": bool(info.get("email_verified")),
         }
 
     if provider == "github":
         user = client.get("user", token=token).json()
         email = user.get("email")
+        primary = None
         if not email:
             emails = client.get("user/emails", token=token).json()
             primary = next(
@@ -24,6 +26,8 @@ def fetch_profile(provider, client , token):
             "email" : email,
             "name" : user.get("name") or user.get("login"),
             "avatar_url" : user.get("avatar_url"),
+            # Only the /user/emails route tells us the address is verified.
+            "email_verified": primary is not None,
         }
 
     if provider == "discord":
@@ -39,6 +43,7 @@ def fetch_profile(provider, client , token):
                 if avatar
                 else None
             ),
+            "email_verified": bool(user.get("verified")),
         }
 
     if provider == "hackclub":
@@ -49,6 +54,7 @@ def fetch_profile(provider, client , token):
             "email": info.get("email"),
             "name": info.get("name") or info.get("nickname") or info.get("email"),
             "avatar_url": info.get("picture"),      # not part of the documented claims
-        }    
+            "email_verified": bool(info.get("email_verified", True)),
+        }
 
     raise ValueError(f"Unsupported provider: {provider}")

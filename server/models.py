@@ -25,6 +25,8 @@ class User(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     welcome_email_sent_at = db.Column(db.DateTime(timezone=True), nullable =True)
+    email_verified_at = db.Column(db.DateTime(timezone=True))
+    verification_sent_at = db.Column(db.DateTime(timezone=True))    
     xp_total = db.Column(db.Integer, nullable=False, default=0)
     daily_goal_xp = db.Column(db.Integer, nullable=False, default=30)
     streak_days = db.Column(db.Integer, nullable=False, default=0)
@@ -55,6 +57,10 @@ class User(db.Model):
     @property
     def needs_questionnaire(self):
         return self.onboarded_at is None
+
+    @property
+    def email_verified(self):
+        return self.email_verified_at is not None
 
 
 class OAuthIdentity(db.Model):
@@ -144,7 +150,11 @@ def upsert_user(profile):
         user.name = profile["name"]
     if profile.get("avatar_url"):
         user.avatar_url = profile["avatar_url"]
+    if profile.get("email_verified") and user.email_verified_at is None:
+        user.email_verified_at = _utcnow()
+
     user.last_login_at = _utcnow()
+
 
     db.session.commit()
     return user, is_new
@@ -154,6 +164,16 @@ def mark_welcome_sent(user_id):
     if user is not None:
         user.welcome_email_sent_at = _utcnow()
         db.session.commit()
+
+def mark_email_verified(user):
+    if user.email_verified_at is None:
+        user.email_verified_at = _utcnow()
+        db.session.commit()
+    return user
+
+def touch_verification_sent(user):
+    user.verification_sent_at = _utcnow()
+    db.session.commit()
 
 def find_by_email(email):
     return db.session.execute(

@@ -2,8 +2,10 @@ import os
 import secrets
 
 from flask import (
-    Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
+    Blueprint, abort, current_app, flash, make_response, redirect, render_template,
+    request, session, url_for
 )
+from .devices import notify_new_device, remember_device
 from .oauth import oauth, enabled_providers, OIDC_PROVIDERS, PROVIDERS
 from .profile import fetch_profile
 from .models import upsert_user, mark_welcome_sent, link_identity
@@ -114,11 +116,18 @@ def callback(provider):
     session.permanent = True
 
     if user.needs_onboarding:
-        return redirect(url_for("accounts.onboarding", next=nxt))
-    if user.needs_questionnaire:
-        return redirect(url_for("onboarding.page"))
+        target = url_for("accounts.onboarding", next=nxt)
+    elif user.needs_questionnaire:
+        target = url_for("onboarding.page")
+    else:
+        target = nxt if is_safe_next(nxt) else url_for("dashboard.index")
 
-    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
+    response = make_response(redirect(target))
+    if is_new:
+        remember_device(response, user)     # brand new account, nothing to warn about
+    else:
+        notify_new_device(user, response)
+    return response
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
