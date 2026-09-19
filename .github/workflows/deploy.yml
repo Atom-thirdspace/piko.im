@@ -1,0 +1,23 @@
+name: Deploy Piko
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: 100.50.175.97
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          passphrase: ${{ secrets.EC2_SSH_PASSPHRASE }}
+          script: |
+            cd /home/ubuntu/piko.im
+            git pull origin main
+            sudo systemctl restart piko

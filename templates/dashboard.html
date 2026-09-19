@@ -1,0 +1,97 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="dashboard" data-api-url="{{ url_for('dashboard.api') }}">
+  <header class="dashboard-header">
+    <div>
+      <h1>Welcome, {{ user.name or user.username }}</h1>
+      <p>@{{ user.username }}{% if user.interest %} · {{ user.interest }}{% endif %}</p>
+    </div>
+    {% if user.avatar_url %}
+      <img class="dashboard-avatar" src="{{ user.avatar_url }}" alt="{{ user.name or user.username }}">
+    {% endif %}
+  </header>
+
+  <section class="dashboard-level" data-level="{{ progress.level }}">
+    <div class="dashboard-section-heading">
+      <h2>Level {{ progress.level }}</h2>
+      <span>{{ progress.xp }} total XP</span>
+    </div>
+    <progress value="{{ progress.into_level }}" max="{{ progress.level_span }}">
+      {{ progress.into_level }} / {{ progress.level_span }} XP
+    </progress>
+    <p>{{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}</p>
+  </section>
+
+  <section class="dashboard-stats" aria-label="Learning stats">
+    <div class="dashboard-stat"><strong>{{ daily_goal.earned_xp }}</strong><span>XP today</span></div>
+    <div class="dashboard-stat"><strong>{{ daily_goal.target_xp }}</strong><span>daily goal</span></div>
+    <div class="dashboard-stat"><strong>{{ user.streak_days or 0 }}</strong><span>day streak</span></div>
+    <div class="dashboard-stat"><strong>{{ stats.lessons_done }}</strong><span>lessons done</span></div>
+    <div class="dashboard-stat"><strong>{{ stats.problems_solved }}</strong><span>problems solved</span></div>
+    <div class="dashboard-stat"><strong>{{ stats.submissions }}</strong><span>submissions</span></div>
+  </section>
+
+  <section class="dashboard-focus">
+    <h2>Continue learning</h2>
+    {% if current %}
+      <p class="dashboard-track">{{ current.track.title }}</p>
+      {% if current.unit %}<p>{{ current.unit.title }}</p>{% endif %}
+      {% if current.lesson %}
+        <div class="dashboard-lesson" data-lesson-id="{{ current.lesson.id }}">
+          <h3>{{ current.lesson.title }}</h3>
+          <p>{{ current.lesson.kind }} · {{ current.lesson.xp }} XP</p>
+          <a href="#lesson-{{ current.lesson.id }}" class="dashboard-action">Start lesson</a>
+        </div>
+      {% else %}
+        <p>Your track has no lesson queued yet.</p>
+      {% endif %}
+    {% else %}
+      <p>You have not joined a learning track yet.</p>
+      <a href="{{ url_for('onboarding.page') }}" class="dashboard-action">Choose a track</a>
+    {% endif %}
+  </section>
+
+  <section class="dashboard-goal">
+    <h2>Daily goal</h2>
+    <p>{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</p>
+    <form method="post" action="{{ url_for('profile.save_learning') }}">
+      <label for="daily-goal-xp">Target XP</label>
+      <select id="daily-goal-xp" name="daily_goal_xp">
+        {% for choice in goal_choices %}
+          <option value="{{ choice }}"{% if choice == user.daily_goal_xp %} selected{% endif %}>{{ choice }} XP</option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="preferred_language" value="{{ user.preferred_language or '' }}">
+      <input type="hidden" name="timezone" value="{{ user.timezone or 'UTC' }}">
+      <button type="submit">Save goal</button>
+    </form>
+  </section>
+
+  <section class="dashboard-activity">
+    <h2>Recent activity</h2>
+    {% if activity %}
+      <ul>
+        {% for row in activity %}
+          <li data-reason="{{ row.reason }}" data-ref="{{ row.ref }}">
+            <span>{{ row.label }}</span>
+            <strong>+{{ row.amount }} XP</strong>
+            <time datetime="{{ row.at.isoformat() }}">{{ row.at.strftime('%d %b') }}</time>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No activity yet. Complete your first lesson to start your history.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock content %}
+
+{% block js %}
+
+
+{% endblock js %}

@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for, render_template
+from flask import Flask
 import os 
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -11,6 +11,7 @@ from server.onboarding.routes import onboarding_bp
 from server.problems import problems_bp
 from server.learning.seed import register_cli
 from server.userprofile import profile_bp
+from server.dashboard import dashboard_bp
 
 load_dotenv()
 
@@ -31,12 +32,9 @@ app.register_blueprint(accounts_bp)
 app.register_blueprint(onboarding_bp)
 app.register_blueprint(problems_bp)
 app.register_blueprint(profile_bp)
+app.register_blueprint(dashboard_bp)
 register_cli(app)
 app.jinja_env.globals["current_user"] = current_user
-
-@app.route("/")
-def home(): 
-    return render_template("index.html")
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)

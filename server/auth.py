@@ -8,16 +8,18 @@ from .oauth import oauth, enabled_providers, OIDC_PROVIDERS, PROVIDERS
 from .profile import fetch_profile
 from .models import upsert_user, mark_welcome_sent, link_identity
 from .mailer import send_welcome_email
-from .session import is_safe_next, current_user, login_required
+from .session import current_user, is_safe_next, login_required
 
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login/")
 def login_page():
+    if current_user():
+        return redirect(url_for("dashboard.index"))
     return render_template(
         "login.html",
         providers=enabled_providers(),
-        next=request.args.get("next", "/"),
+        next=request.args.get("next", url_for("dashboard.index")),
     )
 
 def _authorize_redirect(provider):
@@ -32,10 +34,12 @@ def _authorize_redirect(provider):
 
 @auth_bp.route("/login/<provider>/")
 def login(provider):
+    if current_user():
+        return redirect(url_for("dashboard.index"))
     if provider not in current_app.config.get("ENABLED_PROVIDERS", []):
         abort(404)
     session.pop("oauth_link_user_id", None)      # a plain login is never a link
-    session["oauth_next"] = request.args.get("next", "/")
+    session["oauth_next"] = request.args.get("next", url_for("dashboard.index"))
     return _authorize_redirect(provider)
 
 @auth_bp.route("/connect/<provider>/", methods=["POST"])
@@ -104,7 +108,7 @@ def callback(provider):
             current_app.logger.warning("welcome email failed for user %s", user.id)
 
     # Read `next` before clear() wipes it, then rotate the session on login.
-    nxt = session.get("oauth_next", "/")
+    nxt = session.get("oauth_next", url_for("dashboard.index"))
     session.clear()
     session["user_id"] = user.id
     session.permanent = True
@@ -114,7 +118,7 @@ def callback(provider):
     if user.needs_questionnaire:
         return redirect(url_for("onboarding.page"))
 
-    return redirect(nxt if is_safe_next(nxt) else "/")
+    return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
