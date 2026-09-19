@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.exc import IntegrityError
 
 db = SQLAlchemy()
 
@@ -414,6 +415,37 @@ def set_user_password(user, raw):
     user.set_password(raw)
     db.session.commit()
     return user
+
+def link_identity(user, profile):
+    existing = db.session.execute(
+        db.select(OAuthIdentity).filter_by(
+            provider=profile["provider"],
+            provider_user_id=profile["provider_user_id"],
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return "already_linked" if existing.user_id == user.id else "taken"
+
+    same_provider = db.session.execute(
+        db.select(OAuthIdentity.id).filter_by(user_id=user.id, provider = profile["provider"])
+    ).first()
+    if same_provider is not None:
+        return "provider_in_use"
+
+    db.session.add(OAuthIdentity(
+        user_id = user.id,
+        provider=profile["provider"],
+        provider_user_id=profile["provider_user_id"],
+    ))
+    if not user.avatar_url and profile.get("avatar_url"):
+        user.avatar_url = profile["avatar_url"]
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return "taken"
+    return "linked"
 
 def unlink_identity(user, provider):
     db.session.execute(

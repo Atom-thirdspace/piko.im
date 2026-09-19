@@ -38,7 +38,8 @@ def signup():
 
     if request.method == "GET":
         return render_template(
-            "signup.html", interests=INTERESTS, errors={}, form={}, next=nxt
+            "signup.html", interests=INTERESTS, errors={}, form={}, next=nxt,
+            providers=enabled_providers(),
         )
 
     form = request.form
@@ -55,7 +56,8 @@ def signup():
 
     if errors:
         return render_template(
-            "signup.html", interests=INTERESTS, errors=errors, form=form, next=nxt
+            "signup.html", interests=INTERESTS, errors=errors, form=form, next=nxt,
+            providers=enabled_providers(),
         ), 400
 
     user = create_email_user(

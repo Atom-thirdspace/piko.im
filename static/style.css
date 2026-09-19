@@ -194,6 +194,8 @@ img {
 .auth-form button { margin-top: .8rem; padding: .7rem; cursor: pointer; }
 .oauth-btn { display: block; padding: .7rem; margin-top: .5rem;
              text-align: center; text-decoration: none; border: 1px solid currentColor; }
+.oauth-hackclub { background: #ec3750; border-color: #ec3750; color: #fff; }
+.oauth-discord { background: #5865f2; border-color: #5865f2; color: #fff; }
 .auth-divider { margin: 1.4rem 0 .6rem; text-align: center; opacity: .6; }
 .auth-alt { margin-top: 1.4rem; text-align: center; }
 .field-error { color: #c0392b; font-size: .85rem; margin: 0 0 .4rem; }
@@ -279,3 +281,16 @@ img {
 .topnav { display: flex; align-items: center; gap: 1rem; justify-content: flex-end;
           max-width: 640px; margin: 1rem auto 0; padding: 0 1rem; font-size: .9rem; }
 .topnav a { color: inherit; }
+.settings-connect-intro { margin: 1rem 0 .4rem; }
+.settings-connect { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                    gap: .5rem; }
+.settings-connect form { margin: 0; }
+.settings-connect .oauth-btn { width: 100%; margin: 0; font: inherit; cursor: pointer;
+                               background: transparent; }
+.settings-connect .oauth-hackclub { background: #ec3750; color: #fff; }
+.settings-connect .oauth-discord { background: #5865f2; color: #fff; }
+.provider-dot { flex: 0 0 auto; width: .6rem; height: .6rem; border-radius: 50%; background: #999; }
+.provider-dot.provider-hackclub { background: #ec3750; }
+.provider-dot.provider-discord { background: #5865f2; }
+.provider-dot.provider-github { background: #24292f; }
+.provider-dot.provider-google { background: #4285f4; }

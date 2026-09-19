@@ -41,4 +41,14 @@ def fetch_profile(provider, client , token):
             ),
         }
 
+    if provider == "hackclub":
+        info = token.get("userinfo") or client.get("api/v1/me", token=token).json()
+        return {
+            "provider": "hackclub",
+            "provider_user_id": str(info.get("sub") or info.get("id")),
+            "email": info.get("email"),
+            "name": info.get("name") or info.get("nickname") or info.get("email"),
+            "avatar_url": info.get("picture"),      # not part of the documented claims
+        }    
+
     raise ValueError(f"Unsupported provider: {provider}")

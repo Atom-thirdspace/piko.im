@@ -29,6 +29,15 @@ PROVIDERS = {
             "client_kwargs": {"scope": "identify email"},
         },
     },
+    "hackclub": {
+        "label": "Hack Club",
+        "register": {
+            "server_metadata_url": "https://auth.hackclub.com/.well-known/openid-configuration",
+            "api_base_url": "https://auth.hackclub.com/",     # for the /api/v1/me fallback
+            "client_kwargs": {"scope": "openid profile email"},
+        },
+    },
+
 }
 
 
@@ -56,3 +65,7 @@ def enabled_providers():
         (name, PROVIDERS[name]["label"])
         for name in current_app.config.get("ENABLED_PROVIDERS",[])
     ]
+OIDC_PROVIDERS = {
+    name for name, cfg in PROVIDERS.items()
+    if "server_metadata_url" in cfg["register"]
+}

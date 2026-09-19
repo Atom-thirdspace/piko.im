@@ -121,7 +121,9 @@
       <ul class="settings-list">
         {% for identity in identities %}
           <li>
-            <span>{{ identity.provider.title() }}</span>
+            <span class="provider-dot provider-{{ identity.provider }}"></span>
+            <span>{{ provider_labels.get(identity.provider, identity.provider.title()) }}</span>
+            <span class="settings-hint">connected {{ identity.created_at.strftime('%d %b %Y') }}</span>
             {% if can_unlink %}
               <form method="post"
                     action="{{ url_for('profile.unlink', provider=identity.provider) }}">
@@ -134,7 +136,22 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p class="settings-hint">No provider accounts connected.</p>
+      <p class="settings-hint">You sign in with email and password only.</p>
+    {% endif %}
+
+    {% if connectable %}
+      <p class="settings-hint settings-connect-intro">
+        Connect another account so you can sign in with it too.
+      </p>
+      <div class="settings-connect">
+        {% for name, label in connectable %}
+          <form method="post" action="{{ url_for('auth.connect', provider=name) }}">
+            <button type="submit" class="oauth-btn oauth-{{ name }}">
+              Connect {{ label }}
+            </button>
+          </form>
+        {% endfor %}
+      </div>
     {% endif %}
   </section>
 

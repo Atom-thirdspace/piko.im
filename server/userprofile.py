@@ -15,6 +15,7 @@ from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS,
                          validate_timezone, validate_username)
 
 profile_bp = Blueprint("profile", __name__)
+from .oauth import PROVIDERS, enabled_providers
 
 
 # --------------------------------------------------------------------------- #
@@ -112,6 +113,7 @@ def _render_settings(errors=None, form=None, status=200):
     identities = db.session.execute(
         db.select(OAuthIdentity).where(OAuthIdentity.user_id == user.id)
     ).scalars().all()
+    linked = {identity.provider for identity in identities}
 
     return render_template(
         "settings.html",
@@ -123,7 +125,9 @@ def _render_settings(errors=None, form=None, status=200):
         timezones=sorted(set(COMMON_TIMEZONES + [user.timezone or "UTC"])),
         goals=DAILY_GOAL_CHOICES,
         identities=identities,
-        # Don't let someone strand themselves with no way back in.
+        provider_labels={name: cfg["label"] for name, cfg in PROVIDERS.items()},
+        connectable=[(name, label) for name, label in enabled_providers()
+                     if name not in linked],        # Don't let someone strand themselves with no way back in.
         can_unlink=bool(user.password_hash) or len(identities) > 1,
     ), status
 
@@ -229,7 +233,8 @@ def unlink(provider):
         return redirect(url_for("profile.settings"))
 
     unlink_identity(user, provider)
-    flash("%s disconnected." % provider.title(), "success")
+    flash("%s disconnected." % PROVIDERS.get(provider, {}).get("label", provider.title()),
+          "success")
     return redirect(url_for("profile.settings"))
 
 
