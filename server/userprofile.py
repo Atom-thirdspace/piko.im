@@ -10,7 +10,8 @@ from .progress import level_progress
 from .session import current_user, login_required
 from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS,
                          validate_avatar_url, validate_daily_goal,
-                         validate_display_name, validate_interest,
+                         validate_display_name, clean_interests,
+                         validate_interests,
                          validate_language, validate_password_change,
                          validate_timezone, validate_username)
 
@@ -119,7 +120,7 @@ def _render_settings(errors=None, form=None, status=200):
         "settings.html",
         user=user,
         errors=errors or {},
-        form=form or {},
+        form=form if form is not None else request.form,
         interests=INTERESTS,
         languages=[(key, lang.label) for key, lang in LANGUAGES.items()],
         timezones=sorted(set(COMMON_TIMEZONES + [user.timezone or "UTC"])),
@@ -147,11 +148,11 @@ def save_profile():
 
     name = (form.get("name") or "").strip()
     username = (form.get("username") or "").strip().lower()
-    interest = form.get("interest")
+    interests = clean_interests(form.getlist("interest"))
     avatar_url = (form.get("avatar_url") or "").strip()
 
     for field, err in (("name", validate_display_name(name)),
-                       ("interest", validate_interest(interest)),
+                       ("interest", validate_interests(interests)),
                        ("avatar_url", validate_avatar_url(avatar_url))):
         if err:
             errors[field] = err
@@ -166,7 +167,7 @@ def save_profile():
     if errors:
         return _render_settings(errors, form, 400)
 
-    update_profile(user, name, username, interest, avatar_url)
+    update_profile(user, name, username, interests, avatar_url)
     flash("Profile updated.", "success")
     return redirect(url_for("profile.settings"))
 

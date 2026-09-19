@@ -22,15 +22,17 @@
   </main>
 {% endblock content %}
 
-{% macro pager(p, endpoint, **kw) %}
+{# Jinja macros can't declare **kwargs; the implicit `kwargs` catches the
+   extra filter arguments the callers pass through. #}
+{% macro pager(p, endpoint) %}
   {% if p.pages > 1 %}
     <p class="admin-pager">
       {% if p.page > 1 %}
-        <a href="{{ url_for(endpoint, page=p.page - 1, **kw) }}">&larr; Newer</a>
+        <a href="{{ url_for(endpoint, page=p.page - 1, **kwargs) }}">&larr; Newer</a>
       {% endif %}
       <span>Page {{ p.page }} of {{ p.pages }} &middot; {{ p.total }} rows</span>
       {% if p.page < p.pages %}
-        <a href="{{ url_for(endpoint, page=p.page + 1, **kw) }}">Older &rarr;</a>
+        <a href="{{ url_for(endpoint, page=p.page + 1, **kwargs) }}">Older &rarr;</a>
       {% endif %}
     </p>
   {% endif %}

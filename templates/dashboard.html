@@ -9,7 +9,8 @@
   <header class="dashboard-header">
     <div>
       <h1>Welcome, {{ user.name or user.username }}</h1>
-      <p>@{{ user.username }}{% if user.interest %} · {{ user.interest }}{% endif %}</p>
+      {% set focus = user.interest_keys | interest_labels %}
+      <p>@{{ user.username }}{% if focus %} · {{ focus | join(', ') }}{% endif %}</p>
     </div>
     {% if user.avatar_url %}
       <img class="dashboard-avatar" src="{{ user.avatar_url }}" alt="{{ user.name or user.username }}">

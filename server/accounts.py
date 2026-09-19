@@ -5,7 +5,7 @@ from flask import (
     request, session, url_for,
 )
 from .devices import notify_new_device, remember_device
-from .oauth import enabled_providers
+from .oauth import enabled_providers, PROVIDERS
 from .mailer import send_verification_email
 from .models import (
     complete_profile, create_email_user, find_by_email, find_by_login,
@@ -14,7 +14,8 @@ from .models import (
 )
 from .session import current_user, is_safe_next, login_required
 from .tokens import make_verify_token, read_verify_token
-from .validators import INTERESTS, INTEREST_KEYS, validate_signup, validate_username
+from .validators import (INTERESTS, clean_interests, validate_interests,
+                         validate_signup, validate_username)
 
 accounts_bp = Blueprint("accounts", __name__)
 
@@ -66,7 +67,8 @@ def signup():
 
     if request.method == "GET":
         return render_template(
-            "signup.html", interests=INTERESTS, errors={}, form={}, next=nxt,
+            "signup.html", interests=INTERESTS, errors={}, form=request.form,
+            next=nxt,
             providers=enabled_providers(),
         )
 
@@ -77,9 +79,10 @@ def signup():
     if errors.get("email"):
         existing = find_by_email((form.get("email") or "").strip().lower())
         if existing is not None and not existing.password_hash:
+            used = ", ".join(PROVIDERS[i.provider]["label"] for i in existing.identities)
             errors["email"] = (
-                "You already signed up with Google or GitHub. "
-                "Sign in that way instead."
+                "You already signed up with %s. Sign in that way instead."
+                % (used or "a connected account")
             )
 
     if errors:
@@ -92,7 +95,7 @@ def signup():
         email=form["email"].strip(),
         username=form["username"].strip(),
         name=form["name"].strip(),
-        interest=form["interest"],
+        interests=clean_interests(form.getlist("interest")),
         password=form["password"],
     )
 
@@ -211,9 +214,10 @@ def onboarding():
     if err:
         errors["username"] = err
 
-    interest = request.form.get("interest")
-    if interest not in INTEREST_KEYS:
-        errors["interest"] = "Pick what you want to focus on."
+    interests = clean_interests(request.form.getlist("interest"))
+    err = validate_interests(interests)
+    if err:
+        errors["interest"] = err
 
     if errors:
         return render_template(
@@ -221,7 +225,7 @@ def onboarding():
             user=user, next=nxt,
         ), 400
 
-    complete_profile(user, username, interest)
+    complete_profile(user, username, interests)
     if user.needs_questionnaire:
         return redirect(url_for("onboarding.page"))
     return redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))

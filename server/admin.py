@@ -119,7 +119,7 @@ def users():
         stmt = stmt.where(User.password_hash.is_(None))
 
     rows, pager = _paginate(stmt, _page())
-    return render_template("admin/users.html", users=rows, pager=pager, q=q,
+    return render_template("admin/users.html", users=rows, pager_=pager, q=q,
                            only=only, admin_set=admin_emails())
 
 @admin_bp.route("/users/<int:user_id>/")
@@ -250,7 +250,7 @@ def problems():
                               db.func.lower(Problem.title).like(like)))
     rows, pager = _paginate(stmt, _page())
     counts = {p.id: len(p.tests) for p in rows}
-    return render_template("admin/problems.html", problems=rows, pager=pager,
+    return render_template("admin/problems.html", problems=rows, pager_=pager,
                            q=q, test_counts=counts)
 
 @admin_bp.route("/problems/new", methods=["GET", "POST"])
@@ -355,7 +355,7 @@ def submissions():
     verdict_options = db.session.execute(
         db.select(Submission.verdict).distinct().order_by(Submission.verdict)
     ).scalars().all()
-    return render_template("admin/submissions.html", submissions=rows, pager=pager,
+    return render_template("admin/submissions.html", submissions=rows, pager_=pager,
                            verdict=verdict, username=username,
                            verdict_options=verdict_options)
 
@@ -445,4 +445,4 @@ def system():
 def audit():
     rows, pager = _paginate(
         db.select(AdminAction).order_by(AdminAction.created_at.desc()), _page())
-    return render_template("admin/audit.html", action=rows, pager = pager)
+    return render_template("admin/audit.html", actions=rows, pager_=pager)

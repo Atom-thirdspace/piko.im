@@ -30,6 +30,8 @@ COMMON_TIMEZONES= [
     "America/Los_Angeles", "America/Sao_Paulo", "Australia/Sydney",
 ]
 INTEREST_KEYS = {key for key, _ in INTERESTS}
+INTEREST_LABELS = dict(INTERESTS)
+MAX_INTERESTS = 3
 
 def validate_username(username, taken_check):
     u = (username or "").strip().lower()
@@ -57,10 +59,26 @@ def validate_avatar_url(url):
         return "Enter an https:// image URL, or leave it blank."
     return None   
 
-def validate_interest(key):
-    if key not in INTEREST_KEYS:
-        return "Pick what you want to focus on."
-    return None  
+def clean_interests(raw):
+    """Drop unknown keys and duplicates, keep the order the form sent."""
+    seen, out = set(), []
+    for key in raw or []:
+        if key in INTEREST_KEYS and key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
+
+def validate_interests(keys):
+    if not keys:
+        return "Pick at least one thing to focus on."
+    if len(keys) > MAX_INTERESTS:
+        return "Pick up to %d." % MAX_INTERESTS
+    return None
+
+
+def interest_labels(keys):
+    return [INTEREST_LABELS[k] for k in (keys or []) if k in INTEREST_LABELS]
 
 def validate_daily_goal(raw):
     try:
@@ -117,8 +135,9 @@ def validate_signup(form, email_taken, username_taken):
     if not (1 <= len(name) <= 80):
         errors["name"] = "Enter your name"
 
-    if form.get("interest") not in INTEREST_KEYS:
-        errors["interest"] = "Pick what you want to focus on."
+    err = validate_interests(clean_interests(form.getlist("interest")))
+    if err:
+        errors["interest"] = err
 
     password = form.get("password") or ""
     if len(password) < 8:

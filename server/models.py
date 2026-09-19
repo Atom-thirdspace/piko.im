@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import ARRAY
 
 db = SQLAlchemy()
 
@@ -20,7 +22,9 @@ class User(db.Model):
     name = db.Column(db.String(255))
     username = db.Column(db.String(32), unique = True, index= True)
     password_hash = db.Column(db.Text)
-    interest = db.Column(db.String(64))
+    interest = db.Column(db.String(64))          # first pick; kept for topic matching
+    interests = db.Column(ARRAY(db.String(64)), nullable=False,
+                          server_default="{}", default=list)
     avatar_url = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
@@ -51,8 +55,15 @@ class User(db.Model):
         return check_password_hash(self.password_hash, raw)
     
     @property
+    def interest_keys(self):
+        """The array, falling back to the legacy single column."""
+        if self.interests:
+            return list(self.interests)
+        return [self.interest] if self.interest else []
+
+    @property
     def needs_onboarding(self):
-        return not self.username or not self.interest
+        return not self.username or not self.interest_keys
 
     @property
     def needs_questionnaire(self):
@@ -204,21 +215,27 @@ def find_by_login(identifier):
         return find_by_email(ident)
     return find_by_username(ident)
 
-def create_email_user(email,username,name,interest,password):
+def set_interests(user, keys):
+    """Always assign a new list - SQLAlchemy doesn't track in-place mutation of a
+    plain ARRAY column, so user.interests.append(...) would not persist."""
+    user.interests = list(keys)
+    user.interest = keys[0] if keys else None
+
+def create_email_user(email,username,name,interests,password):
     user = User(
         email=email.lower(),
         username=username.lower(),
         name=name,
-        interest=interest,
     )
+    set_interests(user, interests)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
     return user
 
-def complete_profile(user, username, interest):
+def complete_profile(user, username, interests):
     user.username = username.lower()
-    user.interest = interest
+    set_interests(user, interests)
     db.session.commit()
     return user
 
@@ -429,10 +446,10 @@ class XpEvent(db.Model):
 
     user = db.relationship("User")
 
-def update_profile(user, name, username,interest, avatar_url):
+def update_profile(user, name, username, interests, avatar_url):
     user.name = name.strip()
     user.username = username.strip().lower()
-    user.interest = interest
+    set_interests(user, interests)
     user.avatar_url = (avatar_url or "").strip() or None
     db.session.commit()
     return user

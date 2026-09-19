@@ -1,7 +1,9 @@
 {% extends "base-dashboard.html" %}
+{% from "_interests.html" import interest_picker %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='choices.js') }}"></script>
 {% endblock head %}
 
 {% block content %}
@@ -26,14 +28,9 @@
              value="{{ form.get('username', user.username or '') }}" required>
       {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
 
-      <label for="interest">Focus</label>
-      <select id="interest" name="interest" required>
-        {% for key, label in interests %}
-          <option value="{{ key }}"
-            {{ 'selected' if form.get('interest', user.interest) == key }}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      {% if errors.interest %}<p class="field-error">{{ errors.interest }}</p>{% endif %}
+      {{ interest_picker(interests,
+                         form.getlist('interest') or user.interest_keys,
+                         error=errors.interest, legend="Focus") }}
 
       <label for="avatar_url">Avatar URL <span class="settings-hint">(optional)</span></label>
       <input id="avatar_url" name="avatar_url" type="url"

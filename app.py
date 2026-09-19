@@ -13,9 +13,12 @@ from server.learning.seed import register_cli
 from server.userprofile import profile_bp
 from server.dashboard import dashboard_bp
 from server.admin import admin_bp, is_admin
+from server.validators import interest_labels
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
+base = os.environ.get("OAUTH_REDIRECT_BASE" , "s")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev")
@@ -38,6 +41,12 @@ app.register_blueprint(admin_bp)
 register_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 app.jinja_env.globals["is_admin"] = is_admin
+app.jinja_env.filters["interest_labels"] = interest_labels
+
+
+if base.startswith("https://"):
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+    app.config["PREFERRED_URL_SCHEME"] = "https"
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)

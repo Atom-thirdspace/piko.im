@@ -1,0 +1,17 @@
+{% macro interest_picker(interests, chosen, max=3, error=None,
+                         legend="What do you want to focus on?") %}
+  <fieldset class="choice-group" data-max-choices="{{ max }}">
+    <legend>{{ legend }}
+      <span class="settings-hint">pick up to {{ max }}</span></legend>
+    <div class="choice-grid">
+      {% for key, label in interests %}
+        <label class="choice">
+          <input type="checkbox" name="interest" value="{{ key }}"
+                 {{ 'checked' if key in chosen }}>
+          <span>{{ label }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+  </fieldset>
+{% endmacro %}

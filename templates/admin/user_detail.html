@@ -13,7 +13,8 @@
         <table class="admin-table">
         <tr><td>ID</td><td>{{ u.id }}</td></tr>
         <tr><td>Name</td><td>{{ u.name }}</td></tr>
-        <tr><td>Focus</td><td>{{ u.interest }}</td></tr>
+        <tr><td>Focus</td>
+            <td>{{ (u.interest_keys | interest_labels | join(', ')) or '—' }}</td></tr>
         <tr><td>Level</td><td>{{ progress.level }} ({{ u.xp_total }} XP)</td></tr>
         <tr><td>Streak</td><td>{{ u.streak_days }} (best {{ u.streak_best }})</td></tr>
         <tr><td>Timezone</td><td>{{ u.timezone }}</td></tr>

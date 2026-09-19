@@ -32,17 +32,23 @@ def fetch_profile(provider, client , token):
 
     if provider == "discord":
         user = client.get("users/@me", token=token).json()
+        uid = str(user["id"])
         avatar = user.get("avatar")
+        if avatar:
+            # Animated avatars are served as .gif; asking for .png gives a 404.
+            ext = "gif" if avatar.startswith("a_") else "png"
+            avatar_url = f"https://cdn.discordapp.com/avatars/{uid}/{avatar}.{ext}?size=256"
+        else:
+            # Since the discriminator went away, the default avatar keys off the id.
+            avatar_url = f"https://cdn.discordapp.com/embed/avatars/{(int(uid) >> 22) % 6}.png"
+
         return {
-            "provider" : "discord",
-            "provider_user_id" : str(user["id"]),
-            "email" : user.get("email"),
-            "name" : user.get("username"),
-            "avatar_url": (
-                f"https://cdn.discordapp.com/avatars/{user['id']}/{avatar}.png"
-                if avatar
-                else None
-            ),
+            "provider": "discord",
+            "provider_user_id": uid,
+            "email": user.get("email"),
+            # global_name is the display name; username is the @handle.
+            "name": user.get("global_name") or user.get("username"),
+            "avatar_url": avatar_url,
             "email_verified": bool(user.get("verified")),
         }
 

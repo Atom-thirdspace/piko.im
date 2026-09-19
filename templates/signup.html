@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% from "_interests.html" import interest_picker %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='choices.js') }}"></script>
 {% endblock head %}
 
 {% block content %}
@@ -26,14 +28,7 @@
            value="{{ form.get('email', '') }}" required>
     {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
 
-    <label for="interest">What do you want to focus on?</label>
-    <select id="interest" name="interest" required>
-      <option value="" disabled {{ 'selected' if not form.get('interest') }}>Choose one...</option>
-      {% for key, label in interests %}
-        <option value="{{ key }}" {{ 'selected' if form.get('interest') == key }}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    {% if errors.interest %}<p class="field-error">{{ errors.interest }}</p>{% endif %}
+    {{ interest_picker(interests, form.getlist('interest'), error=errors.interest) }}
 
     <label for="password">Password</label>
     <input id="password" name="password" type="password"

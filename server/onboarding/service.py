@@ -1,8 +1,10 @@
 """The questionnaire state machine: answers in, enrollment out."""
 
 from ..learning.catalog import TRACKS_BY_SLUG
-from ..models import (Enrollment, Lesson, OnboardingSession, Track, Unit, User,_utcnow,db)
+from ..models import (Enrollment, Lesson, OnboardingSession, Track, Unit, User,_utcnow,db,
+                      set_interests)
 from ..progress import level_progress
+from ..validators import MAX_INTERESTS, clean_interests
 from . import placement
 from .recommend import recommend
 from .steps import (AnswerError, STEPS_BY_KEY, is_complete, next_step, steps_for,
@@ -190,7 +192,11 @@ def complete(user, track_slug=None):
     user.daily_goal_xp = rec["daily_goal_xp"]
     user.preferred_language = answers.get("language") or user.preferred_language
     if answers.get("topics"):
-        user.interest = answers["topics"][0]
+        # Topic keys and interest keys are different vocabularies; keep the
+        # overlap (arrays, trees, dp) and leave the rest to the track choice.
+        merged = clean_interests(user.interest_keys + answers["topics"])[:MAX_INTERESTS]
+        if merged:
+            set_interests(user, merged)
     user.onboarded_at = _utcnow()
 
     sess.completed_at = _utcnow()
