@@ -1,0 +1,78 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+  <h1>{{ p.slug if p else 'New problem' }}</h1>
+
+  <form class="auth-form" method="post">
+    <label for="slug">Slug</label>
+    <input id="slug" name="slug" value="{{ form.get('slug', p.slug if p else '') }}" required>
+    {% if errors.slug %}<p class="field-error">{{ errors.slug }}</p>{% endif %}
+
+    <label for="title">Title</label>
+    <input id="title" name="title" value="{{ form.get('title', p.title if p else '') }}" required>
+    {% if errors.title %}<p class="field-error">{{ errors.title }}</p>{% endif %}
+
+    <label for="statement_md">Statement (Markdown)</label>
+    <textarea id="statement_md" name="statement_md" rows="14">{{ form.get('statement_md', p.statement_md if p else '') }}</textarea>
+
+    <label for="difficulty">Difficulty</label>
+    <select id="difficulty" name="difficulty">
+      {% for d in ['easy', 'medium', 'hard'] %}
+        <option value="{{ d }}" {{ 'selected' if (p.difficulty if p else 'easy') == d }}>{{ d }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="topic">Topic</label>
+    <input id="topic" name="topic" value="{{ p.topic if p else '' }}">
+
+    <label for="xp">XP</label>
+    <input id="xp" name="xp" type="number" value="{{ p.xp if p else 10 }}">
+
+    <label for="time_limit_sec">Time limit (s)</label>
+    <input id="time_limit_sec" name="time_limit_sec" type="number" step="0.5"
+           value="{{ p.time_limit_sec if p else 2.0 }}">
+
+    <label for="memory_mb">Memory (MB)</label>
+    <input id="memory_mb" name="memory_mb" type="number" value="{{ p.memory_mb if p else 256 }}">
+
+    <button type="submit">Save problem</button>
+  </form>
+
+  {% if p %}
+    <section>
+      <h2>Test cases ({{ p.tests|length }})</h2>
+      {% for t in p.tests %}
+        <div class="admin-test">
+          <div><b>#{{ loop.index }}</b>
+            {% if t.is_sample %}<span class="admin-badge">sample</span>{% endif %}</div>
+          <pre>{{ t.stdin }}</pre>
+          <pre>{{ t.expected_stdout }}</pre>
+          <form method="post"
+                action="{{ url_for('admin.problem_delete_test', problem_id=p.id, test_id=t.id) }}">
+            <button class="settings-link" type="submit">Delete</button>
+          </form>
+        </div>
+      {% else %}
+        <p class="admin-empty">No tests - submissions to this problem return 503.</p>
+      {% endfor %}
+
+      <form class="auth-form" method="post"
+            action="{{ url_for('admin.problem_add_test', problem_id=p.id) }}">
+        <label for="stdin">stdin</label>
+        <textarea id="stdin" name="stdin" rows="4"></textarea>
+        <label for="expected_stdout">expected stdout</label>
+        <textarea id="expected_stdout" name="expected_stdout" rows="4"></textarea>
+        <label><input type="checkbox" name="is_sample"> Show as a sample</label>
+        <button type="submit">Add test</button>
+      </form>
+    </section>
+
+    <section class="admin-danger">
+      <h2>Delete problem</h2>
+      <form class="admin-inline" method="post"
+            action="{{ url_for('admin.problem_delete', problem_id=p.id) }}">
+        <input name="confirm" placeholder="type {{ p.slug }}" autocomplete="off" required>
+        <button class="settings-danger-btn" type="submit">Delete</button>
+      </form>
+    </section>
+  {% endif %}
+{% endblock admin_content %}

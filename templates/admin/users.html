@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+{% block admin_content %}
+  <h1>Users</h1>
+
+  <form class="admin-filters" method="get">
+    <input name="q" value="{{ q }}" placeholder="email, username or name">
+    <select name="filter">
+      <option value="">Everyone</option>
+      <option value="unverified" {{ 'selected' if only == 'unverified' }}>Unverified</option>
+      <option value="oauth" {{ 'selected' if only == 'oauth' }}>No password (OAuth only)</option>
+    </select>
+    <button type="submit">Search</button>
+  </form>
+
+  <table class="admin-table">
+    <tr><th>User</th><th>Email</th><th>XP</th><th>Streak</th><th>Joined</th><th></th></tr>
+    {% for u in users %}
+      <tr>
+        <td><a href="{{ url_for('admin.user_detail', user_id=u.id) }}">
+          {{ u.username or '(no username)' }}</a>
+          {% if u.email|lower in admin_set %}<span class="admin-badge">admin</span>{% endif %}
+        </td>
+        <td>{{ u.email }} {% if not u.email_verified %}
+          <span class="admin-badge warn">unverified</span>{% endif %}</td>
+        <td>{{ u.xp_total }}</td>
+        <td>{{ u.streak_days }}</td>
+        <td>{{ u.created_at.strftime('%d %b %Y') }}</td>
+        <td><a href="{{ url_for('admin.user_detail', user_id=u.id) }}">Open</a></td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  {{ pager(pager_, 'admin.users', q=q, filter=only) }}
+{% endblock admin_content %}

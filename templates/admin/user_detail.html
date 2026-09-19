@@ -1,0 +1,99 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+    <h1>{{ u.username or u.email}}</h1>
+    <p class="admin-sub">
+        {{u.email}}
+        {% if is_target_admin %}<span class="admin-badge">admin</span>{% endif %}
+        {% if not u.email_verified %}<span class="admin-badge warn">unverified</span>{% endif %}
+  </p>
+
+  <div class="admin-cols">
+    <section>
+        <h2>Account</h2>
+        <table class="admin-table">
+        <tr><td>ID</td><td>{{ u.id }}</td></tr>
+        <tr><td>Name</td><td>{{ u.name }}</td></tr>
+        <tr><td>Focus</td><td>{{ u.interest }}</td></tr>
+        <tr><td>Level</td><td>{{ progress.level }} ({{ u.xp_total }} XP)</td></tr>
+        <tr><td>Streak</td><td>{{ u.streak_days }} (best {{ u.streak_best }})</td></tr>
+        <tr><td>Timezone</td><td>{{ u.timezone }}</td></tr>
+        <tr><td>Password</td><td>{{ 'set' if u.password_hash else 'none' }}</td></tr>
+        <tr><td>Joined</td><td>{{ u.created_at.strftime('%d %b %Y %H:%M') }}</td></tr>
+        <tr><td>Last login</td><td>{{ u.last_login_at.strftime('%d %b %Y %H:%M') }}</td></tr>
+        </table>
+    </section>
+
+    <section>
+        <h2>Email</h2>
+        {% if not u.email_verified %}
+        <form method="post" action="{{ url_for('admin.user_verify', user_id=u.id) }}">
+            <button type="submit">Mark verified</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('admin.user_send_verification', user_id=u.id) }}">
+            <button type="submit">Send confirmation email</button>
+      </form>
+
+      <h2>XP</h2>
+      <form class="admin-inline" method="post" action="{{ url_for('admin.user_xp', user_id=u.id) }}">
+        <input name="amount" type="number" placeholder="+50 or -50" required>
+        <input name="note" placeholder="why">
+        <button type="submit">Apply</button>
+      </form>
+
+      <h2>Streak</h2>
+      <form method="post" action="{{ url_for('admin.user_reset_streak', user_id=u.id) }}">
+        <button type="submit">Reset streak to 0</button>
+      </form>
+    </section>
+
+    <section>
+        <h2>Connected Accounts</h2>
+        {% for i in identities %}
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.user_unlink', user_id=u.id, provider=i.provider) }}">
+          <span>{{ provider_labels.get(i.provider, i.provider) }}</span>
+          <button type="submit">Disconnect</button>
+        </form>
+      {% else %}
+        <p class="admin-empty">None.</p>
+      {% endfor %}
+    </section>
+  </div>
+
+  <section>
+    <h2>Recent submissions</h2>
+    <table class="admin-table">
+        {% for s in submissions %}
+        <tr>
+          <td><a href="{{ url_for('admin.submission_detail', sub_id=s.id) }}">#{{ s.id }}</a></td>
+          <td>{{ s.problem.slug if s.problem }}</td>
+          <td class="verdict-{{ s.verdict }}">{{ s.verdict }}</td>
+          <td>{{ s.passed }}/{{ s.total }}</td>
+          <td>{{ s.created_at.strftime('%d %b %H:%M') }}</td>
+        </tr>
+        {% else %}
+            <tr><td class="admin-empty">No submissions.</td></tr>
+        {% endfor %}
+    </table>
+  <h2>Recent XP</h2>
+    <table class="admin-table">
+      {% for e in xp_events %}
+        <tr><td>{{ '%+d'|format(e.amount) }}</td><td>{{ e.reason }}</td>
+            <td>{{ e.ref }}</td><td>{{ e.created_at.strftime('%d %b %H:%M') }}</td></tr>
+      {% else %}
+        <tr><td class="admin-empty">Nothing yet.</td></tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <section class="admin-danger">
+    <h2>Delete account</h2>
+    <p>Erases their XP, streak, submissions and progress. Can't be undone.</p>
+    <form class="admin-inline" method="post"
+          action="{{ url_for('admin.user_delete', user_id=u.id) }}">
+      <input name="confirm" placeholder="type {{ u.username }}" autocomplete="off" required>
+      <button class="settings-danger-btn" type="submit">Delete</button>
+    </form>
+  </section>
+{% endblock admin_content %}

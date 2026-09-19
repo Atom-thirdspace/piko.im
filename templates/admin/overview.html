@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+    <h1>Overview</h1>
+
+    <div class="admin-titles">
+        <div class="admin-tile"><b>{{ counts.users }}</b><span>users</span></div>
+        <div class="admin-tile"><b>{{ counts.unverified }}</b><span>unverified</span></div>
+        <div class="admin-tile"><b>{{ counts.problems }}</b><span>problems</span></div>
+        <div class="admin-tile"><b>{{ counts.submissions }}</b><span>submissions</span></div>
+        <div class="admin-tile"><b>{{ counts.accepted }}</b><span>accepted</span></div>
+        <div class="admin-tile"><b>{{ counts.lessons_done }}</b><span>lessons done</span></div>
+  </div>
+
+  <div class="admin-cols">
+    <section>
+      <h2>Newest users</h2>
+      <table class="admin-table">
+        {% for u in recent_users %}
+          <tr>
+            <td><a href="{{ url_for('admin.user_detail', user_id=u.id) }}">
+              {{ u.username or u.email }}</a></td>
+            <td>{{ u.created_at.strftime('%d %b') }}</td>
+            <td>{{ '✓' if u.email_verified else '—' }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </section>
+
+    <section>
+        <h2>Latest submissions</h2>
+        <table class="admin-table">
+        {% for s in recent_subs %}
+          <tr>
+            <td><a href="{{ url_for('admin.submission_detail', sub_id=s.id) }}">#{{ s.id }}</a></td>
+            <td>{{ s.language }}</td>
+            <td class="verdict-{{ s.verdict }}">{{ s.verdict }}</td>
+            <td>{{ s.created_at.strftime('%d %b %H:%M') }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </section>
+
+    <section>
+        <h2>Verdict mix</h2>
+        <table class="admin-table">
+            {% for verdict, n in verdicts %}
+                <tr><td class="verdict-{{ verdict }}">{{ verdict }}</td><td>{{ n }}</td></tr>
+            {% endfor %}
+        </table>
+    </section>
+  </div>
+  {% endblock admin_content %}

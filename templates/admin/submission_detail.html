@@ -1,0 +1,22 @@
+{% extend "admin/base.html" %}
+{% block admin_content %}
+  <h1>Submission #{{ s.id }}</h1>
+    <p class="admin-sub">
+    {{ s.user.username if s.user }} &middot; {{ s.problem.slug if s.problem }} &middot;
+    {{ s.language }} &middot;
+    <span class="verdict-{{ s.verdict }}">{{ s.verdict }}</span>
+    ({{ s.passed }}/{{ s.total }}, {{ s.max_time_ms }}ms)
+    </p>
+
+  <form method="post" action="{{ url_for('admin.submission_rejudge', sub_id=s.id) }}">
+    <button type="submit">Re-judge against current tests</button>
+  </form>
+
+  {% if s.compile_output %}
+    <h2>Compile output</h2>
+    <pre class="admin-pre">{{ s.compile_output }}</pre>
+  {% endif %}
+
+  <h2>Source</h2>
+  <pre class="admin-pre">{{ s.source }}</pre>
+{% endblock admin_content %}

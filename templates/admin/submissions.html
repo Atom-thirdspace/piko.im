@@ -1,0 +1,34 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+{% block admin_content %}
+  <h1>Submissions</h1>
+
+  <form class="admin-filters" method="get">
+    <input name="user" value="{{ username }}" placeholder="username">
+    <select name="verdict">
+      <option value="">Any verdict</option>
+      {% for v in verdict_options %}
+        <option value="{{ v }}" {{ 'selected' if verdict == v }}>{{ v }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <table class="admin-table">
+    <tr><th>#</th><th>User</th><th>Problem</th><th>Lang</th>
+        <th>Verdict</th><th>Tests</th><th>When</th></tr>
+    {% for s in submissions %}
+      <tr>
+        <td><a href="{{ url_for('admin.submission_detail', sub_id=s.id) }}">{{ s.id }}</a></td>
+        <td>{{ s.user.username if s.user else '—' }}</td>
+        <td>{{ s.problem.slug if s.problem else '—' }}</td>
+        <td>{{ s.language }}</td>
+        <td class="verdict-{{ s.verdict }}">{{ s.verdict }}</td>
+        <td>{{ s.passed }}/{{ s.total }}</td>
+        <td>{{ s.created_at.strftime('%d %b %H:%M') }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  {{ pager(pager_, 'admin.submissions', verdict=verdict, user=username) }}
+{% endblock admin_content %}

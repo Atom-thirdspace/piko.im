@@ -1,0 +1,13 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+  <h1>System</h1>
+  <table class="admin-table">
+    {% for label, value, ok in checks %}
+      <tr>
+        <td>{{ label }}</td>
+        <td>{{ value }}</td>
+        <td>{{ 'ok' if ok else 'check this' }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% endblock admin_content %}

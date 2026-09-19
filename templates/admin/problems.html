@@ -1,0 +1,30 @@
+{% extends "admin/base.html"}
+{% from "admin/base.html" import pager %}
+{% block admin_content %}
+    <h1>Problems</h1>
+
+    <form class="admin-filters" method="get">
+        <input name="q" value="{{ q }}" placeholder="slug or title">
+        <button type="submit">Search</button>
+        <a class="admin-btn" href="{{ url_for('admin.problem_form') }}">New problem</a>
+    </form>
+
+    <table class="admin-table">
+    <tr><th>Slug</th><th>Title</th><th>Difficulty</th><th>Topic</th>
+        <th>XP</th><th>Tests</th></tr>
+    {% for p in problems %}
+      <tr>
+        <td><a href="{{ url_for('admin.problem_form', problem_id=p.id) }}">{{ p.slug }}</a></td>
+        <td>{{ p.title }}</td>
+        <td>{{ p.difficulty }}</td>
+        <td>{{ p.topic or '—' }}</td>
+        <td>{{ p.xp }}</td>
+        <td>{{ test_counts.get(p.id, 0) }}
+            {% if not test_counts.get(p.id) %}
+              <span class="admin-badge warn">unsolvable</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  {{ pager(pager_, 'admin.problems', q=q) }}
+{% endblock admin_content %}

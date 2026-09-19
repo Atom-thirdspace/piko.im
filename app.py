@@ -12,6 +12,7 @@ from server.problems import problems_bp
 from server.learning.seed import register_cli
 from server.userprofile import profile_bp
 from server.dashboard import dashboard_bp
+from server.admin import admin_bp, is_admin
 
 load_dotenv()
 
@@ -33,8 +34,10 @@ app.register_blueprint(onboarding_bp)
 app.register_blueprint(problems_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(admin_bp)
 register_cli(app)
 app.jinja_env.globals["current_user"] = current_user
+app.jinja_env.globals["is_admin"] = is_admin
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)

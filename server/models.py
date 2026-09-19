@@ -63,6 +63,19 @@ class User(db.Model):
         return self.email_verified_at is not None
 
 
+class AdminAction(db.Model):
+    __tablename__ = "admin_actions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"),
+                        index=True)
+    action = db.Column(db.String(64), nullable= False)
+    target = db.Column(db.String(120), nullable = False, default = "")
+    detail = db.Column(db.Text, nullable = False, default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    admin = db.relationship("User")
+
 class OAuthIdentity(db.Model):
     """One row per linked provider account, so one user can have several."""
 

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+{% endblock head %}
+
+{% block body_before_content %}
+  <nav class="admin-nav">
+    <span class="admin-brand">Piko admin</span>
+    {% for endpoint, label in admin_nav %}
+      <a href="{{ url_for(endpoint) }}"
+         class="{{ 'active' if admin_active == endpoint }}">{{ label }}</a>
+    {% endfor %}
+    <a class="admin-exit" href="{{ url_for('dashboard.index') }}">Back to app</a>
+  </nav>
+{% endblock body_before_content %}
+
+{% block content %}
+  <main class="admin">
+    {% block admin_content %}{% endblock admin_content %}
+  </main>
+{% endblock content %}
+
+{% macro pager(p, endpoint, **kw) %}
+  {% if p.pages > 1 %}
+    <p class="admin-pager">
+      {% if p.page > 1 %}
+        <a href="{{ url_for(endpoint, page=p.page - 1, **kw) }}">&larr; Newer</a>
+      {% endif %}
+      <span>Page {{ p.page }} of {{ p.pages }} &middot; {{ p.total }} rows</span>
+      {% if p.page < p.pages %}
+        <a href="{{ url_for(endpoint, page=p.page + 1, **kw) }}">Older &rarr;</a>
+      {% endif %}
+    </p>
+  {% endif %}
+{% endmacro %}

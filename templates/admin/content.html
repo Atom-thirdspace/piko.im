@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% block admin_content %}
+  <h1>Content</h1>
+
+  <form method="post" action="{{ url_for('admin.content_seed') }}">
+    <button type="submit">Re-run seed-catalog</button>
+    <span class="admin-hint">Idempotent: updates titles and positions, adds what's missing.</span>
+  </form>
+
+  {% if orphan_lessons %}
+    <p class="admin-warn">
+      {{ orphan_lessons|length }} code lesson(s) have no problem row yet:
+      {{ orphan_lessons|map(attribute='slug')|join(', ') }}
+    </p>
+  {% endif %}
+
+  {% for track in tracks %}
+    <section>
+      <h2>{{ track.title }} <span class="admin-hint">{{ track.slug }}</span></h2>
+      {% for unit in track.units %}
+        <h3>{{ unit.title }} <span class="admin-hint">{{ unit.level }} &middot; {{ unit.topic }}</span></h3>
+        <table class="admin-table">
+          {% for lesson in unit.lessons %}
+            <tr>
+              <td>{{ lesson.position + 1 }}</td>
+              <td>{{ lesson.title }}</td>
+              <td>{{ lesson.kind }}</td>
+              <td>{{ lesson.xp }} XP</td>
+              <td>{{ lesson.problem.slug if lesson.problem else '—' }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% endfor %}
+    </section>
+  {% endfor %}
+{% endblock admin_content %}
