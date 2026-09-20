@@ -132,3 +132,10 @@ header {
 body{
     margin-top: 10vh;
 }
+
+#logo {
+    position: fixed;
+    top: -4.5vh;
+    left: 2vw;
+    width: 10vw;
+}
