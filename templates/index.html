@@ -8,12 +8,13 @@
 {% block content %}
 <main>
     <img id="girl" src="https://cdn.hackclub.com/01a0a122-696b-7dc3-a917-137d052b5147/Untitled%20design%20(62).png" alt="">
-    <img id="logo" src="https://cdn.hackclub.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
     <a data-aos="fade-in" id="log" href="{{ url_for('auth.login_page') }}">
         <img id="login" src="https://cdn.hackclub.com/01a0a001-634a-7f66-b2e9-3716df2d76b5/Untitled%20design%20(56).avif" alt="">
         <p id="textl">Login</p>
     </a>
 <header>
+    <img id="logo" src="https://cdn.hackclub.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
+
 <a data-aos="fade-down" data-aos-delay="200" id="feature" href="#">Features</a>
 <a data-aos="fade-down" data-aos-delay="300" id="privace" href="#">Privacy</a>
 <a data-aos="fade-down" data-aos-delay="400" id="Blog" href="#">Blog</a>
@@ -23,21 +24,45 @@
 <div class="hero">
     <h1>
         <span data-aos="fade-up" data-aos-delay="200" class="highlight3">
-            Learn DSA 
+            Finally, DSA
         </span>
     </h1>
-    <h1>
-        <span data-aos="fade-up" data-aos-delay="400" class="highlight1">
-            <br>but
+    <h1 data-aos="fade-up" data-aos-delay="400" class="highlight1 line2">
+        <span>
+            that
         </span>
     </h1>
 
     <h1>
-        <span data-aos="fade-up" data-aos-delay="600" class="highlight">
-            <br><br>Gamified
-        </span>
-        <span class="highlight4">.</span>
-    </h1>
+    <span data-aos="fade-up" data-aos-delay="600" class="highlight line3">
+        feels Gamified
+
+        <svg class="pencil-line" viewBox="0 0 1000 30" preserveAspectRatio="none">
+            <defs>
+                <filter id="rough">
+                    <feTurbulence
+                        type="fractalNoise"
+                        baseFrequency="0.03"
+                        numOctaves="2"
+                        seed="3"
+                        result="noise"
+                    />
+                    <feDisplacementMap
+                        in="SourceGraphic"
+                        in2="noise"
+                        scale="2"
+                    />
+                </filter>
+            </defs>
+
+            <path d="M 5 20
+                     C 180 8, 350 10, 520 9
+                     C 700 8, 860 10, 995 17" />
+        </svg>
+    </span>
+
+    <span class="highlight4">.</span>
+</h1>
 </div>
     <section id="section2" >
         <div id="companies">
