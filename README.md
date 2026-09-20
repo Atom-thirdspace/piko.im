@@ -1,7 +1,4 @@
-<!-- <p align="center"> <img src="assets/logo.png" width="128" height="128" alt="Aryan Brite website logo">
-</p> -->
-
-<h1 align="center">piko.im</h1>
+c<h1 align="center">piko.im</h1>
 
 <p align="center"> We’re building a game-like way to learn DSA. You solve problems, earn XP, level up, and unlock new topics as you go.
 
