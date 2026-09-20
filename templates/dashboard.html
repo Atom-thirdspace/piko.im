@@ -17,15 +17,16 @@
     {% endif %}
   </header>
 
+
   <section class="dashboard-level" data-level="{{ progress.level }}">
     <div class="dashboard-section-heading">
-      <h2>Level {{ progress.level }}</h2>
-      <span>{{ progress.xp }} total XP</span>
+      <h2 class="level" >Level {{ progress.level }}</h2>
+      <span class="xp" >{{ progress.xp }} total XP</span>
     </div>
-    <progress value="{{ progress.into_level }}" max="{{ progress.level_span }}">
+    <progress class="nav" id="prog" value="{{ progress.into_level }}" max="{{ progress.level_span }}">
       {{ progress.into_level }} / {{ progress.level_span }} XP
     </progress>
-    <p>{{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}</p>
+    <p class="nav" id="tolvl" >{{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}</p>
   </section>
 
   <section class="dashboard-stats" aria-label="Learning stats">

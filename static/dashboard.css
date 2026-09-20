@@ -6,12 +6,121 @@ body {
 
 .topnav {
     position: fixed;
-    right: 0;
+    right: 25vw;
     display: flex;
     gap: 1vw;
-    padding-right:1vw;
+    top:2.2vh;
+    padding-right:0vw;
+    align-items: center;
+    z-index: 101;
 }
 
 p,a,button {
     font-size: 1.3vw;
+}
+.dashboard-avatar {
+    border-radius: 100%;
+    width: 5.5vh;
+    border: 1px solid #77431d;
+    position: fixed;
+    top: 1vh;
+    right: 1vw;
+    z-index: 200;
+}
+
+a{
+    font-size: 1.35vw;
+}
+
+h1 {
+    font-size: 3vw;
+}
+
+
+.level {
+    top: 2.6vh;
+    right: 6.1vw;
+    position: fixed;
+    font-family: face;
+    font-size: 1vw;
+    z-index: 101;
+}
+
+.xp {
+    top: 1.4vh;
+    right: 5vw;
+    position: fixed;
+    font-size: 1vw;
+    font-family: face;
+    font-weight: 800;
+    z-index: 101;
+}
+
+.nav {
+    top: 1.4vh;
+    position: fixed;
+    font-size: 1vw;
+    font-family: face;
+    font-weight: 800;
+    z-index: 101;
+}
+
+#prog {
+    right: 11.5vw;
+    top: 3vh;
+    height: 2.5vh;
+    width: 10vw;
+
+    appearance: none;
+    border: 3px solid #2b193d;
+    border-radius: 999px;
+    background: #eee7f5;
+    overflow: hidden;
+
+    box-shadow:
+        0 4px 0 #2b193d,
+        0 6px 10px rgba(43, 25, 61, 0.15);
+        z-index: 101;
+}
+
+/* Chrome / Safari */
+#prog::-webkit-progress-bar {
+    background: #eee7f5;
+    border-radius: 999px;
+}
+
+#prog::-webkit-progress-value {
+    background: #8534F3;
+    border-radius: 999px;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* Firefox */
+#prog::-moz-progress-bar {
+    background: #8534F3;
+    border-radius: 999px;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+}
+@font-face {
+    font-family: face;
+    src: url("https://cdn.hackclub.com/01a09f6d-388e-7b00-bc97-f496aba42ac6/safiro-medium-webfont%20(2).ttf");
+}
+
+
+#tolvl {
+    top: 0.1vh;
+    right: 14.2vw;
+    font: face;
+    font-weight: 800;
+    font-size: 0.7vw;
+    z-index: 101;
+}
+
+header {
+    height: 8vh;
+    background-color: white;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: -100;
 }
