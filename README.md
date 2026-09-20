@@ -1,4 +1,6 @@
-c<h1 align="center">piko.im</h1>
+<p align="center"> <img src="static/logo.webp" width="128" height="128" alt="Aryan Brite website logo">
+</p>
+<h1 align="center">piko.im</h1>
 
 <p align="center"> We’re building a game-like way to learn DSA. You solve problems, earn XP, level up, and unlock new topics as you go.
 
@@ -17,21 +19,26 @@ c<h1 align="center">piko.im</h1>
 </p>
 
 > [!IMPORTANT]
-> **AI Usage:** 
+> **AI Usage:** Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. 
 
 
 > [!NOTE]
-> ### Aryan :
-> ### Adhyys : Hey there! I am Adhdhyan aka Adhyys, I worked on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend. In future, I intend to extend my support for the backend of game like DSA problems.
+> ### Aryan : Hey there, I worked on the frontend of the site. Currently, the landing page is not fully completed. The hero section is pretty much completed, but the header is still under construction. The login and onboarding just work, but the dashboard only has the skeleton without CSS. We're still working on this, and we'll complete this, I think, by the third week. 
+> ### Adhyys : Hey there! I am Adhdhyan aka Adhyys, I worked on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend. In future, I intend to extend my support for the backend of game like DSA problems. Right now, I have created the user onboarding system, login, initiated the database, and an emailing system where we email the user whenever the user logs in using recent emails. 
 
 ## Screenshot
-![screenshot](assets/ss.png)
+![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
 
 
 ## Tech Stack
 - Flask
 - Jinja
 - HTMX
+- AOS
+- Neon
+- Hack Club, Google, Github and Discord OAuth
+- Resend Emails
+
 
 
 ## Running Locally
