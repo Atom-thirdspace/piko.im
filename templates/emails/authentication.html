@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if welcome %}Welcome to Piko{% else %}Confirm your email{% endif %}</title>
+  <style>
+    {% include "emails/authentication.css" %}
+  </style>
+</head>
+<body class="email email-authentication">
+  <div class="email-wrapper">
+    <table class="email-shell" role="presentation">
+      <tr>
+        <td class="email-header">
+        </td>
+      </tr>
+      <tr>
+        <td class="email-content">
+          <h1 class="email-title">
+            {% if welcome %}Welcome to Piko{% else %}Confirm your email{% endif %}
+          </h1>
+          <p class="greeting">Hey{% if name %} {{ name }}{% endif %},</p>
+
+          {% if welcome %}
+          <div class="message message-welcome">
+            <p>
+  I am Aryan, Frontend software engineer at
+  <a href="https://piko.aryan.my">piko.im</a>.
+  I just saw that you registered for piko.im. Firstly, I'm so glad that you took your first step.
+  And I'm so excited to walk you through piko.im.
+</p>
+
+            <p>You might see that there is a "Confirm email" button in your dashboard. Firstly, you're supposed to confirm your email, and then you'll find a lot of options to start from. We have already customized your dashboard according to your needs based on your onboarding questions, but you can still change them in your settings. Right now,</p>
+            <p>You're at <strong>Level 1</strong> with <strong>0 XP</strong>. Let's fix that.</p>
+            <p>Start with clicking on your first course and go ahead with learning. </p>
+            <br>
+            <p>Feel free to ask me any question you have or have any recommendation for us. <strong> I reply to all of the emails :)</strong></p>
+
+            <p>Welcome to the Piko family</p>
+            
+          </div>
+          {% endif %}
+
+          {% if verify_url %}
+          <div class="message message-verification">
+            {% if welcome %}
+            <p>One thing first: confirm this is your email address.</p>
+            {% else %}
+            <p>Use the button below to confirm this address belongs to your Piko account.</p>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <div class="email-action">
+            <a class="button" href="{{ cta_url }}">{{ cta_label }}</a>
+          </div>
+
+          <p class="fine-print">
+            {% if verify_url %}
+            This link works for 24 hours. If you didn't sign up for Piko, ignore this email and nothing happens.
+            {% else %}
+            You're getting this because you just signed up at piko.im.
+            {% endif %}
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td class="email-footer">
+          <br>
+            <p>Good Luck Peeking, <br>Aryan Brite</p>
+            <img style="width: 10%;" src="https://cdn.hackclub.com/01a0bf72-9e2f-79e3-bf78-1fe4b8045eda/Untitled%20design%20(78).avif" alt="">
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New sign-in to your Piko account</title>
+  <style>
+    {% include "emails/new-login.css" %}
+  </style>
+</head>
+<body class="email email-new-login">
+  <div class="email-wrapper">
+    <table class="email-shell" role="presentation">
+      <tr>
+        <td class="email-header">
+          <a class="brand" href="https://piko.im">Piko</a>
+        </td>
+      </tr>
+      <tr>
+        <td class="email-content">
+          <p class="eyebrow">Security alert</p>
+          <h1 class="email-title">New sign-in</h1>
+          <p class="greeting">Hey{% if name %} {{ name }}{% endif %},</p>
+          <div class="message">
+            <p>Your Piko account was just signed in to from a device we haven't seen before.</p>
+          </div>
+
+          <table class="details" role="presentation">
+            <tr>
+              <th scope="row">When</th>
+              <td>{{ when }}</td>
+            </tr>
+            <tr>
+              <th scope="row">IP address</th>
+              <td>{{ ip }}</td>
+            </tr>
+            <tr>
+              <th scope="row">Browser</th>
+              <td>{{ user_agent }}</td>
+            </tr>
+          </table>
+
+          <div class="message message-follow-up">
+            <p>That was probably you. If it wasn't, change your password now.</p>
+          </div>
+          <div class="email-action">
+            <a class="button" href="{{ settings_url }}">Review my account</a>
+          </div>
+          <p class="fine-print">We send this once per new device, not on every sign-in.</p>
+        </td>
+      </tr>
+      <tr>
+        <td class="email-footer">
+          <p>Piko</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
