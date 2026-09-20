@@ -19,7 +19,9 @@
 </p>
 
 > [!IMPORTANT]
-> **AI Usage:** Aryan and Adhdyan both used AI as a supporting tool during development, mainly for debugging, getting implementation suggestions, and figuring out things they were stuck on. Aryan used ChatGPT for CSS references, debugging issues with the infinite scroll in the hero section, and implementing the line below the text. He also occasionally used ChatGPT and Copilot for coding help, including some backend bugs that were outside his frontend focus. Adhdyan used Claude Code for creating email templates, some basic frontend work for backend testing, exploring ways to implement a compiler for DSA problems, and getting suggestions for admin tools. He also used Claude to debug issues in his code. AI was used as a reference and debugging aid rather than as a replacement for their own development work.
+> **AI Usage:** Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project.
+
+> Adhdhyan: I used Claude Code for making email templates and helped me with some BASIC frontend for the sake of backend testing, it also suggested me options to how to implement compiler in website for DSA problems, also took suggestions for admin tools. Apart from that I ask Claude to fix bugs whichever existed in my code.
 
 
 
