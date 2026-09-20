@@ -7,16 +7,15 @@
 {% block content %}
 <main class="dashboard" data-api-url="{{ url_for('dashboard.api') }}">
   <header class="dashboard-header">
-    <div>
-      <h1>Welcome, {{ user.name or user.username }}</h1>
-      {% set focus = user.interest_keys | interest_labels %}
-      <p>@{{ user.username }}{% if focus %} · {{ focus | join(', ') }}{% endif %}</p>
-    </div>
     {% if user.avatar_url %}
       <img class="dashboard-avatar" src="{{ user.avatar_url }}" alt="{{ user.name or user.username }}">
     {% endif %}
   </header>
-
+  <div>
+      <h1>Welcome, {{ user.name or user.username }}</h1>
+      {% set focus = user.interest_keys | interest_labels %}
+      <p>@{{ user.username }}{% if focus %} · {{ focus | join(', ') }}{% endif %}</p>
+    </div>
 
   <section class="dashboard-level" data-level="{{ progress.level }}">
     <div class="dashboard-section-heading">
