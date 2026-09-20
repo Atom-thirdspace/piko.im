@@ -19,15 +19,16 @@
 </p>
 
 > [!IMPORTANT]
-> **AI Usage:** Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project.
+> **AI Usage:** 
+> Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project.
 
 > Adhdhyan: I used Claude Code for making email templates and helped me with some BASIC frontend for the sake of backend testing, it also suggested me options to how to implement compiler in website for DSA problems, also took suggestions for admin tools. Apart from that I ask Claude to fix bugs whichever existed in my code.
 
 
 
 > [!NOTE]
-> ### Aryan : Hey there, I worked on the frontend of the site. Currently, the landing page is not fully completed. The hero section is pretty much completed, but the header is still under construction. The login and onboarding just work, but the dashboard only has the skeleton without CSS. We're still working on this, and we'll complete this, I think, by the third week. 
-> ### Adhyys : Hey there! I am Adhdhyan aka Adhyys, I worked on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend. In future, I intend to extend my support for the backend of game like DSA problems. Right now, I have created the user onboarding system, login, initiated the database, and an emailing system where we email the user whenever the user logs in using recent emails. 
+> Aryan : Hey there, I worked on the frontend of the site. Currently, the landing page is not fully completed. The hero section is pretty much completed, but the header is still under construction. The login and onboarding just work, but the dashboard only has the skeleton without CSS. We're still working on this, and we'll complete this, I think, by the third week. 
+> Adhyys : Hey there! I am Adhdhyan aka Adhyys, I worked on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend. In future, I intend to extend my support for the backend of game like DSA problems. Right now, I have created the user onboarding system, login, initiated the database, and an emailing system where we email the user whenever the user logs in using recent emails. 
 
 ## Screenshot
 ![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
