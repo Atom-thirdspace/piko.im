@@ -27,6 +27,7 @@
 
 
 > [!NOTE]
+
 > Aryan : Hey there, I worked on the frontend of the site. Currently, the landing page is not fully completed. The hero section is pretty much completed, but the header is still under construction. The login and onboarding just work, but the dashboard only has the skeleton without CSS. We're still working on this, and we'll complete this, I think, by the third week. 
 > Adhyys : Hey there! I am Adhdhyan aka Adhyys, I worked on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend. In future, I intend to extend my support for the backend of game like DSA problems. Right now, I have created the user onboarding system, login, initiated the database, and an emailing system where we email the user whenever the user logs in using recent emails. 
 
