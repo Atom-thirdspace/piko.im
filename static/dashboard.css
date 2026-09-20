@@ -118,8 +118,12 @@ h1 {
 
 header {
     height: 8vh;
-    background-color: #fff6ee;
     position: fixed;
+    background: linear-gradient(
+    to top,
+    rgba(119, 67, 29, 0.06),
+    transparent
+);
     top: 0;
     width: 100%;
     z-index: -100;
