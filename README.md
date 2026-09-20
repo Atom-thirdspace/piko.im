@@ -45,7 +45,13 @@
  git clone https://github.com/Atom-thirdspace/piko.im 
 ```
 
-2) 
+2) Set the environment variables according to .env.example
+
+3) 
+```sh
+python app.py
+```
+4) Once the server is up, go tp 127.0.0.1:5000
 
 ---
 
