@@ -19,7 +19,8 @@
 </p>
 
 > [!IMPORTANT]
-> **AI Usage:** Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. 
+> **AI Usage:** Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes.
+> Adhdhyan: I used Claude Code for making email templates and helped me with some BASIC frontend for the sake of backend testing, it also suggested me options to how to implement compiler in website for DSA problems, also took suggestions for admin tools. Apart from that I ask Claude to fix bugs whichever existed in my code. 
 
 
 > [!NOTE]
