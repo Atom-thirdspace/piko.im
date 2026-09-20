@@ -194,6 +194,33 @@
     thirdGallerySet.setAttribute("aria-hidden", "true");
     galleryTrack.appendChild(thirdGallerySet);
   }
+
+  if (galleryTrack && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animationDuration = 18000;
+    let loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+    let offset = 0;
+    let previousTime;
+
+    const animateGallery = (time) => {
+      if (previousTime === undefined) previousTime = time;
+
+      const elapsed = Math.min(time - previousTime, 100);
+      previousTime = time;
+      loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+      offset -= elapsed * loopDistance / animationDuration;
+
+      if (offset <= -loopDistance) {
+        offset += loopDistance;
+        galleryTrack.appendChild(galleryTrack.firstElementChild);
+      }
+
+      galleryTrack.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(animateGallery);
+    };
+
+    requestAnimationFrame(animateGallery);
+  }
+
   AOS.init();
 </script>
 {% endblock js %}

@@ -427,8 +427,8 @@ img {
 #companies .track {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  animation: gallery-scroll 18s linear infinite;
+  gap: 0;
+  will-change: transform;
 }
 
 #companies .masonry-set {
@@ -436,6 +436,7 @@ img {
   flex-direction: column;
   flex: 0 0 auto;
   gap: 10px;
+  padding-bottom: 10px;
 }
 
 #companies .masonry-row {
@@ -482,19 +483,9 @@ img {
   border-radius: 28px 28px 48px 48px;
 }
 
-@keyframes gallery-scroll {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(calc(-33.333333% - 3.333333px));
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   #companies .track {
-    animation-play-state: paused;
+    transform: translateY(0);
   }
 }
 
