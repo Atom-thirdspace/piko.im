@@ -347,6 +347,7 @@ img {
     fill: none;
     stroke: #f7c865;
     stroke-width: 9;
+    vector-effect: non-scaling-stroke;
     stroke-linecap: round;
 
     filter: url("#rough");
@@ -375,4 +376,150 @@ img {
 
 .line3 {
     margin-top: 29vh;
+}
+
+#section2 {
+  width: 50%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  right: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 0 28px 18px 18px;
+  background: transparent;
+}
+
+#section2::before,
+#section2::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  height: 15%;
+  pointer-events: none;
+}
+
+#section2::before {
+  top: 0;
+  background: linear-gradient(
+    #f7f7f4,
+    rgba(247, 247, 244, 0 )
+  );
+}
+
+#section2::after {
+  bottom: 0;
+  background: linear-gradient(
+    rgba(247, 247, 244, 0),
+    #f7f7f4
+  );
+}
+
+#companies {
+  width: 100%;
+  height: 123%;
+  margin-top: -9%;
+  overflow: visible;
+}
+
+#companies .track {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: gallery-scroll 18s linear infinite;
+}
+
+#companies .masonry-set {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 10px;
+}
+
+#companies .masonry-row {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+/*
+  Both cards have the same height.
+  Width creates the vertical/horizontal effect.
+*/
+
+#companies .gallery-tile {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 25vh;
+  min-height: 150px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #a8d6ed;
+}
+
+#companies .gallery-tall {
+  flex: 0.78 1 0;
+}
+
+#companies .gallery-wide {
+  flex: 1.35 1 0;
+}
+
+#companies .gallery-tile img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(1.45) contrast(1.03);
+}
+
+#companies .gallery-row:nth-child(even) .gallery-tile {
+  border-radius: 28px 28px 48px 48px;
+}
+
+@keyframes gallery-scroll {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(calc(-33.333333% - 3.333333px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #companies .track {
+    animation-play-state: paused;
+  }
+}
+
+@media (max-width: 900px) {
+  #section2 {
+    width: 52%;
+    padding-right: 18px;
+  }
+}
+
+@media (max-width: 650px) {
+  #section2 {
+    width: 100%;
+    height: 620px;
+    position: relative;
+    top: auto;
+    right: auto;
+    padding: 0 18px;
+    border-top: 1px solid rgba(16, 25, 40, 0.12);
+  }
+
+  #companies {
+    margin-top: -8%;
+  }
+
+  #companies .gallery-tall,
+  #companies .gallery-wide {
+    height: 180px;
+  }
 }

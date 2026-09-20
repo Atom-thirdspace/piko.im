@@ -7,7 +7,6 @@
 
 {% block content %}
 <main>
-    <img id="girl" src="https://cdn.hackclub.com/01a0a122-696b-7dc3-a917-137d052b5147/Untitled%20design%20(62).png" alt="">
     <a data-aos="fade-in" id="log" href="{{ url_for('auth.login_page') }}">
         <img id="login" src="https://cdn.hackclub.com/01a0a001-634a-7f66-b2e9-3716df2d76b5/Untitled%20design%20(56).avif" alt="">
         <p id="textl">Login</p>
@@ -22,6 +21,123 @@
 <a data-aos="fade-down" data-aos-delay="600" id="business" href="#">For Business</a>
 </header>
 <div class="hero">
+<section id="section2" aria-label="DSA learning gallery">
+  <div id="companies">
+    <div class="track">
+
+      <!-- First image set -->
+      <div class="masonry-set">
+
+        <!-- Left narrow, right wide -->
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://images.unsplash.com/photo-1535378917042-10a22c95931a?auto=format&fit=crop&w=900&q=82"
+              alt="Playful robot illustration"
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=900&q=82"
+              alt="Colorful science experiment"
+            >
+          </div>
+        </div>
+
+        <!-- Left wide, right narrow -->
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=900&q=82"
+              alt="Students learning together"
+            >
+          </div>
+
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=82"
+              alt="Child studying"
+            >
+          </div>
+        </div>
+
+        <!-- Left narrow, right wide -->
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=900&q=82"
+              alt="Open book and glasses"
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=82"
+              alt="Laptop and digital learning"
+            >
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Duplicate set for seamless infinite scrolling -->
+      <div class="masonry-set" aria-hidden="true">
+
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://images.unsplash.com/photo-1535378917042-10a22c95931a?auto=format&fit=crop&w=900&q=82"
+              alt=""
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=900&q=82"
+              alt=""
+            >
+          </div>
+        </div>
+
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://images.unsplash.com/photo-1596495578065-6e0763fa1178?auto=format&fit=crop&w=900&q=82"
+              alt=""
+            >
+          </div>
+
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=82"
+              alt=""
+            >
+          </div>
+        </div>
+
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=900&q=82"
+              alt=""
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=82"
+              alt=""
+            >
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
     <h1>
         <span data-aos="fade-up" data-aos-delay="200" class="highlight3">
             Finally, DSA
@@ -64,11 +180,6 @@
     <span class="highlight4">.</span>
 </h1>
 </div>
-    <section id="section2" >
-        <div id="companies">
-    <div class="track">
-
-
 </main>
 
 
@@ -77,6 +188,12 @@
 {% block js %}
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
+  const galleryTrack = document.querySelector("#companies .track");
+  if (galleryTrack && galleryTrack.children.length === 2) {
+    const thirdGallerySet = galleryTrack.children[0].cloneNode(true);
+    thirdGallerySet.setAttribute("aria-hidden", "true");
+    galleryTrack.appendChild(thirdGallerySet);
+  }
   AOS.init();
 </script>
 {% endblock js %}
