@@ -170,3 +170,43 @@
     .sample { grid-template-columns: 1fr; }
     .lesson-row a { flex-wrap: wrap; }
 }
+
+/* ---------------------------------------------------------------- tutor */
+
+.tutor {
+    margin-top: 2.5rem;
+    padding: 1.25rem;
+    border: 1px solid #e6d9cd;
+    border-radius: .75rem;
+    background: #fffdfb;
+}
+
+.tutor h2 { margin: 0 0 .25rem; font-size: 1.1rem; }
+.tutor__note { margin: 0 0 .9rem; font-size: .88rem; color: #7a6455; }
+
+.tutor__form { display: flex; flex-direction: column; gap: .6rem; align-items: flex-start; }
+
+.tutor__form textarea {
+    width: 100%;
+    padding: .7rem;
+    font: inherit;
+    font-size: .95rem;
+    border: 1px solid #d8c8ba;
+    border-radius: .5rem;
+    background: #fff;
+    resize: vertical;
+}
+
+.tutor__answer {
+    margin-top: 1rem;
+    padding: .9rem 1rem;
+    border-radius: .5rem;
+    background: #faf4ee;
+    border: 1px solid #e6d9cd;
+    font-size: .95rem;
+}
+.tutor__answer.is-error { background: #fdf0ed; border-color: #b3402f; }
+.tutor__answer > :first-child { margin-top: 0; }
+.tutor__answer > :last-child { margin-bottom: 0; }
+
+.tutor__left { margin: .8rem 0 0; font-size: .8rem; color: #7a6455; }

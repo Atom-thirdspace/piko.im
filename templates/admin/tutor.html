@@ -1,0 +1,62 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+<h1>Tutor log</h1>
+
+<p>
+  {{ stats.total }} exchanges ·
+  {{ stats.flagged }} flagged ·
+  {{ stats.failed }} failed
+</p>
+
+<p>
+  {% if flagged_only %}
+    <a href="{{ url_for('admin.tutor') }}">Show everything</a>
+  {% else %}
+    <a href="{{ url_for('admin.tutor', flagged=1) }}">Show flagged only</a>
+  {% endif %}
+</p>
+
+{% if rows %}
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>When</th><th>User</th><th>Context</th><th>Mode</th>
+        <th>Question</th><th>Answer</th><th>Model</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr{% if row.flagged %} class="is-flagged"{% endif %}>
+          <td>{{ row.created_at.strftime('%d %b %H:%M') }}</td>
+          <td>
+            {% if row.user %}
+              <a href="{{ url_for('admin.user_detail', user_id=row.user_id) }}">
+                {{ row.user.username or row.user.email }}
+              </a>
+            {% else %}(gone){% endif %}
+          </td>
+          <td>
+            {% if row.problem %}{{ row.problem.title }}
+            {% elif row.lesson %}{{ row.lesson.title }}
+            {% else %}-{% endif %}
+          </td>
+          <td>
+            {{ row.mode }}
+            {%- if row.flagged %} <strong>flagged</strong>{% endif %}
+            {%- if not row.ok %} <strong>failed</strong>{% endif %}
+          </td>
+          <td>{{ row.question }}</td>
+          <td>{{ row.answer[:300] }}{% if row.answer | length > 300 %}…{% endif %}</td>
+          <td>{{ row.model or '-' }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ pager(pager_, 'admin.tutor') }}
+{% else %}
+  <p>{% if flagged_only %}Nothing flagged.{% else %}No tutor questions yet.{% endif %}</p>
+{% endif %}
+{% endblock admin_content %}

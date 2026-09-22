@@ -10,7 +10,7 @@ from .learning.seed import seed_catalog
 from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonProgress,
                      OAuthIdentity, Problem, ProblemTest, Submission, Track, Unit,
                      User, XpEvent, db, delete_account, mark_email_verified,
-                     reject_deletion_request, unlink_identity)
+                     reject_deletion_request, TutorMessage, unlink_identity)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user
@@ -22,7 +22,8 @@ PAGE_SIZE = 25
 NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.deletions", "Deletions"),
        ("admin.problems", "Problems"), ("admin.submissions", "Submissions"),
-       ("admin.content", "Content"), ("admin.system", "System"),
+       ("admin.content", "Content"), ("admin.tutor", "Tutor"),
+       ("admin.system", "System"),
        ("admin.audit", "Audit log")]
 
 def admin_emails():
@@ -503,3 +504,21 @@ def deletion_reject(req_id):
     log_action("reject_deletion", req.user_id, note[:200])
     flash("Request declined. The account stays.", "success")
     return redirect(url_for("admin.deletions"))
+
+@admin_bp.route("/tutor/")
+@admin_required
+def tutor():
+    """Review what learners are asking the AI tutor, and what it said back."""
+    flagged_only = request.args.get("flagged") == "1"
+    stmt = db.select(TutorMessage).order_by(TutorMessage.created_at.desc())
+    if flagged_only:
+        stmt = stmt.where(TutorMessage.flagged.is_(True))
+
+    rows, pager = _paginate(stmt, _page())
+    stats = {
+        "total": _count(TutorMessage),
+        "flagged": _count(TutorMessage, TutorMessage.flagged.is_(True)),
+        "failed": _count(TutorMessage, TutorMessage.ok.is_(False)),
+    }
+    return render_template("admin/tutor.html", rows=rows, pager_=pager,
+                           flagged_only=flagged_only, stats=stats)

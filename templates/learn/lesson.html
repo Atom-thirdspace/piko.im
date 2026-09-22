@@ -86,6 +86,28 @@
     {% endif %}
   </form>
 
+  <section class="tutor" id="tutor"
+           data-url="{{ url_for('tutor.tutor_ask') }}"
+           data-lesson-id="{{ lesson.id }}"
+           {% if lesson.problem_id %}data-problem-id="{{ lesson.problem_id }}"{% endif %}>
+    <h2>Stuck? Ask the tutor</h2>
+    <p class="tutor__note">
+      It only knows this lesson.
+      {%- if lesson.kind == 'code' and not solved %}
+        It'll nudge you, not hand over the answer.
+      {%- endif %}
+    </p>
+
+    <form class="tutor__form" id="tutor-form">
+      <label class="sr-only" for="tutor-q">Your question</label>
+      <textarea id="tutor-q" rows="3" maxlength="500"
+                placeholder="e.g. why is a hash set better than sorting here?"></textarea>
+      <button type="submit" class="btn btn-primary" id="tutor-send">Ask</button>
+    </form>
+
+    <div class="tutor__answer prose" id="tutor-answer" hidden></div>
+  </section>
+
   <nav class="lesson-nav">
     {% if prev %}
       <a href="{{ url_for('learn.lesson', track_slug=track.slug,
@@ -102,3 +124,64 @@
   </nav>
 </main>
 {% endblock content %}
+
+{% block js %}
+<script>
+(function () {
+  var root = document.getElementById('tutor');
+  if (!root) { return; }
+
+  var form  = document.getElementById('tutor-form');
+  var box   = document.getElementById('tutor-answer');
+  var send  = document.getElementById('tutor-send');
+  var input = document.getElementById('tutor-q');
+
+  form.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    var question = input.value.trim();
+    if (question.length < 5) { return; }
+
+    send.disabled = true;
+    send.textContent = 'Thinking…';
+    box.hidden = false;
+    box.className = 'tutor__answer';
+    box.textContent = 'Working on it…';
+
+    var body = { question: question, lesson_id: Number(root.dataset.lessonId) };
+    if (root.dataset.problemId) { body.problem_id = Number(root.dataset.problemId); }
+
+    try {
+      var res = await fetch(root.dataset.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      var data = await res.json();
+
+      if (!res.ok) {
+        box.className = 'tutor__answer is-error';
+        box.textContent = data.error || 'Something went wrong.';
+        return;
+      }
+
+      // Safe: render_md escapes the model's text before applying markup.
+      box.className = 'tutor__answer prose';
+      box.innerHTML = data.answer_html;
+
+      if (typeof data.remaining === 'number') {
+        var left = document.createElement('p');
+        left.className = 'tutor__left';
+        left.textContent = data.remaining + ' questions left this hour';
+        box.appendChild(left);
+      }
+    } catch (err) {
+      box.className = 'tutor__answer is-error';
+      box.textContent = 'Could not reach the tutor.';
+    } finally {
+      send.disabled = false;
+      send.textContent = 'Ask';
+    }
+  });
+})();
+</script>
+{% endblock js %}
