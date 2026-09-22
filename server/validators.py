@@ -23,6 +23,40 @@ INTERESTS = [
     ("beginner", "Just starting out"),
 ]
 
+DELETION_REASONS = [
+    ("not-useful",  "It isn't useful to me"),
+    ("too-hard",    "The content is too hard"),
+    ("too-easy",    "The content is too easy"),
+    ("bugs",        "Too many bugs or things not working"),
+    ("privacy",     "Privacy or data concerns"),
+    ("elsewhere",   "I'm using something else"),
+    ("break",       "Just taking a break"),
+    ("other",       "Something else"),
+]
+DELETION_REASON_KEYS = {key for key, _ in DELETION_REASONS}
+DELETION_REASON_LABELS = dict(DELETION_REASONS)
+
+
+def validate_deletion_request(form, username):
+    errors = {}
+    reason = (form.get("reason") or "").strip()
+    detail = (form.get("detail") or "").strip()
+    typed = (form.get("confirm_username") or "").strip().lower()
+
+    if reason not in DELETION_REASON_KEYS:
+        errors["reason"] = "Pick the closest reason."
+    elif reason == "other" and len(detail) < 10:
+        errors["detail"] = "Tell us a bit more - at least 10 characters."
+
+    if len(detail) > 2000:
+        errors["detail"] = "Keep it under 2000 characters."
+
+    if typed != (username or ""):
+        errors["confirm_username"] = "Type your username exactly to confirm."
+
+    return errors, reason, detail
+
+
 COMMON_TIMEZONES= [
     "UTC", "Asia/Kolkata", "Asia/Dubai", "Asia/Singapore", "Asia/Tokyo",
     "Europe/London", "Europe/Berlin", "Europe/Moscow",

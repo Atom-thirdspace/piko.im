@@ -154,15 +154,25 @@
 
   <section class="settings-card settings-danger">
     <h2>Delete account</h2>
-    <p>This erases your XP, streak, submissions and progress. It can't be undone.</p>
-    <form class="auth-form" method="post" action="{{ url_for('profile.delete') }}">
-      <label for="confirm_username">Type <b>{{ user.username }}</b> to confirm</label>
-      <input id="confirm_username" name="confirm_username" type="text" autocomplete="off" required>
-      {% if errors.confirm_username %}
-        <p class="field-error">{{ errors.confirm_username }}</p>
-      {% endif %}
-      <button class="settings-danger-btn" type="submit">Delete my account</button>
-    </form>
+    {% if pending_deletion %}
+      <p>
+        You asked to delete your account on
+        {{ pending_deletion.created_at.strftime('%d %b %Y') }}. It's waiting for an
+        admin to review. Nothing has been erased yet.
+      </p>
+      <form method="post" action="{{ url_for('profile.leave_cancel') }}">
+        <button type="submit">Cancel that request</button>
+      </form>
+    {% else %}
+      <p>
+        This erases your XP, streak, submissions and progress. We'll ask why you're
+        leaving, then an admin reviews the request before anything is deleted.
+      </p>
+      <a class="settings-danger-btn" href="{{ url_for('profile.leave') }}">
+        Request account deletion
+      </a>
+    {% endif %}
   </section>
+
 </main>
 {% endblock content %}

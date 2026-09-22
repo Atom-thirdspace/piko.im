@@ -1,0 +1,58 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<h1>Deletion requests</h1>
+
+<h2>Pending ({{ pending | length }})</h2>
+{% if pending %}
+  {% for req in pending %}
+    <div class="admin-danger">
+      <p>
+        <a href="{{ url_for('admin.user_detail', user_id=req.user_id) }}">
+          {{ req.user.username or req.user.email }}
+        </a>
+        · {{ req.user.email }}
+        · asked {{ req.created_at.strftime('%d %b %Y %H:%M') }}
+      </p>
+      <p><strong>{{ reason_labels.get(req.reason, req.reason) }}</strong></p>
+      {% if req.detail %}<blockquote>{{ req.detail }}</blockquote>{% endif %}
+
+      <form method="post" action="{{ url_for('admin.deletion_approve', req_id=req.id) }}">
+        <label>Type <b>{{ req.user.username }}</b> to confirm</label>
+        <input name="confirm" autocomplete="off" required>
+        <button type="submit">Approve and delete</button>
+      </form>
+
+      <form method="post" action="{{ url_for('admin.deletion_reject', req_id=req.id) }}">
+        <input name="note" placeholder="Why you're declining (optional)">
+        <button type="submit">Decline</button>
+      </form>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>Nothing waiting.</p>
+{% endif %}
+
+<h2>Recently decided</h2>
+{% if decided %}
+  <table class="admin-table">
+    <thead>
+      <tr><th>User</th><th>Reason</th><th>Status</th><th>By</th><th>When</th><th>Note</th></tr>
+    </thead>
+    <tbody>
+      {% for req in decided %}
+        <tr>
+          <td>{{ req.user.username if req.user else '(gone)' }}</td>
+          <td>{{ reason_labels.get(req.reason, req.reason) }}</td>
+          <td>{{ req.status }}</td>
+          <td>{{ req.decided_by.username if req.decided_by else '-' }}</td>
+          <td>{{ req.decided_at.strftime('%d %b %Y') if req.decided_at }}</td>
+          <td>{{ req.decision_note }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No decisions yet.</p>
+{% endif %}
+{% endblock admin_content %}

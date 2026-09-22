@@ -1,0 +1,62 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="settings">
+    <h1>Leaving Piko</h1>
+    <p class="settings-back"><a href="{{ url_for('profile.settings') }}">&larr; Back to settings</a></p>
+
+    {% if pending %}
+        <section class="settings-card">
+            <h2>Your request is waiting on review</h2>
+            <p>
+                Sent {{ pending.created_at.strftime('%d %b %Y') }}. An admin still has to
+                approve it, so nothing has been deleted and your account works normally
+                until then.
+            </p>
+            <p><strong>Reason given:</strong> {{ pending.reason }}</p>
+            {% if pending.detail %}<blockquote>{{ pending.detail }}</blockquote>{% endif %}
+
+            <form method="post" action="{{ url_for('profile.leave_cancel') }}">
+                <button type="submit">Changed my mind - keep my account</button>
+            </form>
+        </section>
+
+        {% else %}
+        <section class="settings-card">
+            <h2>Before you go</h2>
+            <p>
+                Tell us why you're leaving. This goes to an admin along with your request -
+                nothing is deleted until they approve it, and you can cancel before then.
+            </p>
+            <form action="{{ url_for('profile.leave') }}" class="auth-form" method="post">
+             <fieldset class="leave-reasons">
+                <legend>Why are you leaving?</legend>
+                {% for key, label in reasons %}
+                    <label class="leave-reason">
+                        <input type="radio" name="reason" value="{{ key }}"
+                        {% if form.get('reason') == key %}checked{% endif %} required>
+                        <span>{{ label }}</span>
+                        </label>
+                      {% endfor %}
+                </fieldset>
+                {% if errors.reason %}<p class="field-error">{{ errors.reason }}</p>{% endif %}
+
+                <label for="detail">Anything you'd want us to fix? (optional, required if you picked "something else")</label>
+                <textarea id="detail" name="detail" rows="5" maxlength="2000">{{ form.get('detail', '') }}</textarea>
+                {% if errors.detail %}<p class="field-error">{{ errors.detail }}</p>{% endif %}
+
+                <label for="confirm_username">Type <b>{{ user.username }}</b> to confirm</label>
+                <input id="confirm_username" name="confirm_username" type="text" autocomplete="off" required>
+                {% if errors.confirm_username %}
+                  <p class="field-error">{{ errors.confirm_username }}</p>
+                  {% endif %}
+                  <button class="settings-danger-btn" type="submit">Request account deletion</button>
+            </form>
+        </section>
+        {% endif %}
+</main>
+{% endblock content %}

@@ -7,17 +7,20 @@ from flask import (Blueprint, abort, current_app, flash, redirect, render_templa
 from sqlalchemy import or_
 from .judge import LANGUAGES, TestCase, judge
 from .learning.seed import seed_catalog
-from .models import (AdminAction, Enrollment, Lesson, LessonProgress, OAuthIdentity,
-                     Problem, ProblemTest, Submission, Track, Unit, User, XpEvent,
-                     db, delete_account, mark_email_verified, unlink_identity)
+from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonProgress,
+                     OAuthIdentity, Problem, ProblemTest, Submission, Track, Unit,
+                     User, XpEvent, db, delete_account, mark_email_verified,
+                     reject_deletion_request, unlink_identity)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user
+from .validators import DELETION_REASON_LABELS
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 PAGE_SIZE = 25
 
 NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
+       ("admin.deletions", "Deletions"),
        ("admin.problems", "Problems"), ("admin.submissions", "Submissions"),
        ("admin.content", "Content"), ("admin.system", "System"),
        ("admin.audit", "Audit log")]
@@ -446,3 +449,57 @@ def audit():
     rows, pager = _paginate(
         db.select(AdminAction).order_by(AdminAction.created_at.desc()), _page())
     return render_template("admin/audit.html", actions=rows, pager_=pager)
+
+@admin_bp.route("/deletions/")
+@admin_required
+def deletions():
+    pending = db.session.execute(
+        db.select(DeletionRequest).where(DeletionRequest.status == "pending")
+        .order_by(DeletionRequest.created_at)
+    ).scalars().all()
+    decided = db.session.execute(
+        db.select(DeletionRequest).where(DeletionRequest.status != "pending")
+        .order_by(DeletionRequest.decided_at.desc()).limit(25)
+    ).scalars().all()
+    return render_template("admin/deletions.html", pending=pending, decided=decided,
+                           reason_labels=DELETION_REASON_LABELS)
+
+
+@admin_bp.route("/deletions/<int:req_id>/approve", methods=["POST"])
+@admin_required
+def deletion_approve(req_id):
+    req = _get_or_404(DeletionRequest, req_id)
+    if req.status != "pending":
+        flash("That request was already decided.", "error")
+        return redirect(url_for("admin.deletions"))
+
+    user = req.user
+    if user.id == current_user().id:
+        flash("Approve your own deletion from settings, not here.", "error")
+        return redirect(url_for("admin.deletions"))
+    if (request.form.get("confirm") or "").strip().lower() != (user.username or ""):
+        flash("Type their username exactly to confirm.", "error")
+        return redirect(url_for("admin.deletions"))
+
+    # The request row cascades away with the user, so the audit entry is written
+    # first - it is the only record that survives.
+    log_action("approve_deletion", user.id,
+               "%s - %s: %s" % (user.email, req.reason, (req.detail or "")[:200]))
+    delete_account(user)
+    flash("Account deleted.", "success")
+    return redirect(url_for("admin.deletions"))
+
+
+@admin_bp.route("/deletions/<int:req_id>/reject", methods=["POST"])
+@admin_required
+def deletion_reject(req_id):
+    req = _get_or_404(DeletionRequest, req_id)
+    if req.status != "pending":
+        flash("That request was already decided.", "error")
+        return redirect(url_for("admin.deletions"))
+
+    note = (request.form.get("note") or "").strip()
+    reject_deletion_request(req, current_user(), note)
+    log_action("reject_deletion", req.user_id, note[:200])
+    flash("Request declined. The account stays.", "success")
+    return redirect(url_for("admin.deletions"))

@@ -5,13 +5,14 @@ from .judge.languages import LANGUAGES
 from .models import (Enrollment, LessonProgress, OAuthIdentity, Submission,
                      XpEvent, User, db, delete_account, find_by_username,
                      set_user_password, unlink_identity, update_preferences,
-                     update_profile)
+                     update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request)
 from .progress import level_progress
 from .session import current_user, login_required
-from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS,
+from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS, DELETION_REASONS,
                          validate_avatar_url, validate_daily_goal,
                          validate_display_name, clean_interests,
                          validate_interests,
+                         validate_deletion_request,
                          validate_language, validate_password_change,
                          validate_timezone, validate_username)
 
@@ -130,6 +131,7 @@ def _render_settings(errors=None, form=None, status=200):
         connectable=[(name, label) for name, label in enabled_providers()
                      if name not in linked],        # Don't let someone strand themselves with no way back in.
         can_unlink=bool(user.password_hash) or len(identities) > 1,
+        pending_deletion = pending_deletion_request(user)
     ), status
 
 
@@ -239,19 +241,34 @@ def unlink(provider):
     return redirect(url_for("profile.settings"))
 
 
-@profile_bp.route("/settings/delete", methods=["POST"])
+@profile_bp.route("/settings/leave/", methods=["GET", "POST"])
 @login_required
-def delete():
+def leave():
     user = current_user()
-    typed = (request.form.get("confirm_username") or "").strip().lower()
+    pending = pending_deletion_request(user)
 
-    if typed != (user.username or ""):
-        return _render_settings(
-            {"confirm_username": "Type your username exactly to confirm."},
-            request.form, 400,
-        )
+    if request.method == "POST" and pending is None:
+        errors, reason, detail = validate_deletion_request(request.form, user.username)
+        if errors:
+            return render_template("leave.html", user=user, pending=None,
+                                   reasons=DELETION_REASONS, errors=errors,
+                                   form=request.form), 400
 
-    delete_account(user)
-    session.clear()
-    flash("Your account and everything in it has been deleted.", "success")
-    return redirect("/")
+        create_deletion_request(user, reason, detail)
+        flash("Request sent. An admin will review it - you can cancel until they do.",
+              "success")
+        return redirect(url_for("profile.settings"))
+
+    return render_template("leave.html", user=user, pending=pending,
+                           reasons=DELETION_REASONS, errors={}, form={})
+
+
+@profile_bp.route("/settings/leave/cancel", methods=["POST"])
+@login_required
+def leave_cancel():
+    if cancel_deletion_request(current_user()) is None:
+        flash("You don't have a deletion request open.", "error")
+    else:
+        flash("Deletion request withdrawn. Your account stays as it is.", "success")
+    return redirect(url_for("profile.settings"))
+

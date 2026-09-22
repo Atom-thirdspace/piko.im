@@ -447,6 +447,68 @@ class XpEvent(db.Model):
 
     user = db.relationship("User")
 
+class DeletionRequest(db.Model):
+    """A user asking to leave. Nothing is destroyed until an admin approves."""
+
+    __tablename__ = "deletion_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    reason = db.Column(db.String(32), nullable=False)
+    detail = db.Column(db.Text, nullable=False, default="")
+    # pending | rejected | cancelled. An approved row is gone with the user.
+    status = db.Column(db.String(16), nullable=False, default="pending", index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    decided_at = db.Column(db.DateTime(timezone=True))
+    decided_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    decision_note = db.Column(db.Text, nullable=False, default="")
+
+    # Two FKs to the same table, so the join condition has to be spelled out.
+    user = db.relationship("User", foreign_keys=[user_id])
+    decided_by = db.relationship("User", foreign_keys=[decided_by_id])
+
+
+def pending_deletion_request(user):
+    return db.session.execute(
+        db.select(DeletionRequest).filter_by(user_id=user.id, status="pending")
+    ).scalar_one_or_none()
+
+
+def create_deletion_request(user, reason, detail):
+    existing = pending_deletion_request(user)
+    if existing is not None:
+        return existing
+    req = DeletionRequest(user_id=user.id, reason=reason, detail=detail)
+    db.session.add(req)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # The partial unique index caught a double submit; hand back the winner.
+        db.session.rollback()
+        return pending_deletion_request(user)
+    return req
+
+
+def cancel_deletion_request(user):
+    req = pending_deletion_request(user)
+    if req is None:
+        return None
+    req.status = "cancelled"
+    req.decided_at = _utcnow()
+    db.session.commit()
+    return req
+
+
+def reject_deletion_request(req, admin, note):
+    req.status = "rejected"
+    req.decided_at = _utcnow()
+    req.decided_by_id = admin.id
+    req.decision_note = (note or "")[:2000]
+    db.session.commit()
+    return req
+
+
 def update_profile(user, name, username, interests, avatar_url):
     user.name = name.strip()
     user.username = username.strip().lower()
@@ -461,6 +523,7 @@ def update_preferences(user, daily_goal_xp, preferred_language, timezone):
     user.timezone = timezone
     db.session.commit()
     return user
+    
 
 def set_user_password(user, raw):
     user.set_password(raw)
@@ -509,3 +572,4 @@ def unlink_identity(user, provider):
 def delete_account(user):
     db.session.execute(db.delete(User).where(User.id == user.id))
     db.session.commit()
+
