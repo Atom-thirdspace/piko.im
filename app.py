@@ -14,6 +14,7 @@ from server.learning.routes import learn_bp
 from server.userprofile import profile_bp
 from server.dashboard import dashboard_bp
 from server.admin import admin_bp, is_admin
+from server.tutor import tutor_bp
 from server.validators import interest_labels
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -38,7 +39,9 @@ app.register_blueprint(onboarding_bp)
 app.register_blueprint(problems_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(tutor_bp)
 app.register_blueprint(admin_bp)
+
 app.register_blueprint(learn_bp)
 register_cli(app)
 app.jinja_env.globals["current_user"] = current_user

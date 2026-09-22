@@ -469,6 +469,51 @@ class DeletionRequest(db.Model):
     decided_by = db.relationship("User", foreign_keys=[decided_by_id])
 
 
+class TutorMessage(db.Model):
+    """Every tutor exchange, for rate limiting and abuse review."""
+
+    __tablename__ = "tutor_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    lesson_id = db.Column(db.Integer, db.ForeignKey("lessons.id", ondelete="SET NULL"))
+    problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="SET NULL"))
+    mode = db.Column(db.String(16), nullable=False, default="hint")
+    question = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.Text, nullable=False, default="")
+    model = db.Column(db.String(64), nullable=False, default="")
+    ok = db.Column(db.Boolean, nullable=False, default=True)
+    flagged = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False, index=True)
+
+    user = db.relationship("User")
+    lesson = db.relationship("Lesson")
+    problem = db.relationship("Problem")
+
+
+def tutor_calls_since(user, since):
+    return db.session.execute(
+        db.select(db.func.count()).select_from(TutorMessage)
+        .where(TutorMessage.user_id == user.id, TutorMessage.created_at >= since)
+    ).scalar() or 0
+
+
+def log_tutor_message(user, lesson, problem, mode, question, answer, model,
+                      ok=True, flagged=False):
+    row = TutorMessage(
+        user_id=user.id,
+        lesson_id=lesson.id if lesson else None,
+        problem_id=problem.id if problem else None,
+        mode=mode, question=question[:4000], answer=(answer or "")[:8000],
+        model=model, ok=ok, flagged=flagged,
+    )
+    db.session.add(row)
+    db.session.commit()
+    return row
+
+
 def pending_deletion_request(user):
     return db.session.execute(
         db.select(DeletionRequest).filter_by(user_id=user.id, status="pending")

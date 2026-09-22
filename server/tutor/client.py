@@ -1,0 +1,74 @@
+import os
+import requests
+from flask import current_app
+
+DEFAULT_BASE = "https://ai.hackclub.com/proxy/v1"
+DEFAULT_MODEL = "gpt-5-mini"
+
+class TutorError(Exception):
+    """Anything the user should see as a polite failure, not a 500."""
+
+
+def config():
+    key = (os.environ.get("HACKCLUB_AI_KEY") or "").strip()
+    if not key:
+        raise TutorError("The tutor isn't switched on yet.")
+    return (
+        key,
+        (os.environ.get("HACKCLUB_AI_BASE") or DEFAULT_BASE).rstrip("/"),
+        (os.environ.get("TUTOR_MODEL") or DEFAULT_MODEL).strip(),
+    )
+
+def is_configured():
+    return bool((os.environ.get("HACKCLUB_AI_KEY") or "").strip())
+
+def ask(system, user, max_tokens=600, timeout=30):
+    key, base, model = config()
+
+    try:
+        resp = requests.post(
+            base + "/chat/completions",
+            headers={"Authorization": "Bearer " + key,
+                     "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "max_tokens": max_tokens,
+                "temperature": 0.3,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            },
+            timeout=timeout,
+        )
+    except requests.Timeout:
+        raise TutorError("The tutor took too long to answer. Try again.")
+    except requests.RequestException:
+        raise TutorError("Couldn't reach the tutor right now.")
+
+    if resp.status_code == 429:
+        raise TutorError("The tutor is busy right now. Give it a minute.")
+    if resp.status_code in (401, 403):
+        current_app.logger.error("tutor auth rejected (%s) for model %s",
+                                 resp.status_code, model)
+        raise TutorError("The tutor's credentials were rejected.")
+    if resp.status_code == 402:
+        # Out of upstream credit. Say so plainly - "had a problem answering"
+        # sends people hunting for a bug in their question.
+        current_app.logger.error("tutor out of credit: %s", resp.text[:300])
+        raise TutorError("The tutor is out of credit. Ask an admin to top it up.")
+    if resp.status_code >= 400:
+        # The body can echo the prompt back, so it goes to the log, not the user.
+        current_app.logger.error("tutor upstream %s for model %s: %s",
+                                 resp.status_code, model, resp.text[:300])
+        raise TutorError("The tutor had a problem answering that.")
+
+    try:
+        data = resp.json()
+        text = (data["choices"][0]["message"]["content"] or "").strip()
+    except (ValueError, KeyError, IndexError):
+        raise TutorError("The tutor sent back something unreadable.")
+
+    if not text:
+        raise TutorError("The tutor didn't have an answer for that one.")
+    return text, model
