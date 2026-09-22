@@ -349,7 +349,8 @@ def problem_delete(problem_id):
 def submissions():
     verdict = request.args.get("verdict") or ""
     username = (request.args.get("user") or "").strip().lower()
-    username = (request.args.get("user") or "").strip().lower()
+
+    stmt = db.select(Submission).order_by(Submission.created_at.desc())
     if verdict:
         stmt = stmt.where(Submission.verdict == verdict)
     if username:
