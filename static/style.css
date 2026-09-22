@@ -90,11 +90,6 @@ h2::selection{
 }
 
 
-@font-face {
-    font-family: face;
-    src: url("https://cdn.hackclub.com/01a09f6d-388e-7b00-bc97-f496aba42ac6/safiro-medium-webfont%20(2).ttf");
-}
-
 @keyframes blink {
     0% {
         opacity: 0;
@@ -308,13 +303,6 @@ img {
 .settings-danger h2 { color: #c0392b; }
 .settings-danger-btn { background: #c0392b; color: #fff; border: none;
                        border-radius: 8px; padding: .7rem; cursor: pointer; }
-.topnav { display: flex; align-items: center; gap: 1rem; justify-content: flex-end;
-          max-width: 640px; margin: 1rem auto 0; padding: 0 1rem; font-size: .9rem; }
-.topnav a { color: inherit; }
-.verify-banner { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
-                 padding: .7rem 1rem; background: #fff4e5; border-bottom: 1px solid #f0c987;
-                 font-size: .95rem; }
-.verify-banner form { margin: 0; }
 .settings-connect-intro { margin: 1rem 0 .4rem; }
 .settings-connect { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
                     gap: .5rem; }

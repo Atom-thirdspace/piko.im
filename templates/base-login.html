@@ -5,16 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Piko</title>
     <link rel="shortcut icon" href="https://user-cdn.hackclub-assets.com/01a09ef4-95a9-7c17-a846-7fdc19de52aa/Untitled%20design%20(52).png" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
     {% block head %}
     
     {% endblock head %}
 </head>
 <body>
+    <img id="custom-cursor" src="https://cdn.hackclub.com/01a0b45b-38fa-7ae4-b0a0-f903879286aa/Untitled%20design%20(70).png" alt="" aria-hidden="true">
+    {% block app_header %}{% endblock app_header %}
     {% block content %}
     
     {% endblock content %}
     {% block js %}
     
     {% endblock js %}
+    <script defer src="{{ url_for('static', filename='cursor.js') }}"></script>
 </body>
 </html>
