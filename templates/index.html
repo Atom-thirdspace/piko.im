@@ -7,18 +7,21 @@
 
 {% block content %}
 <main>
+<header class="sitenav">
+    <img id="logo" src="https://cdn.hackclub.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
+
+    <nav id="mainnav">
+        <a data-aos="fade-down" data-aos-delay="200" id="feature" href="#">Features</a>
+        <a data-aos="fade-down" data-aos-delay="300" id="privace" href="#">Privacy</a>
+        <a data-aos="fade-down" data-aos-delay="400" id="Blog" href="#">Blog</a>
+        <a data-aos="fade-down" data-aos-delay="500" id="help" href="#">Help Center</a>
+        <a data-aos="fade-down" data-aos-delay="600" id="business" href="#">For Business</a>
+    </nav>
+
     <a data-aos="fade-in" id="log" href="{{ url_for('auth.login_page') }}">
         <img id="login" src="https://cdn.hackclub.com/01a0a001-634a-7f66-b2e9-3716df2d76b5/Untitled%20design%20(56).avif" alt="">
         <p id="textl">Login</p>
     </a>
-<header>
-    <img id="logo" src="https://cdn.hackclub.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
-
-<a data-aos="fade-down" data-aos-delay="200" id="feature" href="#">Features</a>
-<a data-aos="fade-down" data-aos-delay="300" id="privace" href="#">Privacy</a>
-<a data-aos="fade-down" data-aos-delay="400" id="Blog" href="#">Blog</a>
-<a data-aos="fade-down" data-aos-delay="500" id="help" href="#">Help Center</a>
-<a data-aos="fade-down" data-aos-delay="600" id="business" href="#">For Business</a>
 </header>
 <div class="hero">
 <section id="section2" aria-label="DSA learning gallery">

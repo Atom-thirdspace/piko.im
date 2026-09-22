@@ -5,95 +5,187 @@
 {% endblock head %}
 
 {% block content %}
-<main class="dashboard" data-api-url="{{ url_for('dashboard.api') }}">
-  <header class="dashboard-header">
+{% set goal_pct = (daily_goal.earned_xp / daily_goal.target_xp * 100) | round | int
+                  if daily_goal.target_xp else 0 %}
+{% set level_pct = (progress.into_level / progress.level_span * 100) | round | int
+                   if progress.level_span else 0 %}
+
+<main class="dash" data-api-url="{{ url_for('dashboard.api') }}">
+
+  <header class="dash__intro">
     {% if user.avatar_url %}
-      <img class="dashboard-avatar" src="{{ user.avatar_url }}" alt="{{ user.name or user.username }}">
-    {% endif %}
-    <img id="logo" src="https://user-cdn.hackclub-assets.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
-  </header>
-  <div>
-      <h1>Welcome, {{ user.name or user.username }}</h1>
-      {% set focus = user.interest_keys | interest_labels %}
-      <p>@{{ user.username }}{% if focus %} · {{ focus | join(', ') }}{% endif %}</p>
-    </div>
-
-  <section class="dashboard-level" data-level="{{ progress.level }}">
-    <div class="dashboard-section-heading">
-      <h2 class="level" >Level {{ progress.level }}</h2>
-      <span class="xp" >{{ progress.xp }} total XP</span>
-    </div>
-    <progress class="nav" id="prog" value="{{ progress.into_level }}" max="{{ progress.level_span }}">
-      {{ progress.into_level }} / {{ progress.level_span }} XP
-    </progress>
-    <p class="nav" id="tolvl" >{{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}</p>
-  </section>
-
-  <section class="dashboard-stats" aria-label="Learning stats">
-    <div class="dashboard-stat"><strong>{{ daily_goal.earned_xp }}</strong><span>XP today</span></div>
-    <div class="dashboard-stat"><strong>{{ daily_goal.target_xp }}</strong><span>daily goal</span></div>
-    <div class="dashboard-stat"><strong>{{ user.streak_days or 0 }}</strong><span>day streak</span></div>
-    <div class="dashboard-stat"><strong>{{ stats.lessons_done }}</strong><span>lessons done</span></div>
-    <div class="dashboard-stat"><strong>{{ stats.problems_solved }}</strong><span>problems solved</span></div>
-    <div class="dashboard-stat"><strong>{{ stats.submissions }}</strong><span>submissions</span></div>
-  </section>
-
-  <section class="dashboard-focus">
-    <h2>Continue learning</h2>
-    {% if current %}
-      <p class="dashboard-track">{{ current.track.title }}</p>
-      {% if current.unit %}<p>{{ current.unit.title }}</p>{% endif %}
-      {% if current.lesson %}
-        <div class="dashboard-lesson" data-lesson-id="{{ current.lesson.id }}">
-          <h3>{{ current.lesson.title }}</h3>
-          <p>{{ current.lesson.kind }} · {{ current.lesson.xp }} XP</p>
-          <a href="#lesson-{{ current.lesson.id }}" class="dashboard-action">Start lesson</a>
-        </div>
-      {% else %}
-        <p>Your track has no lesson queued yet.</p>
-      {% endif %}
+      <img class="dash__avatar" src="{{ user.avatar_url }}"
+           alt="" width="64" height="64">
     {% else %}
-      <p>You have not joined a learning track yet.</p>
-      <a href="{{ url_for('onboarding.page') }}" class="dashboard-action">Choose a track</a>
+      <div class="dash__avatar dash__avatar--blank" aria-hidden="true">
+        {{ (user.name or user.username)[0] | upper }}
+      </div>
+    {% endif %}
+
+    <div class="dash__who">
+      <h1 class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
+      <p class="dash__handle">
+        @{{ user.username }}
+        {%- set focus = user.interest_keys | interest_labels %}
+        {%- if focus %} · {{ focus | join(', ') }}{% endif %}
+      </p>
+    </div>
+
+    <div class="dash__streak" title="Current streak">
+      <span class="dash__streak-num">{{ user.streak_days or 0 }}</span>
+      <span class="dash__streak-label">day streak</span>
+      {% if user.streak_best %}
+        <span class="dash__streak-best">best {{ user.streak_best }}</span>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- ---------- level ---------- -->
+  <section class="dash__level card" aria-labelledby="level-h">
+    <div class="card__head">
+      <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
+      <span class="card__meta">{{ progress.xp }} total XP</span>
+    </div>
+
+    <div class="meter" role="img"
+         aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
+      <span class="meter__fill" style="width: {{ level_pct }}%"></span>
+    </div>
+
+    <p class="card__foot">
+      {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
+    </p>
+  </section>
+
+  <!-- ---------- continue ---------- -->
+  <section class="dash__continue card" aria-labelledby="continue-h">
+    <div class="card__head">
+      <h2 class="card__title" id="continue-h">Continue learning</h2>
+      {% if current %}
+        <a class="card__link" href="{{ url_for('learn.track', track_slug=current.track.slug) }}">
+          Whole path
+        </a>
+      {% endif %}
+    </div>
+
+    {% if current %}
+      <p class="dash__path">{{ current.track.title }}</p>
+      {% if current.unit %}
+        <p class="dash__unit">{{ current.unit.title }}</p>
+      {% endif %}
+
+      {% if current.lesson %}
+        <article class="lessoncard" data-lesson-id="{{ current.lesson.id }}">
+          <h3 class="lessoncard__title">{{ current.lesson.title }}</h3>
+          <p class="lessoncard__meta">
+            <span class="tag tag--{{ current.lesson.kind }}">{{ current.lesson.kind }}</span>
+            <span class="lessoncard__xp">+{{ current.lesson.xp }} XP</span>
+          </p>
+          <a class="btn btn--primary"
+             href="{{ url_for('learn.lesson',
+                              track_slug=current.track.slug,
+                              unit_slug=current.unit.slug,
+                              lesson_slug=current.lesson.slug) }}">
+            Start lesson
+          </a>
+        </article>
+      {% else %}
+        <p class="empty">You've finished every lesson on this path.</p>
+        <a class="btn" href="{{ url_for('learn.index') }}">Pick another path</a>
+      {% endif %}
+
+    {% else %}
+      <p class="empty">You haven't joined a learning path yet.</p>
+      <a class="btn btn--primary" href="{{ url_for('learn.index') }}">Choose a path</a>
     {% endif %}
   </section>
 
-  <section class="dashboard-goal">
-    <h2>Daily goal</h2>
-    <p>{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</p>
-    <form method="post" action="{{ url_for('profile.save_learning') }}">
-      <label for="daily-goal-xp">Target XP</label>
-      <select id="daily-goal-xp" name="daily_goal_xp">
+  <section class="dash__goal card" aria-labelledby="goal-h">
+    <div class="card__head">
+      <h2 class="card__title" id="goal-h">Today's goal</h2>
+      <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
+    </div>
+
+    <div class="meter meter--goal" role="img"
+         aria-label="{{ goal_pct }} percent of today's goal">
+      <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
+    </div>
+
+    <p class="card__foot">
+      {% if daily_goal.remaining_xp %}
+        {{ daily_goal.remaining_xp }} XP to go.
+      {% else %}
+        Goal hit. Anything more is a bonus.
+      {% endif %}
+    </p>
+
+    <form class="goalform" method="post" action="{{ url_for('profile.save_learning') }}">
+      <label class="goalform__label" for="daily-goal-xp">Change target</label>
+      <select class="goalform__select" id="daily-goal-xp" name="daily_goal_xp">
         {% for choice in goal_choices %}
-          <option value="{{ choice }}"{% if choice == user.daily_goal_xp %} selected{% endif %}>{{ choice }} XP</option>
+          <option value="{{ choice }}"{% if choice == user.daily_goal_xp %} selected{% endif %}>
+            {{ choice }} XP
+          </option>
         {% endfor %}
       </select>
       <input type="hidden" name="preferred_language" value="{{ user.preferred_language or '' }}">
       <input type="hidden" name="timezone" value="{{ user.timezone or 'UTC' }}">
-      <button type="submit">Save goal</button>
+      <button class="btn btn--quiet" type="submit">Save</button>
     </form>
   </section>
 
-  <section class="dashboard-activity">
-    <h2>Recent activity</h2>
+  <section class="dash__stats" aria-label="Your totals">
+    {% set tiles = [
+      ('Lessons done',    stats.lessons_done),
+      ('Problems solved', stats.problems_solved),
+      ('Submissions',     stats.submissions),
+      ('XP today',        daily_goal.earned_xp),
+    ] %}
+    {% for label, value in tiles %}
+      <div class="stat">
+        <strong class="stat__value">{{ value }}</strong>
+        <span class="stat__label">{{ label }}</span>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="dash__activity card" aria-labelledby="activity-h">
+    <div class="card__head">
+      <h2 class="card__title" id="activity-h">Recent activity</h2>
+    </div>
+
     {% if activity %}
-      <ul>
+      <ul class="feed">
         {% for row in activity %}
-          <li data-reason="{{ row.reason }}" data-ref="{{ row.ref }}">
-            <span>{{ row.label }}</span>
-            <strong>+{{ row.amount }} XP</strong>
-            <time datetime="{{ row.at.isoformat() }}">{{ row.at.strftime('%d %b') }}</time>
+          <li class="feed__item" data-reason="{{ row.reason }}" data-ref="{{ row.ref }}">
+            <span class="feed__dot feed__dot--{{ row.reason }}" aria-hidden="true"></span>
+            <span class="feed__label">{{ row.label }}</span>
+            <strong class="feed__xp">+{{ row.amount }} XP</strong>
+            <time class="feed__time" datetime="{{ row.at.isoformat() }}">
+              {{ row.at.strftime('%d %b') }}
+            </time>
           </li>
         {% endfor %}
       </ul>
     {% else %}
-      <p>No activity yet. Complete your first lesson to start your history.</p>
+      <p class="empty">Nothing yet. Finish a lesson and it shows up here.</p>
     {% endif %}
   </section>
+
+  <aside class="dash__links" aria-label="Shortcuts">
+    <a class="quicklink" href="{{ url_for('learn.index') }}">
+      <span class="quicklink__title">Course paths</span>
+      <span class="quicklink__sub">Browse and switch</span>
+    </a>
+    <a class="quicklink" href="{{ url_for('profile.me') }}">
+      <span class="quicklink__title">Profile</span>
+      <span class="quicklink__sub">How others see you</span>
+    </a>
+    <a class="quicklink" href="{{ url_for('profile.settings') }}">
+      <span class="quicklink__title">Settings</span>
+      <span class="quicklink__sub">Goal, language, account</span>
+    </a>
+  </aside>
+
 </main>
 {% endblock content %}
-
-{% block js %}
-
-
-{% endblock js %}
