@@ -1,6 +1,7 @@
 {% extends "base-dashboard.html" %}
 
 {% block head %}
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 {% endblock head %}
 
@@ -34,7 +35,7 @@
     <div class="dash__streak" title="Current streak">
     <img class="fire" src="https://cdn.hackclub.com/01a0c993-cc49-78c4-b25a-de6a32cfe2b3/Untitled%20design%20(81).avif" alt="">
 
-      <div>
+      <div data-aos="fade-in" data-aos-delay="200" >
         <span class="dash__streak-num">{{ user.streak_days or 0 }}</span>
         <span class="dash__streak-label">day streak</span>
         {% if user.streak_best %}
@@ -45,7 +46,7 @@
   </header>
 
   <!-- ---------- level ---------- -->
-  <section class="dash__level card" aria-labelledby="level-h">
+  <section data-aos="fade-in" data-aos-delay="200" class="dash__level card" aria-labelledby="level-h">
     <div class="card__head">
       <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
       <span class="card__meta">{{ progress.xp }} total XP</span>
@@ -62,7 +63,7 @@
   </section>
 
   <!-- ---------- continue ---------- -->
-  <section class="dash__continue card" aria-labelledby="continue-h">
+  <section data-aos="fade-in" data-aos-delay="300" class="dash__continue card" aria-labelledby="continue-h">
     <div class="card__head">
       <h2 class="card__title" id="continue-h">Continue learning</h2>
       {% if current %}
@@ -104,7 +105,7 @@
     {% endif %}
   </section>
 
-  <section class="dash__goal card" aria-labelledby="goal-h">
+  <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card" aria-labelledby="goal-h">
     <div class="card__head">
       <h2 class="card__title" id="goal-h">Today's goal</h2>
       <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
@@ -193,3 +194,45 @@
 
 </main>
 {% endblock content %}
+
+{% block js %}
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+  const galleryTrack = document.querySelector("#companies .track");
+  if (galleryTrack && galleryTrack.children.length === 2) {
+    const thirdGallerySet = galleryTrack.children[0].cloneNode(true);
+    thirdGallerySet.setAttribute("aria-hidden", "true");
+    galleryTrack.appendChild(thirdGallerySet);
+  }
+
+  if (galleryTrack && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animationDuration = 18000;
+    let loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+    let offset = 0;
+    let previousTime;
+
+    const animateGallery = (time) => {
+      if (previousTime === undefined) previousTime = time;
+
+      const elapsed = Math.min(time - previousTime, 100);
+      previousTime = time;
+      loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+      offset -= elapsed * loopDistance / animationDuration;
+
+      if (offset <= -loopDistance) {
+        offset += loopDistance;
+        galleryTrack.appendChild(galleryTrack.firstElementChild);
+      }
+
+      galleryTrack.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(animateGallery);
+    };
+
+    requestAnimationFrame(animateGallery);
+  }
+
+  AOS.init({
+    once:true
+    });
+</script>
+{% endblock js %}

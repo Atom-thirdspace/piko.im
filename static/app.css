@@ -55,8 +55,7 @@ html body * {
     cursor: pointer;
 }
 
-.topnav a:hover,
-.topnav .settings-link:hover { color: #77431d; text-decoration: underline; }
+
 .topnav form { margin: 0; }
 
 .verify-banner {
@@ -86,4 +85,29 @@ html body * {
     position: absolute;
     left: 2%;
     user-select: none;
+}
+
+.topnav a {
+    position: relative;
+    text-decoration: none;
+    color: black;
+}
+
+.topnav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -6px;
+
+    width: 0;
+    height: 3px;
+
+    background-color: #703e18;
+    border-radius: 999px;
+
+    transition: width 0.3s ease;
+}
+
+.topnav a:hover::after {
+    width: 100%;
 }
