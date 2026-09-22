@@ -82,7 +82,7 @@ html body * {
 .logo {
     height: 6rem;
     width: auto;
-
+    padding-top: 0.2rem;
     position: absolute;
     left: 2%;
 }
