@@ -1,4 +1,4 @@
-header {
+.landing-header {
     top: 4.2vh;
     width:37%;
     position: fixed;
@@ -152,7 +152,7 @@ br{
 }
 
 
-header a {
+.landing-header a {
     position: relative;
     font-size: 1.3vw;
     font-family: face;
@@ -160,7 +160,7 @@ header a {
     color: black;
 }
 
-header a::after {
+.landing-header a::after {
     content: "";
     position: absolute;
     left: 0;
@@ -171,7 +171,7 @@ header a::after {
     transition: width 0.3s ease;
 }
 
-header a:hover::after {
+.landing-header a:hover::after {
     width: 100%;
 }
 
@@ -294,13 +294,6 @@ img {
 .settings-danger h2 { color: #c0392b; }
 .settings-danger-btn { background: #c0392b; color: #fff; border: none;
                        border-radius: 8px; padding: .7rem; cursor: pointer; }
-.topnav { display: flex; align-items: center; gap: 1rem; justify-content: flex-end;
-          max-width: 640px; margin: 1rem auto 0; padding: 0 1rem; font-size: .9rem; }
-.topnav a { color: inherit; }
-.verify-banner { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
-                 padding: .7rem 1rem; background: #fff4e5; border-bottom: 1px solid #f0c987;
-                 font-size: .95rem; }
-.verify-banner form { margin: 0; }
 .settings-connect-intro { margin: 1rem 0 .4rem; }
 .settings-connect { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
                     gap: .5rem; }
