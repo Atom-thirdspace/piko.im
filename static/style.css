@@ -1,23 +1,13 @@
-header.sitenav {
+header {
+    top: 4.2vh;
+    width:37%;
     position: fixed;
-    top: 2vh;
-    right: 0;
-    left: auto;
-    /* Was width:37% + right:24vh. A vh offset against a vw-sized login button
-       overlapped on any viewport wider than 2:1 - let flex reserve the space. */
-    width: auto;
+    right: 24vh;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: clamp(1rem, 2vw, 2.5rem);
-    padding: 0 2vw;
-    box-sizing: border-box;
     z-index: 400;
-}
 
-#mainnav {
-    display: flex;
-    align-items: center;
-    gap: clamp(1rem, 2vw, 2.5rem);
 }
 body {
     margin: 0;
@@ -90,6 +80,11 @@ h2::selection{
 }
 
 
+@font-face {
+    font-family: face;
+    src: url("https://cdn.hackclub.com/01a09f6d-388e-7b00-bc97-f496aba42ac6/safiro-medium-webfont%20(2).ttf");
+}
+
 @keyframes blink {
     0% {
         opacity: 0;
@@ -121,34 +116,31 @@ br{
     pointer-events: none;
 }
 
+#login {
+    top: 0;
+    left: 4%;
+    position: absolute;
+    width: 10vw;
+}
+
 #log {
-    /* Static in the header flex row, so the nav can never sit on top of it. */
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    flex: 0 0 auto;
-    width: clamp(96px, 10vw, 150px);
-    aspect-ratio: 150 / 58;
+    top: 2vh;
+    right: 2vw;
+    position: fixed;
+    width: 10vw;
+    height: 7.9vh;
     text-decoration: none;
     color: inherit;
     border-radius: 60px;
-    transition: transform .15s ease;
+    z-index: 10;
 }
-
-#login {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
 #textl {
-    /* Positioned and later in the DOM than #login, so it paints on top. */
-    position: relative;
-    margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    top: 11%;
     color: rgb(251, 246, 244);
-    font-size: clamp(.85rem, 1.5vw, 1.15rem);
+    font-size: 1.5vw;
 }
 
 #log:hover {
@@ -160,16 +152,15 @@ br{
 }
 
 
-#mainnav a {
+header a {
     position: relative;
-    font-size: clamp(.8rem, 1.3vw, 1.05rem);
+    font-size: 1.3vw;
     font-family: face;
     text-decoration: none;
     color: black;
-    white-space: nowrap;
 }
 
-#mainnav a::after {
+header a::after {
     content: "";
     position: absolute;
     left: 0;
@@ -180,7 +171,7 @@ br{
     transition: width 0.3s ease;
 }
 
-#mainnav a:hover::after {
+header a:hover::after {
     width: 100%;
 }
 
@@ -303,6 +294,13 @@ img {
 .settings-danger h2 { color: #c0392b; }
 .settings-danger-btn { background: #c0392b; color: #fff; border: none;
                        border-radius: 8px; padding: .7rem; cursor: pointer; }
+.topnav { display: flex; align-items: center; gap: 1rem; justify-content: flex-end;
+          max-width: 640px; margin: 1rem auto 0; padding: 0 1rem; font-size: .9rem; }
+.topnav a { color: inherit; }
+.verify-banner { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap;
+                 padding: .7rem 1rem; background: #fff4e5; border-bottom: 1px solid #f0c987;
+                 font-size: .95rem; }
+.verify-banner form { margin: 0; }
 .settings-connect-intro { margin: 1rem 0 .4rem; }
 .settings-connect { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
                     gap: .5rem; }
@@ -517,9 +515,4 @@ img {
   #companies .gallery-wide {
     height: 180px;
   }
-}
-
-/* Five links, a logo and a button do not fit a phone at any font size. */
-@media (max-width: 60rem) {
-    #mainnav { display: none; }
 }
