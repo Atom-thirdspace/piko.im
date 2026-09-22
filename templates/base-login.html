@@ -11,6 +11,7 @@
     {% endblock head %}
 </head>
 <body>
+    <img id="custom-cursor" src="https://cdn.hackclub.com/01a0b45b-38fa-7ae4-b0a0-f903879286aa/Untitled%20design%20(70).png" alt="" aria-hidden="true">
     {% block app_header %}{% endblock app_header %}
     {% block content %}
     
@@ -18,5 +19,6 @@
     {% block js %}
     
     {% endblock js %}
+    <script defer src="{{ url_for('static', filename='cursor.js') }}"></script>
 </body>
 </html>

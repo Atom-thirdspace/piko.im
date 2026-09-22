@@ -11,6 +11,24 @@ body {
     font-family: face, sans-serif;
 }
 
+html,
+body,
+html body * {
+    cursor: none !important;
+}
+
+#custom-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2147483647;
+    width: 64px;
+    height: 64px;
+    pointer-events: none;
+    user-select: none;
+    transform: translate3d(-100px, -100px, 0);
+}
+
 .topnav {
     position: sticky;
     top: 0;
