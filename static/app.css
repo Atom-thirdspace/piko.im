@@ -78,3 +78,11 @@ html body * {
     .verify-banner { padding: .7rem 1rem; }
     .topnav { flex-wrap: wrap; }
 }
+
+.logo {
+    height: 6rem;
+    width: auto;
+
+    position: absolute;
+    left: 2%;
+}

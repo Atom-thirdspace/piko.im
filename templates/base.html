@@ -16,12 +16,15 @@
       {% set viewer = current_user() %}
       {% if viewer %}
         <nav class="topnav">
+            <img class="logo" src="https://user-cdn.hackclub-assets.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
+
           <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
           <a href="{{ url_for('profile.me') }}">Profile</a>
           <a href="{{ url_for('profile.settings') }}">Settings</a>
           <form method="post" action="{{ url_for('auth.logout') }}">
             <button type="submit" class="settings-link">Log out</button>
           </form>
+
         </nav>
         {% if not viewer.email_verified %}
           <div class="verify-banner">
