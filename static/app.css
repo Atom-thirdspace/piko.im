@@ -1,0 +1,62 @@
+@font-face {
+    font-family: face;
+    src: url("https://cdn.hackclub.com/01a09f6d-388e-7b00-bc97-f496aba42ac6/safiro-medium-webfont%20(2).ttf");
+}
+
+* {
+    font-family: inherit;
+}
+
+body {
+    font-family: face, sans-serif;
+}
+
+.topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1.5rem;
+    padding: .9rem 2rem;
+    background: rgba(251, 246, 244, .92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #e9dccf;
+}
+
+.topnav a,
+.topnav .settings-link {
+    font-size: .95rem;
+    color: #2a1a10;
+    text-decoration: none;
+    border: none;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.topnav a:hover,
+.topnav .settings-link:hover { color: #77431d; text-decoration: underline; }
+.topnav form { margin: 0; }
+
+.verify-banner {
+    display: flex;
+    align-items: center;
+    gap: .8rem;
+    flex-wrap: wrap;
+    padding: .7rem 2rem;
+    background: #fdf5ec;
+    border-bottom: 1px solid #e9dccf;
+    font-size: .9rem;
+}
+
+.verify-banner form { margin: 0; }
+
+@media (max-width: 60rem) {
+    .topnav { gap: 1rem; padding: .8rem 1rem; }
+    .topnav a, .topnav .settings-link { font-size: .85rem; }
+    .verify-banner { padding: .7rem 1rem; }
+    .topnav { flex-wrap: wrap; }
+}
