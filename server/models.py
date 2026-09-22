@@ -383,6 +383,7 @@ class Lesson(db.Model):
     title = db.Column(db.String(200), nullable=False)
     kind = db.Column(db.String(16), nullable=False, default="reading")   # reading | quiz | code
     xp = db.Column(db.Integer, nullable=False, default=10)
+    body_md = db.Column(db.Text, nullable=False, default="")
     position = db.Column(db.Integer, nullable=False, default=0)
     # SET NULL, not CASCADE: deleting a problem must not delete the lesson around it.
     problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="SET NULL"))

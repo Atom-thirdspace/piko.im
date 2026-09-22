@@ -1,0 +1,104 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn learn-lesson">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('learn.index') }}">Course paths</a> ·
+      <a href="{{ url_for('learn.track', track_slug=track.slug) }}">{{ track.title }}</a> ·
+      {{ unit.title }}
+    </p>
+    <h1>{{ lesson.title }}</h1>
+    <p class="track-meta">
+      Lesson {{ position }} of {{ total }}
+      · <span class="pill pill-{{ lesson.kind }}">{{ lesson.kind }}</span>
+      · {{ lesson.xp }} XP
+      {% if done %}· <span class="pill pill-done">Done</span>{% endif %}
+    </p>
+  </header>
+
+  <article class="prose">
+    {{ body }}
+    {% if not lesson.body_md %}
+      <p><em>Notes for this lesson haven't been written yet.</em></p>
+    {% endif %}
+  </article>
+
+  {% if lesson.kind == 'code' and lesson.problem %}
+    <section class="lesson-cta">
+      <h2>Your turn</h2>
+      <p>
+        {% if solved %}
+          You've solved <strong>{{ lesson.problem.title }}</strong> - this lesson is done.
+        {% else %}
+          Solve <strong>{{ lesson.problem.title }}</strong> to finish this lesson.
+          The lesson closes itself the moment the judge accepts your code.
+        {% endif %}
+      </p>
+      <a class="btn btn-primary"
+         href="{{ url_for('problems.page', slug=lesson.problem.slug) }}">
+        {% if solved %}Open the problem again{% else %}Open the problem{% endif %}
+      </a>
+    </section>
+  {% endif %}
+
+  <form method="post" class="lesson-finish"
+        action="{{ url_for('learn.complete', track_slug=track.slug,
+                           unit_slug=unit.slug, lesson_slug=lesson.slug) }}">
+
+    {% if quiz %}
+      <section class="quiz">
+        <h2>Check yourself</h2>
+        {% for question in quiz %}
+          {% set verdict = results.get(question.id) if results else None %}
+          <fieldset class="quiz-q{% if verdict is false %} is-wrong{% elif verdict %} is-right{% endif %}">
+            <legend>{{ loop.index }}. {{ question.prompt }}</legend>
+            {% for choice in question.choices %}
+              <label class="quiz-choice">
+                <input type="radio" name="{{ question.id }}" value="{{ choice.id }}"
+                       {% if answers is defined and answers.get(question.id) == choice.id %}checked{% endif %}
+                       {% if not done %}required{% endif %}>
+                <span>{{ choice.text }}</span>
+              </label>
+            {% endfor %}
+            {% if verdict is false %}
+              <p class="quiz-note">Not this one - try again.</p>
+            {% elif verdict %}
+              <p class="quiz-note quiz-note-ok">Correct.</p>
+            {% endif %}
+          </fieldset>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    {% if done %}
+      <p class="pill pill-done">Completed - XP already paid</p>
+    {% elif can_complete %}
+      <button type="submit" class="btn btn-primary">
+        {% if quiz %}Submit answers{% else %}Mark complete · +{{ lesson.xp }} XP{% endif %}
+      </button>
+    {% else %}
+      <p class="gate">{{ gate_message }}</p>
+    {% endif %}
+  </form>
+
+  <nav class="lesson-nav">
+    {% if prev %}
+      <a href="{{ url_for('learn.lesson', track_slug=track.slug,
+                          unit_slug=prev.unit.slug, lesson_slug=prev.slug) }}">
+        ← {{ prev.title }}
+      </a>
+    {% else %}<span></span>{% endif %}
+    {% if next %}
+      <a href="{{ url_for('learn.lesson', track_slug=track.slug,
+                          unit_slug=next.unit.slug, lesson_slug=next.slug) }}">
+        {{ next.title }} →
+      </a>
+    {% endif %}
+  </nav>
+</main>
+{% endblock content %}

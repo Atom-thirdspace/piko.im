@@ -49,6 +49,7 @@ def seed_catalog():
                 lesson.title = lesson_def.title
                 lesson.kind = lesson_def.kind
                 lesson.xp = lesson_def.xp
+                lesson.body_md = (lesson_def.body or "").strip()
                 lesson.position = l_pos
                 if lesson_def.problem_slug:
                     # A code lesson whose problem isn't seeded yet stays unlinked

@@ -1,0 +1,133 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn problem-page" data-submit-url="{{ url_for('problems.submit', slug=problem.slug) }}">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      {% if lesson %}
+        <a href="{{ url_for('learn.track', track_slug=lesson.unit.track.slug) }}">{{ lesson.unit.track.title }}</a> ·
+        <a href="{{ url_for('learn.lesson', track_slug=lesson.unit.track.slug,
+                            unit_slug=lesson.unit.slug, lesson_slug=lesson.slug) }}">{{ lesson.title }}</a>
+      {% else %}
+        <a href="{{ url_for('learn.index') }}">Course paths</a>
+      {% endif %}
+    </p>
+    <h1>{{ problem.title }}</h1>
+    <p class="track-meta">
+      <span class="pill pill-{{ problem.difficulty }}">{{ problem.difficulty }}</span>
+      {% if problem.topic %}· {{ problem.topic }}{% endif %}
+      · {{ problem.xp }} XP
+      · {{ problem.time_limit_sec }}s / {{ problem.memory_mb }}MB
+      {% if solved %}· <span class="pill pill-done">Solved</span>{% endif %}
+    </p>
+  </header>
+
+  <article class="prose">{{ statement }}</article>
+
+  {% if samples %}
+    <section class="samples">
+      <h2>Samples</h2>
+      {% for test in samples %}
+        <div class="sample">
+          <div><h3>Input</h3><pre>{{ test.stdin }}</pre></div>
+          <div><h3>Output</h3><pre>{{ test.expected_stdout }}</pre></div>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="editor">
+    <h2>Your solution</h2>
+    <label for="language">Language</label>
+    <select id="language">
+      {% for lang in languages %}
+        <option value="{{ lang }}"{% if lang == default_language %} selected{% endif %}>{{ lang }}</option>
+      {% endfor %}
+    </select>
+
+    <textarea id="source" rows="18" spellcheck="false"
+              placeholder="Read from stdin, print to stdout."></textarea>
+
+    <button id="run" type="button" class="btn btn-primary">Submit</button>
+    <div id="result" class="result" hidden></div>
+  </section>
+
+  {% if recent %}
+    <section class="submissions">
+      <h2>Your recent submissions</h2>
+      <ul>
+        {% for sub in recent %}
+          <li>
+            <span class="pill pill-{{ 'done' if sub.verdict == 'accepted' else 'fail' }}">
+              {{ verdict_labels.get(sub.verdict, sub.verdict) }}
+            </span>
+            <span>{{ sub.passed }}/{{ sub.total }} tests · {{ sub.language }}</span>
+            <time datetime="{{ sub.created_at.isoformat() }}">{{ sub.created_at.strftime('%d %b %H:%M') }}</time>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+</main>
+{% endblock content %}
+
+{% block js %}
+<script>
+(function () {
+  var page = document.querySelector('.problem-page');
+  var run = document.getElementById('run');
+  var box = document.getElementById('result');
+
+  run.addEventListener('click', async function () {
+    var source = document.getElementById('source').value;
+    if (!source.trim()) { return; }
+
+    run.disabled = true;
+    run.textContent = 'Judging…';
+    box.hidden = false;
+    box.textContent = 'Running your code against the tests…';
+
+    try {
+      var res = await fetch(page.dataset.submitUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: document.getElementById('language').value,
+          source: source
+        })
+      });
+      var data = await res.json();
+
+      if (!res.ok) {
+        box.className = 'result is-fail';
+        box.textContent = data.error || 'Something went wrong.';
+        return;
+      }
+
+      var accepted = data.verdict === 'accepted';
+      var lines = [data.label + ' — ' + data.passed + '/' + data.total + ' tests'];
+      if (data.max_time_ms) { lines.push(data.max_time_ms + ' ms'); }
+      if (data.xp_awarded) { lines.push('+' + data.xp_awarded + ' XP'); }
+      if (data.lesson_xp_awarded) { lines.push('+' + data.lesson_xp_awarded + ' XP lesson complete'); }
+      if (data.compile_output) { lines.push('\n' + data.compile_output); }
+
+      box.className = 'result ' + (accepted ? 'is-ok' : 'is-fail');
+      box.textContent = lines.join(' · ');
+
+      // The lesson only closes on the server, so reload to pick up the new state.
+      if (accepted) { setTimeout(function () { location.reload(); }, 1200); }
+    } catch (err) {
+      box.className = 'result is-fail';
+      box.textContent = 'Could not reach the judge.';
+    } finally {
+      run.disabled = false;
+      run.textContent = 'Submit';
+    }
+  });
+})();
+</script>
+{% endblock js %}

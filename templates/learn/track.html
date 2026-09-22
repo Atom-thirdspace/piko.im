@@ -1,0 +1,71 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('dashboard.index') }}">Dashboard</a> ·
+      <a href="{{ url_for('learn.index') }}">Course paths</a>
+    </p>
+    <h1>{{ track.title }}</h1>
+    <p class="learn-lede">{{ track.description }}</p>
+
+    <div class="bar bar-lg" role="img"
+         aria-label="{{ summary.done }} of {{ summary.total }} lessons done">
+      <span style="width: {{ summary.percent }}%"></span>
+    </div>
+    <p class="track-meta">
+      {{ summary.done }} / {{ summary.total }} lessons · {{ summary.percent }}%
+      {% if is_primary %}· <strong>your current path</strong>{% endif %}
+    </p>
+
+    {% if summary.next %}
+      <form method="post" action="{{ url_for('learn.enroll', track_slug=track.slug) }}">
+        <button type="submit" class="btn btn-primary">
+          {% if enrolled %}Continue{% else %}Start this path{% endif %}
+          - {{ summary.next.title }}
+        </button>
+      </form>
+    {% else %}
+      <p class="pill pill-done">Path finished</p>
+    {% endif %}
+  </header>
+
+  <ol class="unit-list">
+    {% for row in units %}
+      <li class="unit{% if row.done %} is-done{% endif %}">
+        <div class="unit-head">
+          <h2>{{ row.unit.title }}</h2>
+          <span class="pill pill-{{ row.unit.level }}">{{ row.unit.level }}</span>
+        </div>
+
+        <ul class="lesson-list">
+          {% for item in row.lessons %}
+            {% set lesson = item.lesson %}
+            <li class="lesson-row{% if item.done %} is-done{% endif %}{% if item.is_next %} is-next{% endif %}">
+              <a href="{{ url_for('learn.lesson', track_slug=track.slug,
+                                  unit_slug=row.unit.slug, lesson_slug=lesson.slug) }}">
+                <span class="lesson-mark" aria-hidden="true">
+                  {%- if item.done %}✓{% elif item.is_next %}▸{% else %}·{% endif -%}
+                </span>
+                <span class="lesson-name">{{ lesson.title }}</span>
+                <span class="lesson-tags">
+                  <span class="pill pill-{{ lesson.kind }}">{{ lesson.kind }}</span>
+                  <span class="lesson-xp">{{ lesson.xp }} XP</span>
+                </span>
+              </a>
+              {% if item.is_next %}<span class="sr-only">Next up</span>{% endif %}
+            </li>
+          {% else %}
+            <li class="lesson-row"><em>No lessons in this unit yet.</em></li>
+          {% endfor %}
+        </ul>
+      </li>
+    {% endfor %}
+  </ol>
+</main>
+{% endblock content %}

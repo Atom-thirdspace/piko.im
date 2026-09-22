@@ -1,0 +1,81 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></p>
+    <h1>Course paths</h1>
+    <p class="learn-lede">
+      {% if any_enrolled %}
+        Switch paths whenever you like - your finished lessons stay finished.
+      {% else %}
+        Pick where to start. Each path is a run of concepts and problems in the
+        order they build on each other.
+      {% endif %}
+    </p>
+  </header>
+
+  <ul class="track-grid">
+    {% for row in tracks %}
+      {% set track = row.track %}
+      <li class="track-card{% if row.primary %} is-primary{% endif %}">
+        <div class="track-card-top">
+          <h2><a href="{{ url_for('learn.track', track_slug=track.slug) }}">{{ track.title }}</a></h2>
+          {% if row.primary %}
+            <span class="pill pill-on">Current path</span>
+          {% elif row.enrolled %}
+            <span class="pill">Joined</span>
+          {% endif %}
+        </div>
+
+        <p class="track-desc">{{ track.description }}</p>
+
+        <p class="track-meta">
+          {{ row.total }} lesson{{ '' if row.total == 1 else 's' }}
+          · {{ row.xp_total }} XP
+          {% if row.levels %}· {{ row.levels | join(' → ') }}{% endif %}
+        </p>
+
+        {% if row.done %}
+          <div class="bar" role="img"
+               aria-label="{{ row.done }} of {{ row.total }} lessons done">
+            <span style="width: {{ row.percent }}%"></span>
+          </div>
+          <p class="track-meta">{{ row.done }} / {{ row.total }} done · {{ row.percent }}%</p>
+        {% endif %}
+
+        <div class="track-actions">
+          {% if row.next %}
+            <form method="post" action="{{ url_for('learn.enroll', track_slug=track.slug) }}">
+              <button type="submit" class="btn btn-primary">
+                {% if row.done %}Continue{% elif row.enrolled %}Resume{% else %}Start this path{% endif %}
+              </button>
+            </form>
+          {% else %}
+            <span class="pill pill-done">Finished</span>
+          {% endif %}
+          <a class="btn btn-quiet" href="{{ url_for('learn.track', track_slug=track.slug) }}">
+            See the syllabus
+          </a>
+        </div>
+
+        {% if row.next %}
+          <p class="track-next">Next: {{ row.next.title }}</p>
+        {% endif %}
+      </li>
+    {% else %}
+      <li class="track-card">
+        <h2>No paths seeded yet</h2>
+        <p class="track-desc">
+          Run <code>flask --app app seed-catalog</code> to load the catalog into
+          the database.
+        </p>
+      </li>
+    {% endfor %}
+  </ul>
+</main>
+{% endblock content %}
