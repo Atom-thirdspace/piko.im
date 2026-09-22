@@ -209,3 +209,49 @@
 .tutor__answer > :last-child { margin-bottom: 0; }
 
 .tutor__left { margin: .8rem 0 0; font-size: .8rem; color: #7a6455; }
+
+/* thinking indicator - a shimmering label with three staggered dots */
+
+.tutor__answer.is-thinking { background: #faf4ee; border-style: dashed; }
+
+.thinking { display: inline-flex; align-items: center; gap: .1rem; }
+
+.thinking__label {
+    font-size: .95rem;
+    color: #7a6455;
+    background: linear-gradient(90deg, #a08a78 0%, #2a1a10 50%, #a08a78 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: thinking-shimmer 1.8s ease-in-out infinite;
+}
+
+.thinking__dots { display: inline-flex; gap: .18rem; margin-left: .35rem; }
+
+.thinking__dots i {
+    width: .3rem;
+    height: .3rem;
+    border-radius: 50%;
+    background: #77431d;
+    opacity: .3;
+    animation: thinking-dot 1.4s ease-in-out infinite;
+}
+.thinking__dots i:nth-child(2) { animation-delay: .2s; }
+.thinking__dots i:nth-child(3) { animation-delay: .4s; }
+
+@keyframes thinking-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@keyframes thinking-dot {
+    0%, 60%, 100% { opacity: .25; transform: translateY(0); }
+    30%           { opacity: 1;   transform: translateY(-.18rem); }
+}
+
+/* Respect the OS setting - a pulsing label is exactly what this flag is for. */
+@media (prefers-reduced-motion: reduce) {
+    .thinking__label { animation: none; color: #7a6455; -webkit-text-fill-color: #7a6455; }
+    .thinking__dots i { animation: none; opacity: .6; }
+}

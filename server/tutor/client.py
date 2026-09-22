@@ -1,5 +1,6 @@
 import os
 import requests
+from flask import current_app
 
 DEFAULT_BASE = "https://ai.hackclub.com/proxy/v1"
 DEFAULT_MODEL = "gpt-5-mini"
@@ -47,8 +48,19 @@ def ask(system, user, max_tokens=600, timeout=30):
 
     if resp.status_code == 429:
         raise TutorError("The tutor is busy right now. Give it a minute.")
+    if resp.status_code in (401, 403):
+        current_app.logger.error("tutor auth rejected (%s) for model %s",
+                                 resp.status_code, model)
+        raise TutorError("The tutor's credentials were rejected.")
+    if resp.status_code == 402:
+        # Out of upstream credit. Say so plainly - "had a problem answering"
+        # sends people hunting for a bug in their question.
+        current_app.logger.error("tutor out of credit: %s", resp.text[:300])
+        raise TutorError("The tutor is out of credit. Ask an admin to top it up.")
     if resp.status_code >= 400:
-        # Never surface the upstream body - it can echo the prompt back.
+        # The body can echo the prompt back, so it goes to the log, not the user.
+        current_app.logger.error("tutor upstream %s for model %s: %s",
+                                 resp.status_code, model, resp.text[:300])
         raise TutorError("The tutor had a problem answering that.")
 
     try:

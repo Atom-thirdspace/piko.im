@@ -142,10 +142,16 @@
     if (question.length < 5) { return; }
 
     send.disabled = true;
-    send.textContent = 'Thinking…';
+    send.textContent = 'Thinking';
     box.hidden = false;
-    box.className = 'tutor__answer';
-    box.textContent = 'Working on it…';
+    box.className = 'tutor__answer is-thinking';
+    box.innerHTML =
+      '<span class="thinking">' +
+        '<span class="thinking__label">Thinking</span>' +
+        '<span class="thinking__dots" aria-hidden="true">' +
+          '<i></i><i></i><i></i>' +
+        '</span>' +
+      '</span>';
 
     var body = { question: question, lesson_id: Number(root.dataset.lessonId) };
     if (root.dataset.problemId) { body.problem_id = Number(root.dataset.problemId); }
