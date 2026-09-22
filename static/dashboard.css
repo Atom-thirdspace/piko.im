@@ -88,11 +88,37 @@ body {
     margin-left: auto;
     text-align: center;
     padding: .6rem 1rem;
-    background: var(--brand-soft);
-    border: 1px solid var(--line);
     border-radius: var(--radius);
     flex: 0 0 auto;
+    display: flex;
+    align-items:center;
 }
+
+.fire {
+    width: 5rem;
+    transform: rotate(5deg);
+    animation: fire-wiggle 2s ease-in-out infinite;
+    transform-origin: bottom center;
+}
+
+@keyframes fire-wiggle {
+    0%, 100% {
+        transform: rotate(5deg) scale(1);
+    }
+
+    25% {
+        transform: rotate(-3deg) scale(1.05);
+    }
+
+    50% {
+        transform: rotate(7deg) scale(1.1);
+    }
+
+    75% {
+        transform: rotate(1deg) scale(1.04);
+    }
+}
+
 .dash__streak-num { display: block; font-size: 1.8rem; font-weight: 700; color: var(--brand); line-height: 1; }
 .dash__streak-label { display: block; font-size: .75rem; color: var(--ink-soft); }
 .dash__streak-best { display: block; font-size: .7rem; color: var(--ink-soft); opacity: .75; }

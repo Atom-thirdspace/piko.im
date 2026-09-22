@@ -32,11 +32,15 @@
     </div>
 
     <div class="dash__streak" title="Current streak">
-      <span class="dash__streak-num">{{ user.streak_days or 0 }}</span>
-      <span class="dash__streak-label">day streak</span>
-      {% if user.streak_best %}
-        <span class="dash__streak-best">best {{ user.streak_best }}</span>
-      {% endif %}
+    <img class="fire" src="https://cdn.hackclub.com/01a0c993-cc49-78c4-b25a-de6a32cfe2b3/Untitled%20design%20(81).avif" alt="">
+
+      <div>
+        <span class="dash__streak-num">{{ user.streak_days or 0 }}</span>
+        <span class="dash__streak-label">day streak</span>
+        {% if user.streak_best %}
+          <span class="dash__streak-best">best {{ user.streak_best }}</span>
+        {% endif %}
+      </div>
     </div>
   </header>
 

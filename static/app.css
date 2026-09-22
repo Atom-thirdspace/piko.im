@@ -85,4 +85,5 @@ html body * {
     padding-top: 0.2rem;
     position: absolute;
     left: 2%;
+    user-select: none;
 }
