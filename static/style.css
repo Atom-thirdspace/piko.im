@@ -509,3 +509,9 @@ img {
     height: 180px;
   }
 }
+
+.settings-check { display: flex; align-items: center; gap: .5rem;
+    font-size: .95rem; margin-bottom: .4rem; }
+.settings-check input { width: auto; margin: 0; }
+.settings-2fa { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.settings-2fa input { flex: 1; min-width: 12rem; }

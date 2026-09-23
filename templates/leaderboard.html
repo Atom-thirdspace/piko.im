@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='leaderboard.css') }}">
+{% endblock head %}
+
+{% block content %}
+    <main class="board">
+        <h1>Leaderboard</h1>
+
+        <nav class="board__tabs">
+      {% for key, label in scopes.items() %}
+        <a href="{{ url_for('leaderboard.index', scope=key) }}"
+           class="{{ 'is-active' if key == scope }}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+
+    {% set unit = 'day streak' if scope == 'streak' else 'XP' %}
+    {% if you and you.hidden %}
+      <p class="board__you board__you--off">
+        You're hidden from the leaderboard.
+        <a href="{{ url_for('profile.settings') }}">Change that in settings</a>.
+      </p>
+    {% elif you %}
+      <p class="board__you">
+        You're <b>#{{ you.rank }}</b> with {{ you.score }} {{ unit }}.
+      </p>
+    {% endif %}
+
+     {% if rows %}
+      <ol class="board__list">
+        {% for row in rows %}
+          <li class="board__row {{ 'is-you' if viewer and row.user_id == viewer.id }}">
+            <span class="board__rank board__rank--{{ row.rank if row.rank <= 3 else 'n' }}">
+              {{ row.rank }}
+            </span>
+            {% if row.avatar_url %}
+              <img class="board__avatar" src="{{ row.avatar_url }}" alt="" loading="lazy">
+            {% else %}
+              <span class="board__avatar board__avatar--blank" aria-hidden="true">
+                {{ row.name[:1] | upper }}
+              </span>
+            {% endif %}
+            <a class="board__name" href="{{ url_for('profile.public_profile', username=row.username) }}">
+              {{ row.name }}
+              <small>@{{ row.username }} &middot; lvl {{ row.level }}</small>
+            </a>
+            <span class="board__score">{{ row.score }}<small>{{ unit }}</small></span>
+            </li>
+          {% endfor %}
+          </ol>
+     {% else %}
+         <p class="board__empty">Nobody's on this board yet. Go first.</p>
+    {% endif %}
+    </main>
+ {% endblock content %}

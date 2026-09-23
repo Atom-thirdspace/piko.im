@@ -13,7 +13,7 @@ SESSION_KEY = "admin_unlock"
 FAIL_ACTION = "admin.unlock_failed"
 OPEN_ACTION = "admin.unlock"
 
-MAX_FEATURES = 5
+MAX_FAILURES = 5
 LOCKOUT = timedelta(minutes=15)
 DEFAULT_TTL_MINUTES = 120
 
@@ -80,7 +80,8 @@ def _record(user, action, detail=""):
 def record_failure(user):
     _record(user, FAIL_ACTION, detail=request.remote_addr or "")
 
-def window_start():
+def _window_start(user):
+    """Failures only count since the last successful unlock."""
     cutoff = _utcnow() - LOCKOUT
     last_ok = db.session.execute(
     db.select(AdminAction.created_at)
@@ -122,7 +123,7 @@ def admin_email_required(view):
         return view(*args, **kwargs)
     return wrapped
 
-def amin_required(view):
+def admin_required(view):
     @wraps(view)
     @admin_email_required
     def wrapped(*args, **kwargs):

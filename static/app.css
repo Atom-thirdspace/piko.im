@@ -111,3 +111,37 @@ html body * {
 .topnav a:hover::after {
     width: 100%;
 }
+
+/* The two second-step pages - the admin passcode and the 2FA code prompt.
+   They live in app.css rather than admin.css because the login-side page
+   never loads the admin stylesheet. */
+
+.gate { max-width: 26rem; margin: 4rem auto; padding: 0 1rem; }
+.gate h1 { margin: 0 0 .3rem; font-size: 1.3rem; }
+.gate--wide { max-width: 32rem; }
+.gate__sub { color: #7a6455; font-size: .9rem; margin: 0 0 1.2rem; }
+.gate__error { background: #fdecec; border: 1px solid #f3b7bf; border-radius: 8px;
+    padding: .55rem .75rem; font-size: .9rem; margin: 0 0 1rem; }
+.gate form { display: flex; gap: .5rem; }
+.gate__input { flex: 1; padding: .55rem .7rem; font: inherit;
+    border: 1px solid #d9cec4; border-radius: 8px; }
+.gate__input:disabled { background: #f3f0ec; }
+.gate__foot { margin-top: 1.4rem; font-size: .85rem; }
+.gate button { padding: .55rem 1rem; font: inherit; cursor: pointer;
+    background: #77431d; color: #fff; border: none; border-radius: 8px; }
+.gate button:hover { background: #5d3416; }
+.gate button:disabled { opacity: .55; cursor: default; }
+
+/* Drawn server-side, so the secret never reaches a third-party QR service. */
+.qr { display: grid; place-items: center; background: #fff; padding: 1rem;
+    border: 1px solid #e9dccf; border-radius: 12px; margin: 0 0 1rem; }
+.qr svg { width: 12rem; height: 12rem; }
+.qr__key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #f3ece5; padding: .15rem .4rem; border-radius: 6px;
+    letter-spacing: .05em; }
+
+.codes { list-style: none; margin: 0 0 1.4rem; padding: 1rem;
+    background: #f3ece5; border-radius: 12px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: .45rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .95rem; }
+@media (max-width: 30rem) { .codes { grid-template-columns: 1fr; } }

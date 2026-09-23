@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <main class="gate gate--wide">
+    <h1>Two-factor is on</h1>
+    <p class="gate__sub">
+      Save these somewhere that isn't your phone. Each one works once, and this
+      is the only time they are shown - we keep only hashes of them, so we
+      can't read them back to you later.
+    </p>
+
+    <ul class="codes">
+      {% for code in codes %}<li>{{ code }}</li>{% endfor %}
+    </ul>
+
+    <p class="gate__foot">
+      <a href="{{ url_for('profile.settings') }}">I've saved them</a>
+    </p>
+  </main>
+{% endblock content %}

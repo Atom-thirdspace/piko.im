@@ -1,5 +1,9 @@
+import base64
+
 from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    session, url_for)
+
+from . import twofa
 
 from .judge.languages import LANGUAGES
 from .models import (Enrollment, LessonProgress, OAuthIdentity, Submission,
@@ -198,6 +202,15 @@ def save_learning():
     flash("Learning preferences saved.", "success")
     return redirect(url_for("profile.settings"))
 
+@profile_bp.route("/settings/privacy", methods=["POST"])
+@login_required
+def save_privacy():
+    user = current_user()
+    user.show_on_leaderboard = request.form.get("show_on_leaderboard") == "on"
+    db.session.commit()
+    flash("Saved.", "success")
+    return redirect(url_for("profile.settings") + "#privacy")
+
 
 @profile_bp.route("/settings/password", methods=["POST"])
 @login_required
@@ -219,6 +232,85 @@ def save_password():
     set_user_password(user, form["new_password"])
     flash("Password updated." if had_password else "Password set.", "success")
     return redirect(url_for("profile.settings"))
+
+
+# --------------------------------------------------------------------------- #
+# two-factor
+# --------------------------------------------------------------------------- #
+
+SETUP_KEY = "2fa_setup"          # the unconfirmed secret, session-only
+
+
+@profile_bp.route("/settings/2fa/start", methods=["POST"])
+@login_required
+def two_factor_start():
+    user = current_user()
+    if not twofa.configured():
+        flash("Two-factor isn't switched on for this site yet.", "error")
+        return redirect(url_for("profile.settings"))
+    if user.two_factor_on:
+        return redirect(url_for("profile.settings") + "#twofa")
+
+    secret = twofa.new_secret()
+    # Held in the session, not the database: a secret they never prove should
+    # leave no trace on the account.
+    session[SETUP_KEY] = base64.b32encode(secret).decode()
+    return _render_2fa_setup(user, secret)
+
+
+def _render_2fa_setup(user, secret, error=None, status=200):
+    uri = twofa.provisioning_uri(secret, user.email)
+    return render_template("settings_2fa.html", qr=twofa.qr_svg(uri),
+                           manual_key=twofa.manual_key(secret), uri=uri,
+                           error=error), status
+
+
+@profile_bp.route("/settings/2fa/enable", methods=["POST"])
+@login_required
+def two_factor_enable():
+    user = current_user()
+    packed = session.get(SETUP_KEY)
+    if not packed:
+        flash("That setup expired. Start again.", "error")
+        return redirect(url_for("profile.settings") + "#twofa")
+
+    secret = base64.b32decode(packed)
+    step = twofa.check_code(secret, request.form.get("code"))
+    if step is None:
+        return _render_2fa_setup(
+            user, secret, status=400,
+            error="That code isn't right. The app's clock may be off - "
+                  "wait for the next code and try again.")
+
+    plain, hashed = twofa.make_backup_codes()
+    twofa.enable(user, secret, hashed, step)
+    session.pop(SETUP_KEY, None)
+    # Shown exactly once - we keep only hashes, so we can't show them again.
+    return render_template("backup_codes.html", codes=plain)
+
+
+@profile_bp.route("/settings/2fa/disable", methods=["POST"])
+@login_required
+def two_factor_disable():
+    user = current_user()
+    if not user.two_factor_on:
+        return redirect(url_for("profile.settings") + "#twofa")
+
+    # Turning it off is a security decision, so prove it is still you.
+    proof = request.form.get("proof") or ""
+    secret = twofa.unseal(user.totp_secret)
+    ok = (secret is not None
+          and twofa.check_code(secret, proof, user.totp_last_step) is not None)
+    if not ok and user.password_hash:
+        ok = user.check_password(proof)
+
+    if not ok:
+        flash("Enter a current code or your password to turn it off.", "error")
+        return redirect(url_for("profile.settings") + "#twofa")
+
+    twofa.disable(user)
+    flash("Two-factor turned off.", "success")
+    return redirect(url_for("profile.settings") + "#twofa")
 
 
 @profile_bp.route("/settings/unlink/<provider>", methods=["POST"])

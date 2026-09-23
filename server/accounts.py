@@ -8,10 +8,11 @@ from .devices import notify_new_device, remember_device
 from .oauth import enabled_providers, PROVIDERS
 from .mailer import send_verification_email
 from .models import (
-    complete_profile, create_email_user, find_by_email, find_by_login,
+    complete_profile, create_email_user, db, find_by_email, find_by_login,
     find_by_username, load_user, mark_email_verified, mark_welcome_sent,
     touch_login, touch_verification_sent,
 )
+from . import twofa
 from .session import current_user, is_safe_next, login_required
 from .tokens import make_verify_token, read_verify_token
 from .validators import (INTERESTS, clean_interests, validate_interests,
@@ -124,6 +125,12 @@ def password_login():
         flash("Wrong email/username or password.", "error")
         return redirect(url_for("auth.login_page", next=nxt))
 
+    if twofa.enabled(user):
+        # Before touch_login and before any session id is issued: a correct
+        # password is half a login, not a login.
+        twofa.begin_challenge(user, nxt)
+        return redirect(url_for("accounts.two_factor"))
+
     touch_login(user)
     start_session(user)
 
@@ -137,6 +144,52 @@ def password_login():
     response = make_response(redirect(target))
     notify_new_device(user, response)
     return response
+
+
+@accounts_bp.route("/login/2fa/", methods=["GET", "POST"])
+def two_factor():
+    """Step two. Until this passes, the browser holds a pending id, not a login."""
+    if current_user():
+        return redirect(url_for("dashboard.index"))
+
+    user, state = twofa.pending()
+    if user is None:
+        flash("That took too long - sign in again.", "error")
+        return redirect(url_for("auth.login_page"))
+
+    if request.method == "POST":
+        code = request.form.get("code") or ""
+        secret = twofa.unseal(user.totp_secret)
+        step = twofa.check_code(secret, code, user.totp_last_step) if secret else None
+
+        if step is not None:
+            user.totp_last_step = step          # spend it; a code works once
+            db.session.commit()
+        elif not twofa.spend_backup_code(user, code):
+            if twofa.count_try():
+                flash("Too many wrong codes. Sign in again.", "error")
+                return redirect(url_for("auth.login_page"))
+            return render_template(
+                "login_2fa.html",
+                error="That code isn't right. Check the app and try again.")
+
+        nxt = state.get("next") or url_for("dashboard.index")
+        twofa.end_challenge()
+        touch_login(user)
+        start_session(user)
+
+        if user.needs_onboarding:
+            target = url_for("accounts.onboarding", next=nxt)
+        elif user.needs_questionnaire:
+            target = url_for("onboarding.page")
+        else:
+            target = nxt if is_safe_next(nxt) else url_for("dashboard.index")
+
+        response = make_response(redirect(target))
+        notify_new_device(user, response)
+        return response
+
+    return render_template("login_2fa.html", error=None)
 
 
 @accounts_bp.route("/verify/<token>/")

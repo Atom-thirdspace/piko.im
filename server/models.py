@@ -37,6 +37,13 @@ class User(db.Model):
     streak_best = db.Column(db.Integer, nullable=False, default=0)
     last_active_date = db.Column(db.Date)
     timezone = db.Column(db.String(64), nullable=False, default="UTC")
+    show_on_leaderboard = db.Column(
+        db.Boolean, nullable=False, default=True, server_default="true"
+    )
+    totp_secret = db.Column(db.Text)                 # Fernet-encrypted, never raw
+    totp_confirmed_at = db.Column(db.DateTime(timezone=True))
+    totp_last_step = db.Column(db.BigInteger)        # replay guard
+    backup_codes = db.Column(ARRAY(db.Text), nullable=False,server_default="{}", default=list)
     preferred_language = db.Column(db.String(16))
     onboarded_at = db.Column(db.DateTime(timezone=True))
     identities = db.relationship(
@@ -72,6 +79,10 @@ class User(db.Model):
     @property
     def email_verified(self):
         return self.email_verified_at is not None
+
+    @property
+    def two_factor_on(self):
+        return bool(self.totp_secret and self.totp_confirmed_at)
 
 
 class AdminAction(db.Model):

@@ -17,6 +17,7 @@ from server.admin import admin_bp, is_admin
 from server.tutor import tutor_bp
 from server.validators import interest_labels
 from werkzeug.middleware.proxy_fix import ProxyFix
+from server.leaderboard import leaderboard_bp
 
 load_dotenv()
 
@@ -41,7 +42,7 @@ app.register_blueprint(profile_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(tutor_bp)
 app.register_blueprint(admin_bp)
-
+app.register_blueprint(leaderboard_bp)
 app.register_blueprint(learn_bp)
 register_cli(app)
 app.jinja_env.globals["current_user"] = current_user

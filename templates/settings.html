@@ -150,6 +150,47 @@
         {% endfor %}
       </div>
     {% endif %}
+    
+  </section>
+    <section class="settings-card" id="privacy">
+    <h2>Privacy</h2>
+    <form method="post" action="{{ url_for('profile.save_privacy') }}">
+      <label class="settings-check">
+        <input type="checkbox" name="show_on_leaderboard"
+               {{ 'checked' if user.show_on_leaderboard }}>
+        Show me on the public leaderboard
+      </label>
+      <p class="settings-hint">
+        Off means your name, avatar and XP never appear there. Your profile page
+        stays reachable either way.
+      </p>
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </section>
+
+
+  <section class="settings-card" id="twofa">
+    <h2>Two-factor authentication</h2>
+    {% if user.two_factor_on %}
+      <p class="settings-hint">
+        On since {{ user.totp_confirmed_at.strftime('%d %b %Y') }} &middot;
+        {{ user.backup_codes | length }} backup code{{ '' if user.backup_codes | length == 1 else 's' }} left.
+      </p>
+      <form class="settings-2fa" method="post"
+            action="{{ url_for('profile.two_factor_disable') }}">
+        <input type="password" name="proof" autocomplete="one-time-code"
+               placeholder="Current code or your password" required>
+        <button type="submit">Turn off</button>
+      </form>
+    {% else %}
+      <p class="settings-hint">
+        Ask for a code from an authenticator app every time you sign in, so a
+        stolen password isn't enough on its own.
+      </p>
+      <form method="post" action="{{ url_for('profile.two_factor_start') }}">
+        <button type="submit">Set up</button>
+      </form>
+    {% endif %}
   </section>
 
   <section class="settings-card settings-danger">

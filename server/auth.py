@@ -11,6 +11,7 @@ from .profile import fetch_profile
 from .models import upsert_user, mark_welcome_sent, link_identity
 from .mailer import send_welcome_email
 from .session import current_user, is_safe_next, login_required
+from . import twofa
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -111,6 +112,11 @@ def callback(provider):
 
     # Read `next` before clear() wipes it, then rotate the session on login.
     nxt = session.get("oauth_next", url_for("dashboard.index"))
+
+    if twofa.enabled(user):
+        twofa.begin_challenge(user, nxt)        # clears the session itself
+        return redirect(url_for("accounts.two_factor"))
+
     session.clear()
     session["user_id"] = user.id
     session.permanent = True

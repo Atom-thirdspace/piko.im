@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <main class="gate gate--wide">
+    <h1>Scan this</h1>
+    <p class="gate__sub">
+      Open Google Authenticator, Aegis, 1Password or similar, add an account and
+      scan the square. Then type the code it shows, so we know it worked.
+    </p>
+
+    {% if qr %}
+      <div class="qr">{{ qr | safe }}</div>
+    {% endif %}
+
+    <p class="gate__sub">
+      Can't scan? Enter this key by hand:
+      <code class="qr__key">{{ manual_key }}</code>
+    </p>
+
+    {% if error %}
+      <p class="gate__error" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('profile.two_factor_enable') }}">
+      <input class="gate__input" type="text" name="code" inputmode="numeric"
+             autocomplete="one-time-code" placeholder="123 456" autofocus required>
+      <button type="submit">Turn on</button>
+    </form>
+
+    <p class="gate__foot">
+      <a href="{{ url_for('profile.settings') }}">Cancel</a>
+    </p>
+  </main>
+{% endblock content %}
