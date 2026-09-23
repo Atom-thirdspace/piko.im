@@ -13,8 +13,13 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      reject_deletion_request, TutorMessage, unlink_identity)
 from .oauth import PROVIDERS
 from .progress import level_progress
-from .session import current_user
+from .session import current_user, is_safe_next
 from .validators import DELETION_REASON_LABELS
+from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
+                         admin_emails, is_admin, lock_session,
+                         lockout_minutes_left, passcode_set, record_failure,
+                         recent_failures, session_unlocked, unlock_session,
+                         verify_passcode)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 PAGE_SIZE = 25
@@ -25,24 +30,6 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.content", "Content"), ("admin.tutor", "Tutor"),
        ("admin.system", "System"),
        ("admin.audit", "Audit log")]
-
-def admin_emails():
-    return {e.strip().lower()
-            for e in (os.environ.get("ADMIN_EMAILS") or "").split(",") if e.strip()}
-
-def is_admin(user):
-    return user is not None and (user.email or "").lower() in admin_emails()
-
-def admin_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        user = current_user()
-        if user is None:
-            return redirect(url_for("auth.login_page", next=request.full_path))
-        if not is_admin(user):
-            abort(404)
-        return view(*args, **kwargs)
-    return wrapped
 
 @admin_bp.context_processor
 def _nav():
@@ -523,3 +510,40 @@ def tutor():
     }
     return render_template("admin/tutor.html", rows=rows, pager_=pager,
                            flagged_only=flagged_only, stats=stats)
+
+@admin_bp.route("/unlock", methods=["GET", "POST"])
+@admin_email_required
+def unlock():
+    user = current_user()
+    target = request.values.get("next") or ""
+    if not is_safe_next(target):
+        target = url_for("admin.overview")
+
+    if not passcode_set() or session_unlocked(user):
+        return redirect(target)
+
+    error = None
+    wait = lockout_minutes_left(user)
+    if request.method == "POST":
+        if wait:
+            error = "Too many wrong tries. Try again in about %d min." % wait
+        elif verify_passcode(request.form.get("passcode")):
+            unlock_session(user)
+            return redirect(target)
+        else:
+            record_failure(user)
+            wait = lockout_minutes_left(user)
+            left = max(0, MAX_FAILURES - recent_failures(user))
+            error = ("Too many wrong tries. Locked for about %d min." % wait if wait
+                     else "Wrong passcode - %d tr%s left."
+                          % (left, "y" if left == 1 else "ies"))
+
+    return render_template("admin/unlock.html", error=error, wait=wait, next=target)
+
+
+@admin_bp.route("/lock", methods=["POST"])
+@admin_email_required
+def lock():
+    lock_session()
+    flash("Admin locked.", "success")
+    return redirect(url_for("dashboard.index"))

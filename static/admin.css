@@ -50,3 +50,19 @@
 .verdict-accepted { color: #1a7f4b; font-weight: 600; }
 .verdict-wrong_answer, .verdict-runtime_error, .verdict-compile_error,
 .verdict-time_limit_exceeded { color: #c0392b; font-weight: 600; }
+.admin-lock { margin: 0 0 0 auto; }
+.admin-lock button { font: inherit; color: #cbd2e0; background: none;
+    border: none; padding: 0; cursor: pointer; }
+.admin-lock button:hover { color: #fff; text-decoration: underline; }
+.admin-exit { margin-left: 1rem; }   /* was: margin-left: auto */
+
+.gate { max-width: 26rem; margin: 4rem auto; padding: 0 1rem; }
+.gate h1 { margin: 0 0 .3rem; font-size: 1.3rem; }
+.gate__sub { color: #666; font-size: .9rem; margin: 0 0 1.2rem; }
+.gate__error { background: #fdecec; border: 1px solid #f3b7bf; border-radius: 8px;
+    padding: .55rem .75rem; font-size: .9rem; margin: 0 0 1rem; }
+.gate form { display: flex; gap: .5rem; }
+.gate__input { flex: 1; padding: .55rem .7rem; font: inherit;
+    border: 1px solid #d9cec4; border-radius: 8px; }
+.gate__input:disabled { background: #f3f0ec; }
+.gate__foot { margin-top: 1.4rem; font-size: .85rem; }

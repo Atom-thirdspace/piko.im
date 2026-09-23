@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="gate">
+    <h1>Admin passcode</h1>
+    <p class="gate__sub">
+      Your account is on the admin list. Enter the passcode to open the admin
+      screens for the next couple of hours.
+    </p>
+
+
+    {% if error %}
+        <p class="gate__error" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" autocomplete="off">
+      <input type="hidden" name="next" value="{{ next }}">
+      <input class="gate__input" type="password" name="passcode"
+             placeholder="Passcode" autofocus required
+             {{ 'disabled' if wait }}>
+      <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>Unlock</button>
+    </form>
+
+    <p class="gate__foot"><a href="{{ url_for('dashboard.index') }}">Back to the app</a></p>
+  </main>
+{% endblock content %}
