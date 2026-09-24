@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='blog.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="blog blog--post">
+    {% if draft %}
+      <p class="blog__draft">Draft - only admins can see this.</p>
+    {% endif %}
+
+    <p class="blog__back"><a href="{{ url_for('blog.index') }}">&larr; All posts</a></p>
+
+    <h1>{{ post.title }}</h1>
+    <p class="blog__meta">
+      {%- if post.published_at %}{{ post.published_at.strftime('%d %b %Y') }}{% endif -%}
+      {%- if post.author %} &middot; {{ post.author.name or post.author.username }}{% endif -%}
+    </p>
+
+    {% if post.cover_url %}
+      <img class="blog__cover blog__cover--wide" src="{{ post.cover_url }}" alt="">
+    {% endif %}
+
+    <article class="blog__body">{{ body }}</article>
+  </main>
+{% endblock content %}

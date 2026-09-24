@@ -207,6 +207,8 @@ def save_learning():
 def save_privacy():
     user = current_user()
     user.show_on_leaderboard = request.form.get("show_on_leaderboard") == "on"
+    user.discoverable = request.form.get("discoverable") == "on"
+    user.bio = (request.form.get("bio") or "").strip()[:280]
     db.session.commit()
     flash("Saved.", "success")
     return redirect(url_for("profile.settings") + "#privacy")

@@ -14,6 +14,12 @@ RESERVED_USERNAMES = {
     "login", "logout", "signup", "settings", "about",
 }
 
+SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")
+RESERVED_TEAM_SLUGS = {"new", "join", "leave", "edit", "delete", "admin", "api", "me"}
+MAX_TEAMS_PER_USER = 5
+MAX_TEAM_MEMBERS = 50
+
+
 INTERESTS = [
     ("arrays", "Arrays & Strings"),
     ("trees", "Trees & Graphs"),
@@ -181,3 +187,48 @@ def validate_signup(form, email_taken, username_taken):
 
     return errors
 
+def slugify(text, limit=40):
+    s = re.sub(r"[^a-z0-9]+", "-", (text or "").strip().lower()).strip("-")
+    return s[:limit].strip("-")
+
+def validate_team_name(name):
+    n = (name or "").strip()
+    if not (2 <= len(n) <= 60):
+        return "Team names are 2-60 characters."
+    return None
+
+def validate_team_slug(slug, taken_check):
+    s = (slug or "").strip().lower()
+    if not SLUG_RE.match(s):
+        return "2-40 characters: lowercase letters, numbers and hyphens."
+    if s in RESERVED_TEAM_SLUGS:
+        return "That address is reserved."
+    if taken_check(s):
+        return "Another team already uses that address."
+    return None
+
+def validate_blurb(text, limit=280):
+    if len((text or "").strip()) > limit:
+        return "Keep it under %d characters." % limit
+    return None
+
+def validate_post(form, slug_taken):
+    errors = {}
+    title = (form.get("title") or "").strip()
+    slug = (form.get("slug") or "").strip().lower()
+
+    if not (2 <= len(title) <= 200):
+        errors["title"] = "Give it a title (2-200 characters)."
+    if not SLUG_RE.match(slug) or len(slug) > 80:
+        errors["slug"] = "2-80 characters: lowercase letters, numbers and hyphens."
+    elif slug_taken(slug):
+        errors["slug"] = "Another post already uses that address."
+    if len((form.get("summary") or "").strip()) > 300:
+        errors["summary"] = "Summaries are 300 characters or fewer."
+    if not (form.get("body_md") or "").strip():
+        errors["body_md"] = "Write something."
+
+    cover = (form.get("cover_url") or "").strip()
+    if cover and (len(cover) > 500 or not AVATAR_RE.match(cover)):
+        errors["cover_url"] = "Enter an https:// image URL, or leave it blank."
+    return errors

@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='community.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="cm">
+    <header class="cm__head">
+      <h1>Community</h1>
+      <a class="cm__cta" href="{{ url_for('community.teams') }}">Browse teams</a>
+    </header>
+
+    <form class="cm__filters" method="get">
+      <input type="search" name="q" value="{{ q }}" placeholder="Search people">
+      <select name="interest">
+        <option value="">Any focus</option>
+        {% for key, label in interests %}
+          <option value="{{ key }}" {{ 'selected' if key == interest }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="sort">
+        {% for key, label in sorts.items() %}
+          <option value="{{ key }}" {{ 'selected' if key == sort }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Filter</button>
+    </form>
+
+    {% if teams %}
+      <section class="cm__teams">
+        <h2>Teams to join</h2>
+        <ul class="cm__teamstrip">
+          {% for team, members, xp in teams %}
+            <li>
+              <a href="{{ url_for('community.team_detail', slug=team.slug) }}">
+                <b>{{ team.name }}</b>
+                <span>{{ members }} member{{ '' if members == 1 else 's' }}
+                      &middot; {{ xp }} XP</span>
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+
+    <h2>People</h2>
+    {% if people %}
+      <ul class="cm__grid">
+        {% for p in people %}
+          <li class="person">
+            {% if p.avatar_url %}
+              <img class="person__avatar" src="{{ p.avatar_url }}" alt="" loading="lazy">
+            {% else %}
+              <span class="person__avatar person__avatar--blank" aria-hidden="true">
+                {{ p.name[:1] | upper }}
+              </span>
+            {% endif %}
+
+            <a class="person__name"
+               href="{{ url_for('profile.public_profile', username=p.username) }}">
+              {{ p.name }}<small>@{{ p.username }}</small>
+            </a>
+
+            <p class="person__meta">
+              Level {{ p.level }} &middot; {{ p.xp }} XP
+              {% if p.streak %} &middot; {{ p.streak }}-day streak{% endif %}
+            </p>
+
+            {% if p.bio %}<p class="person__bio">{{ p.bio }}</p>{% endif %}
+
+            {% if p.interests %}
+              <p class="person__tags">
+                {% for label in p.interests | interest_labels %}
+                  <span>{{ label }}</span>
+                {% endfor %}
+              </p>
+            {% endif %}
+
+            {% if viewer %}
+              <form method="post"
+                    action="{{ url_for('community.follow', username=p.username) }}">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <button type="submit" class="person__follow {{ 'is-on' if p.you_follow }}">
+                  {% if p.you_follow and p.follows_you %}Connected
+                  {% elif p.you_follow %}Following
+                  {% elif p.follows_you %}Follow back
+                  {% else %}Follow{% endif %}
+                </button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if pager.pages > 1 %}
+        <p class="cm__pager">
+          {% if pager.page > 1 %}
+            <a href="{{ url_for('community.index', q=q, interest=interest, sort=sort, page=pager.page - 1) }}">&larr; Back</a>
+          {% endif %}
+          <span>Page {{ pager.page }} of {{ pager.pages }} &middot; {{ pager.total }} people</span>
+          {% if pager.page < pager.pages %}
+            <a href="{{ url_for('community.index', q=q, interest=interest, sort=sort, page=pager.page + 1) }}">More &rarr;</a>
+          {% endif %}
+        </p>
+      {% endif %}
+    {% else %}
+      <p class="cm__empty">Nobody matches that yet.</p>
+    {% endif %}
+  </main>
+{% endblock content %}

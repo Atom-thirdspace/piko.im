@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='blog.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="blog">
+    <h1>Blog</h1>
+
+    {% if posts %}
+      <ul class="blog__list">
+        {% for post in posts %}
+          <li class="blog__card">
+            {% if post.cover_url %}
+              <img class="blog__cover" src="{{ post.cover_url }}" alt="" loading="lazy">
+            {% endif %}
+            <a class="blog__title" href="{{ url_for('blog.post', slug=post.slug) }}">
+              {{ post.title }}
+            </a>
+            <p class="blog__meta">
+              {{ post.published_at.strftime('%d %b %Y') }}
+              {%- if post.author %} &middot;
+                {{ post.author.name or post.author.username }}
+              {%- endif %}
+            </p>
+            {% if post.summary %}<p class="blog__summary">{{ post.summary }}</p>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if pager.pages > 1 %}
+        <p class="blog__pager">
+          {% if pager.page > 1 %}
+            <a href="{{ url_for('blog.index', page=pager.page - 1) }}">&larr; Newer</a>
+          {% endif %}
+          <span>Page {{ pager.page }} of {{ pager.pages }}</span>
+          {% if pager.page < pager.pages %}
+            <a href="{{ url_for('blog.index', page=pager.page + 1) }}">Older &rarr;</a>
+          {% endif %}
+        </p>
+      {% endif %}
+    {% else %}
+      <p class="blog__empty">Nothing published yet.</p>
+    {% endif %}
+  </main>
+{% endblock content %}

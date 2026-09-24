@@ -10,11 +10,11 @@ from .learning.seed import seed_catalog
 from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonProgress,
                      OAuthIdentity, Problem, ProblemTest, Submission, Track, Unit,
                      User, XpEvent, db, delete_account, mark_email_verified,
-                     reject_deletion_request, TutorMessage, unlink_identity)
+                     reject_deletion_request, TutorMessage, unlink_identity, Post, _utcnow)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
-from .validators import DELETION_REASON_LABELS
+from .validators import DELETION_REASON_LABELS, slugify, validate_post
 from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
                          admin_emails, is_admin, lock_session,
                          lockout_minutes_left, passcode_set, record_failure,
@@ -27,9 +27,11 @@ PAGE_SIZE = 25
 NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.deletions", "Deletions"),
        ("admin.problems", "Problems"), ("admin.submissions", "Submissions"),
-       ("admin.content", "Content"), ("admin.tutor", "Tutor"),
+       ("admin.content", "Content"), ("admin.blog", "Blog"),
+       ("admin.tutor", "Tutor"),
        ("admin.system", "System"),
        ("admin.audit", "Audit log")]
+
 
 @admin_bp.context_processor
 def _nav():
@@ -547,3 +549,81 @@ def lock():
     lock_session()
     flash("Admin locked.", "success")
     return redirect(url_for("dashboard.index"))
+
+@admin_bp.route("/blog/")
+@admin_required
+def blog():
+    page = _page()
+    stmt = db.select(Post).order_by(Post.updated_at.desc())
+    posts, pager = _paginate(stmt, page)
+    return render_template("admin/blog.html", posts=posts, p=pager)
+
+
+@admin_bp.route("/blog/new", methods=["GET", "POST"])
+@admin_bp.route("/blog/<int:post_id>/edit", methods=["GET", "POST"])
+@admin_required
+def blog_form(post_id = None):
+    post = _get_or_404(Post, post_id) if post_id else None
+
+    if request.method == "GET":
+        return render_template("admin/blog_form.html", post=post, errors={}, form={})
+
+    form = request.form
+    slug = (form.get("slug") or "").strip().lower() or slugify(form.get("title"))
+
+    def taken(candidate):
+        clash = db.session.execute(
+            db.select(Post).filter_by(slug=candidate)).scalar_one_or_none()
+        return clash is not None and (post is None or clash.id != post.id)
+
+    errors = validate_post({**form, "slug": slug}, taken)
+    if errors:
+        return render_template("admin/blog_form.html", post=post, errors=errors,
+                               form=form), 400
+
+    if post is None:
+        post = Post(slug=slug, author_id=current_user().id)
+        db.session.add(post)
+
+    post.slug = slug
+    post.title = (form.get("title") or "").strip()
+    post.summary = (form.get("summary") or "").strip()
+    post.body_md = form.get("body_md") or ""
+    post.cover_url = (form.get("cover_url") or "").strip() or None
+    db.session.commit()
+
+    log_action("save_post", post.id, post.slug)
+    flash("Post saved.", "success")
+    return redirect(url_for("admin.blog_form", post_id=post.id))
+
+@admin_bp.route("/blog/<int:post_id>/publish", methods=["POST"])
+@admin_required
+def blog_publish(post_id):
+    post = _get_or_404(Post, post_id)
+    going_live = post.status != "published"
+
+    post.status = "published" if going_live else "draft"
+    if going_live and post.published_at is None:
+        # Set once. Re-publishing an old post shouldn't jump it to the top.
+        post.published_at = _utcnow()
+    db.session.commit()
+
+    log_action("publish_post" if going_live else "unpublish_post", post.id, post.slug)
+    flash("Published." if going_live else "Moved back to draft.", "success")
+    return redirect(url_for("admin.blog_form", post_id=post.id))
+
+
+@admin_bp.route("/blog/<int:post_id>/delete", methods=["POST"])
+@admin_required
+def blog_delete(post_id):
+    post = _get_or_404(Post, post_id)
+    if (request.form.get("confirm") or "").strip() != post.slug:
+        flash("Type the post's slug to confirm.", "error")
+        return redirect(url_for("admin.blog_form", post_id=post.id))
+
+    slug = post.slug
+    db.session.delete(post)
+    db.session.commit()
+    log_action("delete_post", post_id, slug)
+    flash("Post deleted.", "success")
+    return redirect(url_for("admin.blog"))

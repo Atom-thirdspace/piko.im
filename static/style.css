@@ -515,3 +515,8 @@ img {
 .settings-check input { width: auto; margin: 0; }
 .settings-2fa { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 .settings-2fa input { flex: 1; min-width: 12rem; }
+
+.settings-check--stacked { flex-direction: column; align-items: stretch;
+    gap: .3rem; margin-top: .8rem; }
+.settings-check--stacked textarea { width: 100%; font: inherit; padding: .5rem;
+    border: 1px solid #d9cec4; border-radius: 8px; resize: vertical; }

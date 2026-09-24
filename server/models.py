@@ -40,6 +40,9 @@ class User(db.Model):
     show_on_leaderboard = db.Column(
         db.Boolean, nullable=False, default=True, server_default="true"
     )
+    discoverable = db.Column(db.Boolean, nullable=False, default=True,
+                             server_default="true")
+    bio = db.Column(db.Text, nullable=False, default="", server_default="")
     totp_secret = db.Column(db.Text)                 # Fernet-encrypted, never raw
     totp_confirmed_at = db.Column(db.DateTime(timezone=True))
     totp_last_step = db.Column(db.BigInteger)        # replay guard
@@ -457,6 +460,77 @@ class XpEvent(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
 
     user = db.relationship("User")
+
+class Follow(db.Model):
+        __tablename__ = "follows"
+        __table_args__ = (
+            UniqueConstraint("follower_id", "followee_id", name="uq_follow"),
+        db.CheckConstraint("follower_id <> followee_id", name="ck_follow_not_self"),
+        )
+
+        id = db.Column(db.Integer, primary_key=True)
+        follower_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                            nullable=False, index=True)
+        followee_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                                nullable=False, index=True)
+        created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+        follower = db.relationship("User", foreign_keys=[follower_id])
+        followee = db.relationship("User", foreign_keys=[followee_id])
+
+class Team(db.Model):
+    __tablename__ = "teams"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(40), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(60), nullable=False)
+    blurb = db.Column(db.Text, nullable=False, default="")
+    visibility = db.Column(db.String(16), nullable=False, default="open")
+    join_code = db.Column(db.String(16), nullable=False, default="")
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    owner = db.relationship("User")
+    members = db.relationship("TeamMember", back_populates="team",
+                              cascade="all, delete-orphan")
+
+class TeamMember(db.Model):
+    __tablename__ = "team_members"
+    __table_args__ = (
+        UniqueConstraint("team_id", "user_id", name="uq_team_member"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    role = db.Column(db.String(16), nullable=False, default="member")
+    joined_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    team = db.relationship("Team", back_populates="members")
+    user = db.relationship("User")
+
+class Post(db.Model):
+    __tablename__ = "posts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    summary = db.Column(db.String(300), nullable=False, default="")
+    body_md = db.Column(db.Text, nullable=False, default="")
+    cover_url = db.Column(db.Text)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    status = db.Column(db.String(16), nullable=False, default="draft")
+    published_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           onupdate=_utcnow, nullable=False)
+
+    author = db.relationship("User")
+
+    @property
+    def is_live(self):
+        return self.status == "published" and self.published_at is not None
 
 class DeletionRequest(db.Model):
     """A user asking to leave. Nothing is destroyed until an admin approves."""

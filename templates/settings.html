@@ -164,6 +164,23 @@
         Off means your name, avatar and XP never appear there. Your profile page
         stays reachable either way.
       </p>
+
+      <label class="settings-check">
+        <input type="checkbox" name="discoverable"
+               {{ 'checked' if user.discoverable }}>
+        List me in the community directory
+      </label>
+      <p class="settings-hint">
+        Off means you won't show up when people browse or search for others to
+        team up with. You can still join teams you're invited to.
+      </p>
+
+      <label class="settings-check settings-check--stacked">
+        Short bio
+        <textarea name="bio" rows="2" maxlength="280"
+                  placeholder="A line about what you're working on">{{ user.bio }}</textarea>
+      </label>
+
       <button class="btn" type="submit">Save</button>
     </form>
   </section>

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='community.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="cm cm--narrow">
+    <h1>Start a team</h1>
+    <p class="cm__sub">
+      A team is a place to compare progress and keep each other going. You can
+      change any of this later.
+    </p>
+
+    <form class="cm__form" method="post">
+      <label>Name
+        <input type="text" name="name" value="{{ form.get('name', '') }}"
+               maxlength="60" required>
+      </label>
+      {% if errors.name %}<p class="cm__error">{{ errors.name }}</p>{% endif %}
+
+      <label>Address
+        <input type="text" name="slug" value="{{ form.get('slug', '') }}"
+               maxlength="40" placeholder="leave blank to use the name">
+      </label>
+      {% if errors.slug %}<p class="cm__error">{{ errors.slug }}</p>{% endif %}
+
+      <label>Blurb
+        <textarea name="blurb" rows="3" maxlength="280"
+                  placeholder="What is this team for?">{{ form.get('blurb', '') }}</textarea>
+      </label>
+      {% if errors.blurb %}<p class="cm__error">{{ errors.blurb }}</p>{% endif %}
+
+      <label>Who can join
+        <select name="visibility">
+          {% for key, label in visibilities.items() %}
+            <option value="{{ key }}"
+                    {{ 'selected' if form.get('visibility') == key }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <button type="submit">Create</button>
+    </form>
+
+    <p class="cm__foot"><a href="{{ url_for('community.teams') }}">Back to teams</a></p>
+  </main>
+{% endblock content %}

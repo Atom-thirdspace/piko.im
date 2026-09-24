@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='community.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="cm cm--narrow">
+    <p class="cm__foot"><a href="{{ url_for('community.teams') }}">&larr; All teams</a></p>
+
+    <h1>{{ team.name }}</h1>
+    <p class="cm__sub">
+      /{{ team.slug }} &middot;
+      {{ members | length }} member{{ '' if members | length == 1 else 's' }} &middot;
+      {{ total_xp }} XP &middot; level {{ level }}
+    </p>
+    {% if team.blurb %}<p>{{ team.blurb }}</p>{% endif %}
+
+    {% if mine is none and team.visibility != 'closed' %}
+      <form class="cm__inline" method="post"
+            action="{{ url_for('community.team_join', slug=team.slug) }}">
+        {% if team.visibility == 'code' %}
+          <input type="text" name="join_code" placeholder="Join code" required>
+        {% endif %}
+        <button type="submit" {{ 'disabled' if full }}>
+          {{ 'Team is full' if full else 'Join' }}
+        </button>
+      </form>
+    {% elif mine and not is_owner %}
+      <form method="post" action="{{ url_for('community.team_leave', slug=team.slug) }}">
+        <button type="submit" class="cm__quiet">Leave team</button>
+      </form>
+    {% endif %}
+
+    <h2>Members</h2>
+    <ul class="cm__members">
+      {% for m, u in members %}
+        <li>
+          <a href="{{ url_for('profile.public_profile', username=u.username) }}">
+            {{ u.name or u.username }}
+          </a>
+          <span>
+            {{ u.xp_total }} XP{% if m.role == 'owner' %} &middot; owner{% endif %}
+          </span>
+          {% if is_owner and m.role != 'owner' %}
+            <form method="post"
+                  action="{{ url_for('community.team_remove', slug=team.slug, user_id=u.id) }}">
+              <button type="submit" class="cm__quiet">Remove</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+
+    {% if is_owner %}
+      <section class="cm__owner">
+        <h2>Team settings</h2>
+        <form class="cm__form" method="post"
+              action="{{ url_for('community.team_settings', slug=team.slug) }}">
+          <label>Name
+            <input type="text" name="name" value="{{ team.name }}" maxlength="60" required>
+          </label>
+          <label>Blurb
+            <textarea name="blurb" rows="3" maxlength="280">{{ team.blurb }}</textarea>
+          </label>
+          <label>Who can join
+            <select name="visibility">
+              {% for key, label in visibilities.items() %}
+                <option value="{{ key }}"
+                        {{ 'selected' if team.visibility == key }}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          {% if team.visibility == 'code' %}
+            <p class="cm__sub">Join code: <code class="cm__code">{{ team.join_code }}</code></p>
+            <label class="cm__check">
+              <input type="checkbox" name="rotate_code"> Generate a new code
+            </label>
+          {% endif %}
+          <button type="submit">Save</button>
+        </form>
+
+        {% set others = members | rejectattr('0.role', 'equalto', 'owner') | list %}
+        {% if others %}
+          <h2>Hand over</h2>
+          <form class="cm__inline" method="post"
+                action="{{ url_for('community.team_transfer', slug=team.slug) }}">
+            <select name="user_id">
+              {% for m, u in others %}
+                <option value="{{ u.id }}">{{ u.name or u.username }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">Make owner</button>
+          </form>
+        {% endif %}
+
+        <h2>Delete</h2>
+        <form class="cm__inline cm__danger" method="post"
+              action="{{ url_for('community.team_delete', slug=team.slug) }}">
+          <input type="text" name="confirm" placeholder="Type {{ team.slug }} to confirm">
+          <button type="submit">Delete team</button>
+        </form>
+      </section>
+    {% endif %}
+  </main>
+{% endblock content %}

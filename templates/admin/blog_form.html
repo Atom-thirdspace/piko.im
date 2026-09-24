@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>{{ 'Edit post' if post else 'New post' }}</h1>
+
+  <form method="post">
+    <p>
+      <label>Title<br>
+        <input type="text" name="title" size="60"
+               value="{{ form.get('title', post.title if post else '') }}">
+      </label>
+      {% if errors.title %}<span class="admin-hint">{{ errors.title }}</span>{% endif %}
+    </p>
+
+    <p>
+      <label>Slug<br>
+        <input type="text" name="slug" size="40"
+               value="{{ form.get('slug', post.slug if post else '') }}"
+               placeholder="blank = from the title">
+      </label>
+      {% if errors.slug %}<span class="admin-hint">{{ errors.slug }}</span>{% endif %}
+    </p>
+
+    <p>
+      <label>Summary<br>
+        <input type="text" name="summary" size="80"
+               value="{{ form.get('summary', post.summary if post else '') }}">
+      </label>
+      {% if errors.summary %}<span class="admin-hint">{{ errors.summary }}</span>{% endif %}
+    </p>
+
+    <p>
+      <label>Cover image URL<br>
+        <input type="text" name="cover_url" size="80"
+               value="{{ form.get('cover_url', (post.cover_url or '') if post else '') }}">
+      </label>
+      {% if errors.cover_url %}<span class="admin-hint">{{ errors.cover_url }}</span>{% endif %}
+    </p>
+
+    <p>
+      <label>Body <span class="admin-hint">same Markdown subset as lessons</span><br>
+        <textarea name="body_md" rows="24" cols="90">{{ form.get('body_md', post.body_md if post else '') }}</textarea>
+      </label>
+      {% if errors.body_md %}<span class="admin-hint">{{ errors.body_md }}</span>{% endif %}
+    </p>
+
+    <button class="admin-btn" type="submit">Save</button>
+  </form>
+
+  {% if post %}
+    <div class="admin-inline">
+      <form method="post" action="{{ url_for('admin.blog_publish', post_id=post.id) }}">
+        <button class="admin-btn" type="submit">
+          {{ 'Move to draft' if post.is_live else 'Publish' }}
+        </button>
+      </form>
+      <a href="{{ url_for('blog.post', slug=post.slug) }}">View</a>
+    </div>
+
+    <div class="admin-danger">
+      <h2>Delete</h2>
+      <form class="admin-inline" method="post"
+            action="{{ url_for('admin.blog_delete', post_id=post.id) }}">
+        <input type="text" name="confirm" placeholder="Type {{ post.slug }}">
+        <button class="admin-btn" type="submit">Delete post</button>
+      </form>
+    </div>
+  {% endif %}
+{% endblock admin_content %}

@@ -1,0 +1,89 @@
+.cm { max-width: 60rem; margin: 2rem auto 4rem; padding: 0 1rem; }
+.cm--narrow { max-width: 40rem; }
+.cm__head { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.cm__head h1 { margin: 0 0 1rem; }
+.cm__cta { margin-left: auto; color: #77431d; font-weight: 600; }
+.cm__sub { color: #7a6455; font-size: .9rem; }
+.cm__empty { color: #7a6455; }
+.cm__error { color: #c0392b; font-size: .85rem; margin: .2rem 0 0; }
+.cm__foot { font-size: .85rem; margin: 0 0 .8rem; }
+.cm__code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: #f3ece5; padding: .1rem .4rem; border-radius: 6px; }
+
+.cm__filters { display: flex; gap: .5rem; flex-wrap: wrap; margin: 0 0 1.4rem; }
+.cm__filters input, .cm__filters select, .cm__filters button {
+    padding: .5rem .7rem; font: inherit; border: 1px solid #d9cec4;
+    border-radius: 8px; }
+.cm__filters button { background: #77431d; color: #fff; border: none;
+    cursor: pointer; }
+
+.cm__teams { margin-bottom: 1.6rem; }
+.cm h2 { font-size: 1rem; margin: 1.4rem 0 .6rem; }
+.cm__teamstrip { list-style: none; margin: 0; padding: 0; display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .6rem; }
+.cm__teamstrip a { display: block; padding: .7rem .9rem; border-radius: 10px;
+    background: #f3ece5; color: #2a1a10; text-decoration: none; }
+.cm__teamstrip span { display: block; font-size: .8rem; color: #7a6455; }
+
+.cm__grid { list-style: none; margin: 0; padding: 0; display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .8rem; }
+
+.person, .team { border: 1px solid #e9dccf; border-radius: 12px; padding: .9rem;
+    display: flex; flex-direction: column; gap: .35rem; }
+.person__avatar { width: 2.6rem; height: 2.6rem; border-radius: 50%;
+    object-fit: cover; }
+.person__avatar--blank { display: grid; place-items: center; background: #e9dccf;
+    color: #77431d; font-weight: 700; }
+.person__name, .team__name { color: #2a1a10; text-decoration: none;
+    font-weight: 600; }
+.person__name small, .team__name small { display: block; font-weight: 400;
+    color: #7a6455; font-size: .78rem; }
+.person__meta, .team__meta { color: #7a6455; font-size: .8rem; margin: 0; }
+.person__bio, .team__blurb { font-size: .85rem; margin: 0; }
+.person__tags { display: flex; flex-wrap: wrap; gap: .25rem; margin: .2rem 0 0; }
+.person__tags span { font-size: .72rem; background: #f3ece5; color: #5d4a3c;
+    padding: .1rem .45rem; border-radius: 999px; }
+
+.person__follow { margin-top: .4rem; padding: .4rem .8rem; font: inherit;
+    cursor: pointer; border-radius: 8px; border: 1px solid #77431d;
+    background: #fff; color: #77431d; }
+.person__follow.is-on { background: #77431d; color: #fff; }
+
+.cm__form { display: flex; flex-direction: column; gap: .7rem; max-width: 30rem; }
+.cm__form label { display: flex; flex-direction: column; gap: .25rem;
+    font-size: .9rem; }
+.cm__form input, .cm__form textarea, .cm__form select,
+.cm__inline input, .cm__inline select {
+    padding: .5rem .7rem; font: inherit; border: 1px solid #d9cec4;
+    border-radius: 8px; }
+.cm__form textarea { resize: vertical; }
+.cm__form button, .cm__inline button { padding: .5rem 1rem; font: inherit;
+    cursor: pointer; background: #77431d; color: #fff; border: none;
+    border-radius: 8px; }
+.cm__form button:hover, .cm__inline button:hover { background: #5d3416; }
+.cm__inline button:disabled { opacity: .55; cursor: default; background: #77431d; }
+.cm__inline { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+    margin: .8rem 0; }
+.cm__quiet { background: none; border: none; color: #7a6455; font: inherit;
+    cursor: pointer; padding: 0; text-decoration: underline; }
+.cm__check { display: flex; align-items: center; gap: .4rem; font-size: .9rem; }
+
+.cm__members { list-style: none; margin: 0; padding: 0; }
+.cm__members li { display: flex; align-items: center; gap: .8rem; padding: .5rem 0;
+    border-bottom: 1px solid #f0e7dd; }
+.cm__members a { color: #2a1a10; }
+.cm__members span { color: #7a6455; font-size: .85rem; margin-left: auto; }
+.cm__members form { margin: 0 0 0 .6rem; }
+
+.cm__owner { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e9dccf; }
+.cm__danger button { background: #c0392b; }
+.cm__danger button:hover { background: #a03024; }
+
+.cm__pager { display: flex; gap: 1rem; align-items: center; margin-top: 1.4rem;
+    font-size: .9rem; }
+
+@media (max-width: 40rem) {
+    .cm__head { flex-direction: column; align-items: flex-start; gap: .2rem; }
+    .cm__cta { margin-left: 0; }
+    .cm__filters input, .cm__filters select { flex: 1 1 8rem; min-width: 0; }
+}
