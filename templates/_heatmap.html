@@ -1,0 +1,27 @@
+{% macro heatmap(grid, compact=False) %}
+  <div class="hm {{ 'hm--compact' if compact }}">
+    <div class="hm__grid" role="img"
+         aria-label="{{ grid.active_days }} active days, {{ grid.total_xp }} XP since {{ grid.start.strftime('%d %b %Y') }}">
+      {% for column in grid.columns %}
+        <div class="hm__col">
+          {% for cell in column %}
+            {% if cell.future %}
+              <span class="hm__cell hm__cell--future"></span>
+            {% else %}
+              <span class="hm__cell hm__cell--{{ cell.level }}"
+                    title="{{ cell.date.strftime('%d %b %Y') }}: {{ cell.xp }} XP"></span>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    <p class="hm__legend">
+      <span>{{ grid.active_days }} active day{{ '' if grid.active_days == 1 else 's' }}</span>
+      <span class="hm__scale">
+        less
+        {% for i in range(5) %}<span class="hm__cell hm__cell--{{ i }}"></span>{% endfor %}
+        more
+      </span>
+    </p>
+  </div>
+{% endmacro %}

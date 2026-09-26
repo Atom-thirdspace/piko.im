@@ -107,6 +107,11 @@
     if (data.lesson_xp_awarded) {
       bits.push('+' + data.lesson_xp_awarded + ' XP lesson complete');
     }
+    if (data.streak && data.streak.froze) {
+      bits.push('\u2744 a freeze saved your ' + data.streak.days + '-day streak');
+    } else if (data.streak && data.streak.days) {
+      bits.push(data.streak.days + '-day streak');
+    }
     var p = document.createElement('p');
     p.className = 'result__line';
     p.textContent = bits.join(' · ');

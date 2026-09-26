@@ -4,13 +4,15 @@ from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    session, url_for)
 
 from . import twofa
+from .achievements import describe
+from .activity import heatmap
 
 from .judge.languages import LANGUAGES
 from .models import (Enrollment, LessonProgress, OAuthIdentity, Submission,
                      XpEvent, User, db, delete_account, find_by_username,
                      set_user_password, unlink_identity, update_preferences,
                      update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request,
-                     Problem, Team, TeamMember)
+                     Problem, Team, TeamMember, earned_rows)
 from .progress import level_progress
 from .session import current_user, login_required
 from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS, DELETION_REASONS,
@@ -111,7 +113,9 @@ def _showcase(user):
     ).all()
 
     return {"by_topic": by_topic, "teams": teams, "languages": languages,
-            "follows": follow_counts(user)}
+            "follows": follow_counts(user),
+            "achievements": describe([r.key for r in earned_rows(user, limit=8)]),
+            "heatmap": heatmap(user, weeks=18)}
 
 
 @profile_bp.route("/u/<username>/")

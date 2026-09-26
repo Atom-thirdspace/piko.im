@@ -329,3 +329,23 @@ body {
     .dash__intro { flex-wrap: wrap; }
     .dash__streak { margin-left: 0; }
 }
+
+/* Streak, freezes, heatmap and badges */
+
+.streak-card { border: 1px solid #e9dccf; border-radius: 12px;
+    padding: 1rem; margin: 1rem 0; background: #fff; }
+
+.streak-card--at_risk { border-color: #d9a441; background: #fdf8ef; }
+.streak-card--frozen { border-color: #6aa3c8; background: #f2f8fb; }
+.streak-card--broken { border-color: #e3d6c8; background: #faf7f4; }
+
+.streak-card__head { display: flex; align-items: baseline; gap: .4rem; }
+.streak-card__days { font-size: 2rem; line-height: 1; }
+.streak-card__head span { color: #7a6455; font-size: .9rem; }
+.streak-card__say { margin: .4rem 0 .6rem; font-size: .9rem; }
+
+.streak-card__freezes { display: flex; align-items: center; gap: .2rem; margin: 0; }
+.freeze { font-size: 1.1rem; color: #d8cec4; }
+.freeze.is-held { color: #4a90b8; }
+.streak-card__count { margin-left: .4rem; font-size: .8rem; color: #7a6455; }
+.streak-card__log { margin: .5rem 0 0; font-size: .8rem; color: #7a6455; }

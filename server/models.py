@@ -54,7 +54,9 @@ class User(db.Model):
     )
     is_suspended = db.Column(db.Boolean, nullable=False, default=False,
                              server_default="false")
-
+    streak_freezes = db.Column(db.Integer, nullable=False, default=0,
+                               server_default="0")
+    freezes_granted_on = db.Column(db.Date)
 
     def __repr__(self):
         return f"<User {self.id} {self.email}>"
@@ -537,6 +539,28 @@ class XpEvent(db.Model):
 
     user = db.relationship("User")
 
+class StreakFreezeUse(db.Model):
+    __tablename__ = "streak_freeze_uses"
+    __table_args__ = (
+        UniqueConstraint("user_id", "covered_date", name="uq_freeze_day"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    covered_date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+
+
+def recent_freeze_uses(user, limit=5):
+    return db.session.execute(
+        db.select(StreakFreezeUse)
+        .where(StreakFreezeUse.user_id == user.id)
+        .order_by(StreakFreezeUse.covered_date.desc()).limit(limit)
+    ).scalars().all()
+
 class Follow(db.Model):
         __tablename__ = "follows"
         __table_args__ = (
@@ -796,11 +820,6 @@ REPORT_REASON_LABELS = dict(REPORT_REASONS)
 
 
 class Report(db.Model):
-    """Someone flagging a bio, a team blurb or a shared solution.
-
-    Reports are resolved, never deleted - the history is what tells you
-    whether a repeat offender is a pattern or a bad week.
-    """
 
     __tablename__ = "reports"
 
@@ -849,12 +868,6 @@ def open_report_count():
 # --------------------------------------------------------------------------- #
 
 class JudgeJob(db.Model):
-    """A submission waiting for a container.
-
-    The Submission row is created immediately with verdict 'queued', so the
-    browser has something to poll and a learner's history never silently
-    loses an attempt they made.
-    """
 
     __tablename__ = "judge_jobs"
 
@@ -870,3 +883,30 @@ class JudgeJob(db.Model):
     finished_at = db.Column(db.DateTime(timezone=True))
 
     submission = db.relationship("Submission")
+
+class UserAchievement(db.Model):
+    __tablename__ = "user_achievements"
+    __table_args__ = (
+        UniqueConstraint("user_id", "key", name="uq_user_achievement"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    key = db.Column(db.String(48), nullable=False)
+    earned_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+
+def earned_keys(user):
+    return set(db.session.execute(
+        db.select(UserAchievement.key).where(UserAchievement.user_id == user.id)
+    ).scalars())
+
+def earned_rows(user, limit=None):
+    stmt = (db.select(UserAchievement)
+            .where(UserAchievement.user_id == user.id)
+            .order_by(UserAchievement.earned_at.desc()))
+    if limit:
+        stmt = stmt.limit(limit)
+    return db.session.execute(stmt).scalars().all()

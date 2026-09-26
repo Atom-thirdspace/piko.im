@@ -5,7 +5,9 @@ from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
 
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
-from .models import JudgeJob, Lesson, Problem, Submission, User, db
+from .models import (JudgeJob, Lesson, Problem, StreakFreezeUse, Submission,
+                     User, db)
+from .progress import streak_state, user_today
 from .ratelimit import submit_block_reason
 from .session import current_user, login_required
 
@@ -94,6 +96,25 @@ def _cached(user, problem, language, source_hash, tests_hash):
     ).scalar_one_or_none()
 
 
+def _streak_payload(user, since):
+    """The streak as it stands, plus any freeze this submission's job spent.
+
+    XP and streaks are settled by the worker, so the request cannot know what
+    happened - but freezes are ledgered, and rows written after the
+    submission was created belong to this attempt.
+    """
+    state = streak_state(user, user_today(user))
+    spent = 0
+    if since is not None:
+        spent = db.session.execute(
+            db.select(db.func.count()).select_from(StreakFreezeUse)
+            .where(StreakFreezeUse.user_id == user.id,
+                   StreakFreezeUse.created_at >= since)
+        ).scalar() or 0
+    state["froze"] = int(spent)
+    return state
+
+
 def _result_payload(problem, sub):
     """What the browser needs. Shared by the cache hit and the poll endpoint.
 
@@ -120,6 +141,7 @@ def _result_payload(problem, sub):
             "compile_output": sub.compile_output or "",
             "is_public": sub.is_public,
             "tests": rows,
+            "streak": _streak_payload(sub.user, sub.created_at),
             "first_failure": next((r for r in rows if r["verdict"] != V.AC), None)}
 
 

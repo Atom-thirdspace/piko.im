@@ -1,12 +1,12 @@
-from datetime import timezone
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
 from flask import Blueprint, jsonify, redirect, render_template, url_for
 
-from .models import Enrollment, LessonProgress, Submission, XpEvent, db
-from .progress import level_progress, user_today
+from .achievements import describe
+from .models import (Enrollment, LessonProgress, Submission, XpEvent, db,
+                     earned_rows, recent_freeze_uses)
+from .progress import level_progress, user_today, MAX_FREEZES, streak_state
 from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
+from .activity import heatmap
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -90,19 +90,10 @@ def _activity(user, limit=8):
 
 def _dashboard_data(user):
     today = user_today(user)
-    try:
-        user_timezone = ZoneInfo(user.timezone or "UTC")
-    except (ZoneInfoNotFoundError, ValueError):
-        user_timezone = ZoneInfo("UTC")
-    today_xp = 0
-    for event in db.session.execute(
-        db.select(XpEvent).where(XpEvent.user_id == user.id)
-    ).scalars():
-        created_at = event.created_at
-        if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
-        if created_at.astimezone(user_timezone).date() == today:
-            today_xp += event.amount
+    # One grouped query replaces the old pass over every XpEvent row, and
+    # serves the heatmap from the same result.
+    grid = heatmap(user)
+    today_xp = grid["today_xp"]
 
     progress = level_progress(user.xp_total or 0)
     return {
@@ -116,6 +107,11 @@ def _dashboard_data(user):
             "earned_xp": today_xp,
             "remaining_xp": max((user.daily_goal_xp or 0) - today_xp, 0),
         },
+        "heatmap": grid,
+        "streak": streak_state(user, today),
+        "freeze_uses": recent_freeze_uses(user),
+        "max_freezes": MAX_FREEZES,
+        "achievements": describe([r.key for r in earned_rows(user, limit=6)]),
         "goal_choices": DAILY_GOAL_CHOICES,
     }
 
@@ -146,6 +142,7 @@ def _json_data(data):
             {**row, "at": row["at"].isoformat() if row["at"] else None}
             for row in data["activity"]
         ],
+        "streak": data["streak"],
     }
 
 

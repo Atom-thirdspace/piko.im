@@ -145,3 +145,33 @@ html body * {
     display: grid; grid-template-columns: repeat(2, 1fr); gap: .45rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .95rem; }
 @media (max-width: 30rem) { .codes { grid-template-columns: 1fr; } }
+
+/* Heatmap and badges - used on the dashboard and on profiles, which load
+   different stylesheets, so they live here where every page gets them. */
+
+.hm-card, .ach { border: 1px solid #e9dccf; border-radius: 12px;
+    padding: 1rem; margin: 1rem 0; background: #fff; }
+.hm-card h2, .ach h2 { margin: 0 0 .6rem; font-size: 1rem; }
+
+.hm__grid { display: flex; gap: 3px; overflow-x: auto; padding-bottom: .3rem; }
+.hm__col { display: flex; flex-direction: column; gap: 3px; }
+.hm__cell { width: 11px; height: 11px; border-radius: 2px; background: #efe7df; }
+.hm--compact .hm__cell { width: 9px; height: 9px; }
+.hm__cell--0 { background: #efe7df; }
+.hm__cell--1 { background: #e0c9ae; }
+.hm__cell--2 { background: #c99a63; }
+.hm__cell--3 { background: #a06a2c; }
+.hm__cell--4 { background: #77431d; }
+.hm__cell--future { background: transparent; }
+.hm__legend { display: flex; justify-content: space-between; align-items: center;
+    font-size: .75rem; color: #7a6455; margin: .3rem 0 0; flex-wrap: wrap; gap: .5rem; }
+.hm__scale { display: flex; align-items: center; gap: 3px; }
+
+.ach__list { list-style: none; padding: 0; margin: 0; display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: .5rem; }
+.ach__item { border: 1px solid #e9dccf; border-radius: 10px; padding: .5rem .7rem; }
+.ach__item b { display: block; font-size: .88rem; }
+.ach__item small { color: #7a6455; font-size: .75rem; }
+.ach__item--consistency { border-color: #d9a441; }
+.ach__item--level { border-color: #77431d; }
+.ach__item--range { border-color: #6aa3c8; }

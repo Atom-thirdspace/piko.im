@@ -1,4 +1,5 @@
 {% extends "base-dashboard.html" %}
+{% from "_heatmap.html" import heatmap as heatmap_grid %}
 
 {% block head %}
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -192,6 +193,65 @@
       <span class="quicklink__sub">Goal, language, account</span>
     </a>
   </aside>
+
+  <section class="hm-card">
+    <h2>Your year</h2>
+    {{ heatmap_grid(heatmap) }}
+  </section>
+
+  {% if achievements %}
+    <section class="ach">
+      <h2>Achievements</h2>
+      <ul class="ach__list">
+        {% for a in achievements %}
+          <li class="ach__item ach__item--{{ a.group }}" title="{{ a.description }}">
+            <b>{{ a.title }}</b>
+            <small>{{ a.description }}</small>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+    <section class="streak-card streak-card--{{ streak.status }}">
+    <div class="streak-card__head">
+      <b class="streak-card__days">{{ streak.days }}</b>
+      <span>day{{ '' if streak.days == 1 else 's' }} in a row</span>
+    </div>
+
+    <p class="streak-card__say">
+      {% if streak.status == 'safe' %}
+        Practised today. Nothing to do.
+      {% elif streak.status == 'at_risk' %}
+        Practise today to keep it.
+      {% elif streak.status == 'frozen' %}
+        {{ streak.covered_by }} day{{ '' if streak.covered_by == 1 else 's' }} missed -
+        come back today and a freeze covers it.
+      {% elif streak.status == 'broken' %}
+        {% if streak.lost %}Your {{ streak.lost }}-day streak ended.{% endif %}
+        Start a new one.
+      {% else %}
+        No streak yet. Finish anything today to start one.
+      {% endif %}
+    </p>
+
+    <p class="streak-card__freezes" title="One free freeze a month, up to {{ max_freezes }}.">
+      {% for i in range(max_freezes) %}
+        <span class="freeze {{ 'is-held' if i < streak.freezes }}">&#10052;</span>
+      {% endfor %}
+      <span class="streak-card__count">{{ streak.freezes }} / {{ max_freezes }}</span>
+    </p>
+
+    {% if freeze_uses %}
+      <p class="streak-card__log">
+        Saved you on
+        {% for use in freeze_uses %}
+          {{ use.covered_date.strftime('%d %b') }}{{ '' if loop.last else ',' }}
+        {% endfor %}
+      </p>
+    {% endif %}
+  </section>
+
 
 </main>
 {% endblock content %}

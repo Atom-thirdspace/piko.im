@@ -1,4 +1,5 @@
 {% extends "base-dashboard.html" %}
+{% from "_heatmap.html" import heatmap as heatmap_grid %}
 {% from "_report.html" import report_button %}
 
 {% block head %}
@@ -102,6 +103,25 @@
     {% if not is_self and current_user() %}
       {{ report_button('user', profile_user.id) }}
     {% endif %}
+  </section>
+
+  {% if showcase.achievements %}
+    <section class="ach">
+      <h2>Achievements</h2>
+      <ul class="ach__list">
+        {% for a in showcase.achievements %}
+          <li class="ach__item ach__item--{{ a.group }}" title="{{ a.description }}">
+            <b>{{ a.title }}</b>
+            <small>{{ a.description }}</small>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <section class="hm-card">
+    <h2>Activity</h2>
+    {{ heatmap_grid(showcase.heatmap, compact=True) }}
   </section>
 
   <section class="profile-activity">

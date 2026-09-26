@@ -23,6 +23,7 @@ from server.blog import blog_bp
 from server.csrf import init_csrf
 from server.moderation import moderation_bp
 from server.judge.worker import register_cli as register_judge_cli
+from server.achievements import register_cli as register_achievement_cli
 
 load_dotenv()
 
@@ -55,6 +56,7 @@ app.register_blueprint(moderation_bp)
 app.register_blueprint(learn_bp)
 register_cli(app)
 register_judge_cli(app)
+register_achievement_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels

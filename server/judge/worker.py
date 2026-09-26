@@ -1,12 +1,3 @@
-"""The process that actually runs learner code.
-
-Run at least one alongside the web app:  flask judge-worker
-
-Without a worker nothing is ever judged - submissions sit at 'queued'
-forever. Jobs are claimed with SKIP LOCKED, so several workers can share one
-database without fighting over the same submission.
-"""
-
 import time
 
 from flask import current_app
@@ -22,7 +13,6 @@ MAX_ATTEMPTS = 2
 
 
 def _claim():
-    """Take the oldest queued job, skipping ones another worker holds."""
     job = db.session.execute(
         db.select(JudgeJob).where(JudgeJob.status == "queued")
         .order_by(JudgeJob.created_at).limit(1)
@@ -65,11 +55,16 @@ def run_job(job):
     # XP moves here from the request. The unique constraint on xp_events keeps
     # the award idempotent, so a retried job cannot pay twice.
     if result.verdict == V.AC and first_accepted(sub.user_id, problem.id):
+        from ..achievements import evaluate
         from ..learning.routes import complete_lessons_for_problem
         user = sub.user
         if user is not None:
             award_xp(user, problem.xp, "problem", str(problem.id))
             complete_lessons_for_problem(user, problem.id)
+            db.session.commit()
+            # Badges are evaluated off the request thread, where a handful of
+            # aggregate queries costs nobody a page load.
+            evaluate(user)
 
     job.status = "done"
     job.finished_at = _utcnow()
@@ -77,7 +72,6 @@ def run_job(job):
 
 
 def tick():
-    """One pass. True when it did work, so the caller can skip its sleep."""
     job = _claim()
     if job is None:
         return False
