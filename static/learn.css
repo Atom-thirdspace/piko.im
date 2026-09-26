@@ -283,3 +283,22 @@
 .solution__code { margin: 0; padding: .6rem .8rem; background: #fff;
     border: 1px solid #e3d6c8; border-radius: 8px; overflow-x: auto;
     font-size: .85rem; max-height: 22rem; }
+
+/* Hints - priced, so opening one is a decision */
+.hints { border: 1px solid #e9dccf; border-radius: 12px; padding: 1rem;
+    margin: 1rem 0; background: #fff; }
+.hints h2 { margin: 0 0 .3rem; font-size: 1rem; }
+.hints__meta { font-size: .85rem; color: #7a6455; margin: 0 0 .6rem; }
+.hint { border-top: 1px solid #f0e7dd; padding: .5rem 0; }
+.hint:first-of-type { border-top: none; }
+.hint__open { font: inherit; font-size: .85rem; padding: .35rem .7rem;
+    border: 1px dashed #c9b8a8; border-radius: 8px; background: #faf7f4;
+    cursor: pointer; color: #5d4a3c; }
+.hint__open:hover { background: #f3ece5; }
+.hint__open:disabled { opacity: .5; cursor: default; }
+.hint__body { font-size: .9rem; }
+.hint__body > :first-child { margin-top: 0; }
+.hint__body > :last-child { margin-bottom: 0; }
+.hint.is-open { background: #fdf8ef; border-radius: 8px; padding: .6rem .7rem; }
+
+.solve-stat { font-size: .85rem; color: #5d4a3c; margin: .3rem 0 0; }

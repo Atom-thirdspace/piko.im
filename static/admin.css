@@ -55,3 +55,9 @@
     border: none; padding: 0; cursor: pointer; }
 .admin-lock button:hover { color: #fff; text-decoration: underline; }
 .admin-exit { margin-left: 1rem; }   /* was: margin-left: auto */
+
+/* Similarity pairs, side by side so the shapes can be compared at a glance */
+.sim-pair { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.sim-side { min-width: 0; }
+.sim-side .admin-pre { max-height: 20rem; overflow: auto; }
+@media (max-width: 800px) { .sim-pair { grid-template-columns: 1fr; } }

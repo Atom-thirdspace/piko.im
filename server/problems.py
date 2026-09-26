@@ -5,8 +5,9 @@ from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
 
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
-from .models import (JudgeJob, Lesson, Problem, StreakFreezeUse, Submission,
-                     User, db)
+from .models import (JudgeJob, Lesson, Problem, ProblemHint, StreakFreezeUse,
+                     Submission, User, award_after_hints, db, hint_penalty,
+                     reveal_hint, revealed_hint_ids, solve_percentile)
 from .progress import streak_state, user_today
 from .ratelimit import submit_block_reason
 from .session import current_user, login_required
@@ -28,7 +29,6 @@ def _problem_or_404(slug):
 @problems_bp.route("/problems/<slug>/")
 @login_required
 def page(slug):
-    """The statement, the samples, and an editor wired to /submit."""
     problem = _problem_or_404(slug)
     user = current_user()
 
@@ -37,6 +37,9 @@ def page(slug):
             user_id=user.id, problem_id=problem.id, verdict="accepted"
         ).limit(1)
     ).scalar_one_or_none() is not None
+
+    revealed = revealed_hint_ids(user, problem)
+    penalty = hint_penalty(user.id, problem.id)
 
     recent = db.session.execute(
         db.select(Submission)
@@ -62,6 +65,11 @@ def page(slug):
         recent=recent,
         lesson=lesson,
         verdict_labels=V.LABELS,
+        hints=problem.hints,
+        revealed_hints=revealed,
+        hint_bodies={h.id: render_md(h.body_md) for h in problem.hints
+                     if h.id in revealed},
+        award_now=award_after_hints(problem, penalty),
     )
 
 
@@ -142,6 +150,7 @@ def _result_payload(problem, sub):
             "is_public": sub.is_public,
             "tests": rows,
             "streak": _streak_payload(sub.user, sub.created_at),
+            "solve": solve_percentile(sub.user_id, sub.problem_id),
             "first_failure": next((r for r in rows if r["verdict"] != V.AC), None)}
 
 
@@ -257,3 +266,19 @@ def solutions(slug):
 
     return render_template("problems/solutions.html", problem=problem, rows=rows,
                            mine=mine, follows=following_ids(user))
+
+@problems_bp.route("/problems/<slug>/hints/<int:hint_id>", methods=["POST"])
+@login_required
+def reveal(slug, hint_id):
+    problem = _problem_or_404(slug)
+    user = current_user()
+    hint = db.session.get(ProblemHint, hint_id)
+    if hint is None or hint.problem_id != problem.id:
+        abort(404)
+
+    reveal_hint(user, hint)
+    penalty = hint_penalty(user.id, problem.id)
+    return jsonify(body=str(render_md(hint.body_md)),
+                   cost=hint.cost_xp,
+                   penalty=penalty,
+                   award_now=award_after_hints(problem, penalty))

@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+  <h1>Similarity</h1>
+  <p class="admin-sub">
+    Fingerprint overlap between accepted submissions by different people on
+    the same problem. A high score is a reason to look, not a conclusion -
+    short problems have few correct shapes.
+  </p>
+  <p class="admin-filters">
+    {% for key in ['open', 'confirmed', 'cleared', 'all'] %}
+      <a href="{{ url_for('admin.similarity', status=key) }}"
+         class="{{ 'active' if key == status }}">{{ key }}</a>
+    {% endfor %}
+  </p>
+
+  {% for f in rows %}
+    {% set a, b = f.submission, f.matched %}
+    <div class="admin-test">
+      <p>
+        <b>{{ '%.0f' | format(f.score * 100) }}% overlap</b> &middot;
+        {{ a.problem.slug if a and a.problem else 'problem gone' }} &middot;
+        {{ f.created_at.strftime('%d %b %Y %H:%M') }}
+        <span class="admin-badge {{ 'warn' if f.status == 'open' }}">{{ f.status }}</span>
+      </p>
+
+      {% if a is none or b is none %}
+        <p class="admin-empty">One of the submissions has been deleted.</p>
+      {% else %}
+        <div class="sim-pair">
+          {% for s in (a, b) %}
+            <div class="sim-side">
+              <p class="admin-hint">
+                <a href="{{ url_for('admin.submission_detail', sub_id=s.id) }}">
+                  #{{ s.id }}
+                </a>
+                by
+                {% if s.user %}
+                  <a href="{{ url_for('admin.user_detail', user_id=s.user.id) }}">
+                    {{ s.user.username }}
+                  </a>
+                {% else %}deleted user{% endif %}
+                &middot; {{ s.language }}
+                &middot; {{ s.created_at.strftime('%d %b %H:%M') }}
+                {%- if s.is_public %} &middot; shared{% endif %}
+              </p>
+              <pre class="admin-pre">{{ s.source[:1200] }}</pre>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if f.status == 'open' %}
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.similarity_resolve', flag_id=f.id) }}">
+          {{ csrf_field() }}
+          <button class="admin-btn" type="submit" name="action" value="clear">
+            Not a copy
+          </button>
+          <button class="admin-btn" type="submit" name="action" value="confirm">
+            Confirm &mdash; unshare both
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  {% else %}
+    <p class="admin-empty">Nothing flagged.</p>
+  {% endfor %}
+
+  {{ pager(p, 'admin.similarity', status=status) }}
+{% endblock admin_content %}

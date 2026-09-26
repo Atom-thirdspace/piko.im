@@ -276,6 +276,9 @@ class Problem(db.Model):
     time_limit_sec = db.Column(db.Float, nullable=False, default=2.0)
     memory_mb = db.Column(db.Integer, nullable=False, default=256)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    hints = db.relationship("ProblemHint", back_populates="problem",
+                            cascade="all, delete-orphan",
+                            order_by="ProblemHint.position")
 
     tests = db.relationship("ProblemTest", back_populates="problem",
                             cascade="all, delete-orphan", order_by="ProblemTest.position")
@@ -336,16 +339,6 @@ MAX_CAPTURE = 2000          # per field; a runaway print loop must not fill the 
 
 
 class SubmissionTest(db.Model):
-    """One test case's outcome within a submission.
-
-    Stored so a learner can reopen an old attempt and still see which case
-    broke, and so an admin can tell a bad test from bad code without
-    re-running anything.
-
-    Only the actual output is kept. Expected output is read live from
-    ProblemTest, so editing a test doesn't rewrite history into a lie - it
-    just means an old submission is shown against today's expectations.
-    """
 
     __tablename__ = "submission_tests"
     __table_args__ = (
@@ -910,3 +903,221 @@ def earned_rows(user, limit=None):
     if limit:
         stmt = stmt.limit(limit)
     return db.session.execute(stmt).scalars().all()
+
+class ProblemHint(db.Model):
+    __tablename__ = "problem_hints"
+    id = db.Column(db.Integer, primary_key=True)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    body_md = db.Column(db.Text, nullable=False, default="")
+    cost_xp = db.Column(db.Integer, nullable=False, default=2)
+
+    problem = db.relationship("Problem", back_populates="hints")
+
+
+class HintReveal(db.Model):
+    __tablename__ = "hint_reveals"
+    __table_args__ = (
+        UniqueConstraint("user_id", "hint_id", name="uq_hint_reveal"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    hint_id = db.Column(db.Integer,
+                        db.ForeignKey("problem_hints.id", ondelete="CASCADE"),
+                        nullable=False)
+    revealed_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                            nullable=False)
+    hint = db.relationship("ProblemHint")
+
+MIN_PROBLEM_XP_FRACTION = 4          # a solve never pays less than xp // 4
+
+
+def revealed_hint_ids(user, problem):
+    return set(db.session.execute(
+        db.select(HintReveal.hint_id)
+        .join(ProblemHint, ProblemHint.id == HintReveal.hint_id)
+        .where(HintReveal.user_id == user.id,
+               ProblemHint.problem_id == problem.id)
+    ).scalars())
+
+
+def hint_penalty(user_id, problem_id):
+    return db.session.execute(
+        db.select(db.func.coalesce(db.func.sum(ProblemHint.cost_xp), 0))
+        .select_from(HintReveal)
+        .join(ProblemHint, ProblemHint.id == HintReveal.hint_id)
+        .where(HintReveal.user_id == user_id,
+               ProblemHint.problem_id == problem_id)
+    ).scalar() or 0
+
+
+def award_after_hints(problem, penalty):
+    floor = max(1, problem.xp // MIN_PROBLEM_XP_FRACTION)
+    return max(problem.xp - penalty, floor)
+
+
+def reveal_hint(user, hint):
+    existing = db.session.execute(
+        db.select(HintReveal.id).filter_by(user_id=user.id, hint_id=hint.id)
+    ).scalar_one_or_none()
+    if existing is not None:
+        return False
+    db.session.add(HintReveal(user_id=user.id, hint_id=hint.id))
+    try:
+        db.session.commit()
+    except IntegrityError:            # two tabs, same hint
+        db.session.rollback()
+        return False
+    return True
+
+
+# --------------------------------------------------------------------------- #
+# solve statistics
+# --------------------------------------------------------------------------- #
+
+class ProblemSolve(db.Model):
+    """One row per person who has solved a problem, written at first accept.
+
+    Denormalised on purpose: deriving 'time to solve' from the submissions
+    table means a correlated min() per user per problem, which is fine for
+    one profile and hopeless for a percentile across every solver.
+    """
+
+    __tablename__ = "problem_solves"
+    __table_args__ = (
+        UniqueConstraint("user_id", "problem_id", name="uq_problem_solve"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    seconds = db.Column(db.Integer, nullable=False)
+    attempts = db.Column(db.Integer, nullable=False)
+    solved_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                          nullable=False)
+
+
+MIN_SOLVERS_FOR_PERCENTILE = 5      # below this the number is noise, not signal
+
+
+def record_solve(sub):
+    """Called once, when a submission is the user's first accept."""
+    first_at, attempts = db.session.execute(
+        db.select(db.func.min(Submission.created_at), db.func.count())
+        .where(Submission.user_id == sub.user_id,
+               Submission.problem_id == sub.problem_id)
+    ).one()
+
+    started = first_at or sub.created_at
+    seconds = int((sub.created_at - started).total_seconds())
+
+    db.session.add(ProblemSolve(user_id=sub.user_id, problem_id=sub.problem_id,
+                                seconds=max(seconds, 0), attempts=attempts or 1))
+    try:
+        db.session.commit()
+    except IntegrityError:           # a retried job; the first write stands
+        db.session.rollback()
+
+
+def solve_percentile(user_id, problem_id):
+    """'Faster than N% of solvers', or None when there aren't enough solvers.
+
+    Measured from a person's *first submission* on the problem, so it is
+    really 'time from first attempt to working', not time spent thinking.
+    A first-try solve therefore lands near zero.
+    """
+    mine = db.session.execute(
+        db.select(ProblemSolve.seconds, ProblemSolve.attempts)
+        .filter_by(user_id=user_id, problem_id=problem_id)
+    ).one_or_none()
+    if mine is None:
+        return None
+
+    seconds, attempts = mine
+    slower, total = db.session.execute(
+        db.select(
+            db.func.count().filter(ProblemSolve.seconds > seconds),
+            db.func.count())
+        .select_from(ProblemSolve)
+        .where(ProblemSolve.problem_id == problem_id)
+    ).one()
+
+    if (total or 0) < MIN_SOLVERS_FOR_PERCENTILE:
+        return {"seconds": seconds, "attempts": attempts,
+                "percentile": None, "solvers": total or 0}
+
+    return {"seconds": seconds, "attempts": attempts,
+            "percentile": round(100 * slower / total),
+            "solvers": total}
+
+
+def problem_stats(problem_id):
+    """The quality signals that fall out of the same table."""
+    solvers, med_sec, med_att = db.session.execute(
+        db.select(db.func.count(),
+                  db.func.percentile_cont(0.5).within_group(ProblemSolve.seconds),
+                  db.func.percentile_cont(0.5).within_group(ProblemSolve.attempts))
+        .select_from(ProblemSolve)
+        .where(ProblemSolve.problem_id == problem_id)
+    ).one()
+
+    attempted = db.session.execute(
+        db.select(db.func.count(db.distinct(Submission.user_id)))
+        .where(Submission.problem_id == problem_id)
+    ).scalar() or 0
+
+    return {"solvers": solvers or 0, "attempted": attempted,
+            "solve_rate": round(100 * (solvers or 0) / attempted) if attempted else None,
+            "median_seconds": int(med_sec) if med_sec else None,
+            "median_attempts": round(med_att, 1) if med_att else None}
+
+
+# --------------------------------------------------------------------------- #
+# similarity
+# --------------------------------------------------------------------------- #
+
+class SubmissionFingerprint(db.Model):
+    __tablename__ = "submission_fingerprints"
+
+    submission_id = db.Column(db.Integer,
+                              db.ForeignKey("submissions.id", ondelete="CASCADE"),
+                              primary_key=True)
+    hash = db.Column(db.BigInteger, primary_key=True)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+
+
+class SimilarityFlag(db.Model):
+    """A pair of submissions close enough that a person should look.
+
+    Never a verdict - two correct solutions to a small problem are
+    legitimately near-identical, which is why this lands in a queue.
+    """
+
+    __tablename__ = "similarity_flags"
+    __table_args__ = (
+        UniqueConstraint("submission_id", "matched_id", name="uq_sim_pair"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(db.Integer,
+                              db.ForeignKey("submissions.id", ondelete="CASCADE"),
+                              nullable=False)
+    matched_id = db.Column(db.Integer,
+                           db.ForeignKey("submissions.id", ondelete="CASCADE"),
+                           nullable=False)
+    score = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(16), nullable=False, default="open")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    submission = db.relationship("Submission", foreign_keys=[submission_id])
+    matched = db.relationship("Submission", foreign_keys=[matched_id])

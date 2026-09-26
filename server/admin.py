@@ -13,7 +13,7 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      User, XpEvent, db, delete_account, mark_email_verified,
                      reject_deletion_request, TutorMessage, unlink_identity, Post,
                      _utcnow, replace_test_results, Report, REPORT_REASON_LABELS,
-                     Team, open_report_count)
+                     Team, open_report_count, SimilarityFlag)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -37,7 +37,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.tutor", "Tutor"),
        ("admin.system", "System"),
        ("admin.audit", "Audit log"),
-       ("admin.reports","Reports")
+       ("admin.reports","Reports"),
+       ("admin.similarity", "Similarity")
        ]
 
 
@@ -962,3 +963,42 @@ def preview():
     """Render the Markdown subset exactly as the real page will."""
     from .learning.markdown import render as render_md
     return jsonify(html=str(render_md(request.form.get("body_md") or "")))
+
+
+# --------------------------------------------------------------------------- #
+# similarity queue
+# --------------------------------------------------------------------------- #
+
+@admin_bp.route("/similarity/")
+@admin_required
+def similarity():
+    status = request.args.get("status", "open")
+    if status not in ("open", "cleared", "confirmed", "all"):
+        status = "open"
+
+    stmt = db.select(SimilarityFlag).order_by(SimilarityFlag.score.desc())
+    if status != "all":
+        stmt = stmt.where(SimilarityFlag.status == status)
+    rows, pager = _paginate(stmt, _page())
+    return render_template("admin/similarity.html", rows=rows, p=pager,
+                           status=status)
+
+
+@admin_bp.route("/similarity/<int:flag_id>/resolve", methods=["POST"])
+@admin_required
+def similarity_resolve(flag_id):
+    flag = _get_or_404(SimilarityFlag, flag_id)
+    action = request.form.get("action")
+    flag.status = "confirmed" if action == "confirm" else "cleared"
+
+    if action == "confirm":
+        # Unshare both. Deciding who copied whom is not something a hash
+        # comparison can tell you, and guessing punishes the wrong person.
+        for s in (flag.submission, flag.matched):
+            if s is not None:
+                s.is_public = False
+
+    db.session.commit()
+    log_action("similarity_%s" % flag.status, flag.id, "%.2f" % flag.score)
+    flash("Flag resolved.", "success")
+    return redirect(url_for("admin.similarity"))

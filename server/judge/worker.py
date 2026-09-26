@@ -45,6 +45,8 @@ def run_job(job):
     result = judge(sub.source, sub.language, tests,
                    time_limit_sec=problem.time_limit_sec,
                    memory_mb=problem.memory_mb)
+    
+    is_first_solve = first_accepted(sub.user_id, problem.id)
 
     sub.verdict = result.verdict
     sub.passed, sub.total = result.passed, result.total
@@ -54,17 +56,29 @@ def run_job(job):
 
     # XP moves here from the request. The unique constraint on xp_events keeps
     # the award idempotent, so a retried job cannot pay twice.
-    if result.verdict == V.AC and first_accepted(sub.user_id, problem.id):
+    if result.verdict == V.AC and is_first_solve:
         from ..achievements import evaluate
         from ..learning.routes import complete_lessons_for_problem
+        from ..models import award_after_hints, hint_penalty, record_solve
         user = sub.user
         if user is not None:
-            award_xp(user, problem.xp, "problem", str(problem.id))
+            # Counting reveals *now* is exactly "reveals before the solve":
+            # the award happens once, here, at the moment of first accept.
+            penalty = hint_penalty(user.id, problem.id)
+            award_xp(user, award_after_hints(problem, penalty),
+                     "problem", str(problem.id))
             complete_lessons_for_problem(user, problem.id)
             db.session.commit()
+            record_solve(sub)
             # Badges are evaluated off the request thread, where a handful of
             # aggregate queries costs nobody a page load.
             evaluate(user)
+
+    if result.verdict == V.AC:
+        from ..similarity import check_submission, index_submission
+        fps = index_submission(sub)
+        if fps:
+            check_submission(sub, fps)
 
     job.status = "done"
     job.finished_at = _utcnow()

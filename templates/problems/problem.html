@@ -45,6 +45,34 @@
     </section>
   {% endif %}
 
+  {% if hints %}
+    <section class="hints"
+             data-reveal-url="{{ url_for('problems.reveal', slug=problem.slug, hint_id=0)[:-1] }}">
+      <h2>Stuck?</h2>
+      <p class="hints__meta">
+        {% if solved %}
+          You have solved this - hints are free now.
+        {% else %}
+          Solving this now pays <b data-award>{{ award_now }}</b> XP{% if award_now < problem.xp %}
+          (down from {{ problem.xp }}){% endif %}.
+        {% endif %}
+      </p>
+
+      {% for h in hints %}
+        <div class="hint {{ 'is-open' if h.id in revealed_hints }}" data-hint="{{ h.id }}">
+          {% if h.id in revealed_hints %}
+            <div class="hint__body">{{ hint_bodies[h.id] }}</div>
+          {% else %}
+            <button type="button" class="hint__open">
+              Hint {{ loop.index }}{% if not solved %} &middot; costs {{ h.cost_xp }} XP{% endif %}
+            </button>
+            <div class="hint__body" hidden></div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
   <section class="editor">
     <h2>Your solution</h2>
     <label for="language">Language</label>
@@ -106,6 +134,10 @@
     if (data.xp_awarded) { bits.push('+' + data.xp_awarded + ' XP'); }
     if (data.lesson_xp_awarded) {
       bits.push('+' + data.lesson_xp_awarded + ' XP lesson complete');
+    }
+    if (data.solve && data.solve.percentile !== null && data.solve.percentile !== undefined) {
+      bits.push('faster than ' + data.solve.percentile + '% of '
+                + data.solve.solvers + ' solvers');
     }
     if (data.streak && data.streak.froze) {
       bits.push('\u2744 a freeze saved your ' + data.streak.days + '-day streak');
@@ -173,6 +205,42 @@
         return new Promise(function (ok) { setTimeout(ok, POLL_MS); })
           .then(function () { return poll(id, tries - 1); });
       });
+  }
+
+  var hintBox = document.querySelector('.hints');
+  if (hintBox) {
+    hintBox.addEventListener('click', async function (ev) {
+      var btn = ev.target.closest('.hint__open');
+      if (!btn) { return; }
+      var card = btn.closest('.hint');
+      var award = hintBox.querySelector('[data-award]');
+
+      // Confirm only while it still costs something.
+      if (award && !window.confirm('Open this hint? It lowers what this problem pays.')) {
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        var res = await fetch(hintBox.dataset.revealUrl + card.dataset.hint, {
+          method: 'POST',
+          headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          }
+        });
+        if (!res.ok) { btn.disabled = false; return; }
+
+        var data = await res.json();
+        var body = card.querySelector('.hint__body');
+        body.innerHTML = data.body;
+        body.hidden = false;
+        card.classList.add('is-open');
+        btn.remove();
+        if (award) { award.textContent = data.award_now; }
+      } catch (err) {
+        btn.disabled = false;
+      }
+    });
   }
 
   run.addEventListener('click', async function () {
