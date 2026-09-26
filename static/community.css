@@ -87,3 +87,49 @@
     .cm__cta { margin-left: 0; }
     .cm__filters input, .cm__filters select { flex: 1 1 8rem; min-width: 0; }
 }
+
+/* Team race */
+.cm__you { background: #fdf5ec; border: 1px solid #e9dccf; border-radius: 10px;
+    padding: .6rem .9rem; font-size: .9rem; }
+.cm__race { list-style: none; margin: 1rem 0 0; padding: 0; }
+.race { display: flex; align-items: center; gap: .8rem; padding: .6rem .7rem;
+    border-bottom: 1px solid #f0e7dd; }
+.race.is-mine { background: #fdf5ec; border-radius: 10px; }
+.race__rank { width: 2rem; text-align: right; color: #7a6455;
+    font-variant-numeric: tabular-nums; }
+.race__name { flex: 1; min-width: 0; color: #2a1a10; text-decoration: none;
+    display: flex; flex-direction: column; line-height: 1.25; font-weight: 600; }
+.race__name small { font-weight: 400; color: #7a6455; font-size: .78rem; }
+.race__xp { font-weight: 700; font-variant-numeric: tabular-nums; }
+.race__xp small { font-weight: 400; color: #7a6455; font-size: .72rem;
+    margin-left: .25rem; }
+
+/* Following feed */
+.cm__feed { list-style: none; margin: 0; padding: 0; }
+.fev { display: flex; align-items: center; gap: .7rem; padding: .55rem 0;
+    border-bottom: 1px solid #f0e7dd; }
+.fev__avatar { width: 1.9rem; height: 1.9rem; border-radius: 50%; object-fit: cover; }
+.fev__avatar--blank { display: grid; place-items: center; background: #e9dccf;
+    color: #77431d; font-weight: 700; font-size: .8rem; }
+.fev__line { flex: 1; margin: 0; font-size: .9rem; }
+.fev__line a { color: #2a1a10; font-weight: 600; }
+.fev__xp { color: #77431d; font-weight: 600; }
+.fev__at { color: #7a6455; font-size: .75rem; white-space: nowrap; }
+
+/* Report disclosure, used on profiles, teams and solutions */
+.report { margin-top: .4rem; font-size: .8rem; }
+.report summary { color: #7a6455; cursor: pointer; }
+.report form { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .4rem; }
+.report select, .report input, .report button { font: inherit; font-size: .8rem;
+    padding: .3rem .45rem; border: 1px solid #d9cec4; border-radius: 6px; }
+.report button { background: #77431d; color: #fff; border: none; cursor: pointer; }
+
+/* Profile showcase */
+.profile-showcase { margin: 1rem 0; font-size: .9rem; }
+.profile-showcase p { margin: .25rem 0; }
+.showcase-langs span { background: #f3ece5; border-radius: 999px;
+    padding: .1rem .5rem; margin-right: .3rem; font-size: .78rem; }
+.showcase-topics { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem;
+    padding: 0; margin: .4rem 0 0; }
+.showcase-topics li { background: #f3ece5; border-radius: 8px;
+    padding: .2rem .55rem; font-size: .8rem; }

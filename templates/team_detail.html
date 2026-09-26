@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_report.html" import report_button %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='community.css') }}">
@@ -15,6 +16,10 @@
       {{ total_xp }} XP &middot; level {{ level }}
     </p>
     {% if team.blurb %}<p>{{ team.blurb }}</p>{% endif %}
+
+    {% if current_user() and mine is none %}
+      {{ report_button('team', team.id) }}
+    {% endif %}
 
     {% if mine is none and team.visibility != 'closed' %}
       <form class="cm__inline" method="post"
@@ -98,6 +103,13 @@
             <button type="submit">Make owner</button>
           </form>
         {% endif %}
+
+        <h2>Invite</h2>
+        <form class="cm__inline" method="post"
+              action="{{ url_for('community.team_invite', slug=team.slug) }}">
+          {{ csrf_field() }}
+          <button type="submit">Generate an invite link</button>
+        </form>
 
         <h2>Delete</h2>
         <form class="cm__inline cm__danger" method="post"

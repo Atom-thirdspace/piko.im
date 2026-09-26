@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>Import problems</h1>
+  <p class="admin-sub">
+    One object or an array of them, in the shape
+    <a href="{{ url_for('admin.problems_export_all') }}">export</a> produces.
+  </p>
+
+  {% if report %}
+    <div class="admin-warn">
+      <p>
+        <b>{{ report.added }}</b> added &middot;
+        <b>{{ report.updated }}</b> replaced &middot;
+        <b>{{ report.skipped }}</b> skipped
+      </p>
+      {% if report.notes %}
+        <ul>
+          {% for note in report.notes %}<li>{{ note }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {{ csrf_field() }}
+    <p>
+      <label>Upload a .json file<br>
+        <input type="file" name="file" accept="application/json,.json">
+      </label>
+    </p>
+    <p>
+      <label>…or paste JSON<br>
+        <textarea name="payload" rows="18" cols="90"
+                  placeholder='[{"slug": "two-sum", "title": "Two Sum", "tests": []}]'></textarea>
+      </label>
+    </p>
+    <p>
+      <label class="admin-inline">
+        <input type="checkbox" name="replace">
+        Replace problems that already exist
+        <span class="admin-hint">(this also replaces their test cases)</span>
+      </label>
+    </p>
+    <button class="admin-btn" type="submit">Import</button>
+  </form>
+
+  <h2>Export</h2>
+  <p><a href="{{ url_for('admin.problems_export_all') }}">Download every problem</a></p>
+{% endblock admin_content %}

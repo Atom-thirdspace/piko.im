@@ -310,6 +310,13 @@ class Submission(db.Model):
     compile_output = db.Column(db.Text)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
 
+    # Cache key: identical source against an unchanged test suite can reuse
+    # a previous verdict instead of starting another container.
+    tests_hash = db.Column(db.String(64), nullable=False, default="", server_default="")
+    source_hash = db.Column(db.String(64), nullable=False, default="", server_default="")
+    is_public = db.Column(db.Boolean, nullable=False, default=False,
+                          server_default="false")
+
     user = db.relationship("User")
     problem = db.relationship("Problem")
 
@@ -772,3 +779,94 @@ def delete_account(user):
     db.session.execute(db.delete(User).where(User.id == user.id))
     db.session.commit()
 
+
+# --------------------------------------------------------------------------- #
+# reports and moderation
+# --------------------------------------------------------------------------- #
+
+REPORT_KINDS = ("user", "team", "solution")
+REPORT_REASONS = [
+    ("abuse", "Abusive or hateful"),
+    ("spam", "Spam or advertising"),
+    ("nsfw", "Sexual or graphic content"),
+    ("impersonation", "Pretending to be someone else"),
+    ("other", "Something else"),
+]
+REPORT_REASON_LABELS = dict(REPORT_REASONS)
+
+
+class Report(db.Model):
+    """Someone flagging a bio, a team blurb or a shared solution.
+
+    Reports are resolved, never deleted - the history is what tells you
+    whether a repeat offender is a pattern or a bad week.
+    """
+
+    __tablename__ = "reports"
+
+    id = db.Column(db.Integer, primary_key=True)
+    reporter_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    kind = db.Column(db.String(16), nullable=False)
+    target_id = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.String(32), nullable=False)
+    detail = db.Column(db.Text, nullable=False, default="")
+    status = db.Column(db.String(16), nullable=False, default="open")
+    handled_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    handled_note = db.Column(db.Text, nullable=False, default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    handled_at = db.Column(db.DateTime(timezone=True))
+
+    reporter = db.relationship("User", foreign_keys=[reporter_id])
+    handler = db.relationship("User", foreign_keys=[handled_by])
+
+
+def file_report(reporter, kind, target_id, reason, detail=""):
+    """False when this reporter already has an open report on the same thing."""
+    if kind not in REPORT_KINDS or reason not in REPORT_REASON_LABELS:
+        return False
+
+    existing = db.session.execute(
+        db.select(Report.id).filter_by(
+            reporter_id=reporter.id, kind=kind, target_id=target_id, status="open")
+    ).scalar_one_or_none()
+    if existing is not None:
+        return False
+
+    db.session.add(Report(reporter_id=reporter.id, kind=kind, target_id=target_id,
+                          reason=reason, detail=(detail or "")[:1000]))
+    db.session.commit()
+    return True
+
+
+def open_report_count():
+    return db.session.execute(
+        db.select(db.func.count()).select_from(Report).where(Report.status == "open")
+    ).scalar() or 0
+
+
+# --------------------------------------------------------------------------- #
+# judge queue
+# --------------------------------------------------------------------------- #
+
+class JudgeJob(db.Model):
+    """A submission waiting for a container.
+
+    The Submission row is created immediately with verdict 'queued', so the
+    browser has something to poll and a learner's history never silently
+    loses an attempt they made.
+    """
+
+    __tablename__ = "judge_jobs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(db.Integer,
+                              db.ForeignKey("submissions.id", ondelete="CASCADE"),
+                              nullable=False, index=True)
+    status = db.Column(db.String(16), nullable=False, default="queued")
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    error = db.Column(db.Text, nullable=False, default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    claimed_at = db.Column(db.DateTime(timezone=True))
+    finished_at = db.Column(db.DateTime(timezone=True))
+
+    submission = db.relationship("Submission")

@@ -1,0 +1,82 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+  <h1>Reports</h1>
+  <p class="admin-filters">
+    {% for key in ['open', 'actioned', 'dismissed', 'all'] %}
+      <a href="{{ url_for('admin.reports', status=key) }}"
+         class="{{ 'active' if key == status }}">{{ key }}</a>
+    {% endfor %}
+  </p>
+
+  {% for r in rows %}
+    <div class="admin-test">
+      <p>
+        <b>{{ r.kind }} #{{ r.target_id }}</b> &middot;
+        {{ reasons.get(r.reason, r.reason) }} &middot;
+        by {{ r.reporter.username if r.reporter else 'deleted user' }} &middot;
+        {{ r.created_at.strftime('%d %b %Y %H:%M') }}
+        <span class="admin-badge {{ 'warn' if r.status == 'open' }}">{{ r.status }}</span>
+      </p>
+
+      {% set t = targets.get(r.id) %}
+      {% if t is none %}
+        <p class="admin-empty">Target is gone.</p>
+      {% elif r.kind == 'user' %}
+        <p>
+          <a href="{{ url_for('admin.user_detail', user_id=t.id) }}">@{{ t.username }}</a>
+          {% if t.is_suspended %}
+            <span class="admin-badge warn">suspended</span>
+          {% endif %}
+        </p>
+        <pre class="admin-pre">{{ t.bio or '(no bio)' }}</pre>
+      {% elif r.kind == 'team' %}
+        <p>
+          <a href="{{ url_for('community.team_detail', slug=t.slug) }}">{{ t.name }}</a>
+        </p>
+        <pre class="admin-pre">{{ t.blurb or '(no blurb)' }}</pre>
+      {% else %}
+        <p>
+          <a href="{{ url_for('admin.submission_detail', sub_id=t.id) }}">
+            Submission #{{ t.id }}
+          </a>
+          {{ '- still shared' if t.is_public else '- already hidden' }}
+        </p>
+        <pre class="admin-pre">{{ t.source[:800] }}</pre>
+      {% endif %}
+
+      {% if r.detail %}<p class="admin-hint">{{ r.detail }}</p>{% endif %}
+
+      {% if r.status == 'open' %}
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.report_resolve', report_id=r.id) }}">
+          {{ csrf_field() }}
+          <input type="text" name="note" placeholder="Note (optional)">
+          <select name="action">
+            <option value="dismiss">Dismiss</option>
+            {% if r.kind == 'user' %}
+              <option value="blank_bio">Clear bio + delist</option>
+              <option value="suspend">Suspend account</option>
+            {% elif r.kind == 'team' %}
+              <option value="blank_blurb">Clear blurb</option>
+            {% else %}
+              <option value="unshare">Unshare solution</option>
+            {% endif %}
+          </select>
+          <button class="admin-btn" type="submit">Apply</button>
+        </form>
+      {% else %}
+        <p class="admin-hint">
+          {{ r.handled_note or 'no note' }}
+          &middot; {{ r.handler.username if r.handler else 'unknown' }}
+          {%- if r.handled_at %} &middot; {{ r.handled_at.strftime('%d %b %Y') }}{% endif %}
+        </p>
+      {% endif %}
+    </div>
+  {% else %}
+    <p class="admin-empty">Nothing here.</p>
+  {% endfor %}
+
+  {{ pager(p, 'admin.reports', status=status) }}
+{% endblock admin_content %}

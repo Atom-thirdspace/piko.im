@@ -5,7 +5,9 @@
 {% endblock head %}
 
 {% block content %}
-<main class="learn problem-page" data-submit-url="{{ url_for('problems.submit', slug=problem.slug) }}">
+<main class="learn problem-page"
+      data-submit-url="{{ url_for('problems.submit', slug=problem.slug) }}"
+      data-result-url="{{ url_for('problems.result', slug=problem.slug, sub_id=0)[:-1] }}">
   <header class="learn-head">
     <p class="learn-crumbs">
       {% if lesson %}
@@ -23,6 +25,9 @@
       · {{ problem.xp }} XP
       · {{ problem.time_limit_sec }}s / {{ problem.memory_mb }}MB
       {% if solved %}· <span class="pill pill-done">Solved</span>{% endif %}
+      {% if solved %}
+        · <a href="{{ url_for('problems.solutions', slug=problem.slug) }}">Solutions</a>
+      {% endif %}
     </p>
   </header>
 
@@ -150,6 +155,21 @@
     }
   }
 
+  var POLL_MS = 900;
+
+  // The judge runs in a worker now, so a submission comes back as an id and
+  // we ask for the verdict until it lands.
+  function poll(id, tries) {
+    return fetch(page.dataset.resultUrl + id)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.status !== 'pending') { return data; }
+        if (tries <= 0) { throw new Error('timeout'); }
+        return new Promise(function (ok) { setTimeout(ok, POLL_MS); })
+          .then(function () { return poll(id, tries - 1); });
+      });
+  }
+
   run.addEventListener('click', async function () {
     var source = document.getElementById('source').value;
     if (!source.trim()) { return; }
@@ -158,7 +178,7 @@
     run.textContent = 'Judging…';
     box.hidden = false;
     box.className = 'result';
-    box.textContent = 'Running your code against the tests…';
+    box.textContent = 'Queued…';
 
     try {
       var res = await fetch(page.dataset.submitUrl, {
@@ -181,6 +201,11 @@
         return;
       }
 
+      if (data.status === 'queued') {
+        box.textContent = 'Waiting for a judge…';
+        data = await poll(data.submission_id, 60);      // roughly a minute
+      }
+
       render(data);
 
       // The lesson only closes on the server, so reload to pick up the state.
@@ -189,7 +214,8 @@
       }
     } catch (err) {
       box.className = 'result is-fail';
-      box.textContent = 'Could not reach the judge.';
+      box.textContent = 'The judge is taking too long. Your submission is saved '
+                      + 'and will finish in the background.';
     } finally {
       run.disabled = false;
       run.textContent = 'Submit';

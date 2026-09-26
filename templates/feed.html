@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='community.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="cm cm--narrow">
+    <header class="cm__head">
+      <h1>Your feed</h1>
+      <a class="cm__cta" href="{{ url_for('community.index') }}">Find people</a>
+    </header>
+
+    {% if not following %}
+      <p class="cm__empty">
+        You are not following anyone yet. The
+        <a href="{{ url_for('community.index') }}">community directory</a>
+        is where to start.
+      </p>
+    {% elif not events %}
+      <p class="cm__empty">
+        Nothing from the {{ following }} {{ 'person' if following == 1 else 'people' }}
+        you follow yet.
+      </p>
+    {% else %}
+      <ul class="cm__feed">
+        {% for e in events %}
+          <li class="fev">
+            {% if e.avatar_url %}
+              <img class="fev__avatar" src="{{ e.avatar_url }}" alt="" loading="lazy">
+            {% else %}
+              <span class="fev__avatar fev__avatar--blank" aria-hidden="true">
+                {{ e.who[:1] | upper }}
+              </span>
+            {% endif %}
+            <p class="fev__line">
+              <a href="{{ url_for('profile.public_profile', username=e.username) }}">
+                {{ e.who }}
+              </a>
+              {{ e.what }}
+              <span class="fev__xp">+{{ e.amount }} XP</span>
+            </p>
+            <time class="fev__at">{{ e.at.strftime('%d %b, %H:%M') }}</time>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </main>
+{% endblock content %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='community.css') }}">
+{% endblock head %}
+
+{% block content %}
+  <main class="cm">
+    <header class="cm__head">
+      <h1>This week's team race</h1>
+      <a class="cm__cta" href="{{ url_for('community.teams') }}">All teams</a>
+    </header>
+    <p class="cm__sub">
+      XP earned by every member since {{ since.strftime('%d %b') }}. Resets on a
+      rolling seven-day window, so a quiet week never buries you for good.
+    </p>
+
+    {% if mine %}
+      <p class="cm__you">
+        You are on
+        <a href="{{ url_for('community.team_detail', slug=mine.slug) }}">{{ mine.name }}</a>.
+      </p>
+    {% elif current_user() %}
+      <p class="cm__you">
+        You are not on a team yet.
+        <a href="{{ url_for('community.team_new') }}">Start one</a>.
+      </p>
+    {% endif %}
+
+    {% if rows %}
+      <ol class="cm__race">
+        {% for team, xp, actives, members in rows %}
+          <li class="race {{ 'is-mine' if mine and team.id == mine.id }}">
+            <span class="race__rank">{{ loop.index }}</span>
+            <a class="race__name"
+               href="{{ url_for('community.team_detail', slug=team.slug) }}">
+              {{ team.name }}
+              <small>
+                {{ actives }} of {{ members }} active this week
+              </small>
+            </a>
+            <span class="race__xp">{{ xp }}<small>XP</small></span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="cm__empty">
+        No team has earned XP this week. First one on the board wins it.
+      </p>
+    {% endif %}
+  </main>
+{% endblock content %}

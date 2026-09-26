@@ -1,8 +1,9 @@
+import json
 import os
 from functools import wraps
 from uuid import uuid4
-from flask import (Blueprint, abort, current_app, flash, redirect, render_template,
-                   request, url_for)
+from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
+                   redirect, render_template, request, url_for)
 
 from sqlalchemy import or_
 from .judge import LANGUAGES, TestCase, judge
@@ -11,11 +12,13 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      OAuthIdentity, Problem, ProblemTest, Submission, Track, Unit,
                      User, XpEvent, db, delete_account, mark_email_verified,
                      reject_deletion_request, TutorMessage, unlink_identity, Post,
-                     _utcnow, replace_test_results)
+                     _utcnow, replace_test_results, Report, REPORT_REASON_LABELS,
+                     Team, open_report_count)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
-from .validators import DELETION_REASON_LABELS, slugify, validate_post
+from .validators import (DELETION_REASON_LABELS, SLUG_RE, slugify,
+                         validate_post)
 from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
                          admin_emails, is_admin, lock_session,
                          lockout_minutes_left, passcode_set, record_failure,
@@ -29,7 +32,8 @@ PAGE_SIZE = 25
 NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.deletions", "Deletions"),
        ("admin.problems", "Problems"), ("admin.submissions", "Submissions"),
-       ("admin.content", "Content"), ("admin.blog", "Blog"),
+       ("admin.content", "Content"), ("admin.lessons", "Lessons"),
+       ("admin.blog", "Blog"),
        ("admin.tutor", "Tutor"),
        ("admin.system", "System"),
        ("admin.audit", "Audit log"),
@@ -692,9 +696,269 @@ def report_resolve(report_id):
     rep.status = "dismissed" if action == "dismiss" else "actioned"
     rep.handled_by = current_user().id
     rep.handled_note = note[:500]
+    rep.handled_at = _utcnow()
     db.session.commit()
 
     log_action("report_%s" % action, rep.id, "%s#%s" % (rep.kind, rep.target_id))
     flash("Report resolved.", "success")
     return redirect(url_for("admin.reports"))
 
+
+# --------------------------------------------------------------------------- #
+# lesson authoring
+# --------------------------------------------------------------------------- #
+
+LESSON_KINDS = ("reading", "quiz", "code")
+
+
+@admin_bp.route("/lessons/")
+@admin_required
+def lessons():
+    stmt = (db.select(Lesson).join(Unit).join(Track)
+            .order_by(Track.position, Unit.position, Lesson.position))
+    rows, pager = _paginate(stmt, _page())
+    return render_template("admin/lessons.html", lessons=rows, p=pager)
+
+
+@admin_bp.route("/lessons/new", methods=["GET", "POST"])
+@admin_bp.route("/lessons/<int:lesson_id>/edit", methods=["GET", "POST"])
+@admin_required
+def lesson_form(lesson_id=None):
+    lesson = _get_or_404(Lesson, lesson_id) if lesson_id else None
+    units = db.session.execute(
+        db.select(Unit).join(Track).order_by(Track.position, Unit.position)
+    ).scalars().all()
+    problems = db.session.execute(
+        db.select(Problem).order_by(Problem.slug)).scalars().all()
+
+    if request.method == "GET":
+        return render_template("admin/lesson_form.html", lesson=lesson, errors={},
+                               form={}, units=units, problems=problems,
+                               kinds=LESSON_KINDS)
+
+    form = request.form
+    errors = {}
+    title = (form.get("title") or "").strip()
+    slug = (form.get("slug") or "").strip().lower() or slugify(title)
+    kind = form.get("kind") if form.get("kind") in LESSON_KINDS else "reading"
+
+    try:
+        unit_id = int(form.get("unit_id") or 0)
+    except (TypeError, ValueError):
+        unit_id = 0
+    unit = db.session.get(Unit, unit_id)
+
+    if not title:
+        errors["title"] = "Give it a title."
+    if unit is None:
+        errors["unit_id"] = "Pick a unit."
+    if not SLUG_RE.match(slug):
+        errors["slug"] = "Lowercase letters, numbers and hyphens."
+    elif unit is not None:
+        # The unique constraint is (unit_id, slug), so a clash is per-unit.
+        clash = db.session.execute(
+            db.select(Lesson).filter_by(unit_id=unit.id, slug=slug)
+        ).scalar_one_or_none()
+        if clash is not None and (lesson is None or clash.id != lesson.id):
+            errors["slug"] = "That slug is already used in this unit."
+
+    problem_id = form.get("problem_id") or ""
+    if kind == "code" and not problem_id:
+        errors["problem_id"] = "A code lesson needs a problem."
+
+    if errors:
+        return render_template("admin/lesson_form.html", lesson=lesson,
+                               errors=errors, form=form, units=units,
+                               problems=problems, kinds=LESSON_KINDS), 400
+
+    if lesson is None:
+        lesson = Lesson(unit_id=unit.id, slug=slug)
+        db.session.add(lesson)
+
+    lesson.unit_id = unit.id
+    lesson.slug = slug
+    lesson.title = title
+    lesson.kind = kind
+    lesson.xp = int(form.get("xp") or 10)
+    lesson.body_md = form.get("body_md") or ""
+    lesson.position = int(form.get("position") or 0)
+    lesson.problem_id = int(problem_id) if problem_id else None
+    db.session.commit()
+
+    log_action("save_lesson", lesson.id, lesson.slug)
+    flash("Lesson saved.", "success")
+    return redirect(url_for("admin.lesson_form", lesson_id=lesson.id))
+
+
+@admin_bp.route("/lessons/<int:lesson_id>/delete", methods=["POST"])
+@admin_required
+def lesson_delete(lesson_id):
+    lesson = _get_or_404(Lesson, lesson_id)
+    if (request.form.get("confirm") or "").strip() != lesson.slug:
+        flash("Type the slug to confirm.", "error")
+        return redirect(url_for("admin.lesson_form", lesson_id=lesson.id))
+
+    slug = lesson.slug
+    db.session.delete(lesson)
+    db.session.commit()
+    log_action("delete_lesson", lesson_id, slug)
+    flash("Lesson deleted.", "success")
+    return redirect(url_for("admin.lessons"))
+
+
+# --------------------------------------------------------------------------- #
+# import / export / bulk / preview
+# --------------------------------------------------------------------------- #
+
+def _problem_blob(p):
+    return {"slug": p.slug, "title": p.title, "statement_md": p.statement_md,
+            "difficulty": p.difficulty, "topic": p.topic, "xp": p.xp,
+            "time_limit_sec": p.time_limit_sec, "memory_mb": p.memory_mb,
+            "tests": [{"stdin": t.stdin, "expected_stdout": t.expected_stdout,
+                       "is_sample": t.is_sample} for t in p.tests]}
+
+
+def _json_download(payload, filename):
+    return Response(
+        json.dumps(payload, indent=2, ensure_ascii=False),
+        mimetype="application/json",
+        headers={"Content-Disposition": 'attachment; filename="%s"' % filename})
+
+
+@admin_bp.route("/problems/<int:problem_id>/export")
+@admin_required
+def problem_export(problem_id):
+    p = _get_or_404(Problem, problem_id)
+    return _json_download(_problem_blob(p), "%s.json" % p.slug)
+
+
+@admin_bp.route("/problems/export-all")
+@admin_required
+def problems_export_all():
+    rows = db.session.execute(
+        db.select(Problem).order_by(Problem.slug)).scalars().all()
+    return _json_download([_problem_blob(p) for p in rows], "problems.json")
+
+
+@admin_bp.route("/problems/import", methods=["GET", "POST"])
+@admin_required
+def problems_import():
+    if request.method == "GET":
+        return render_template("admin/problems_import.html", report=None)
+
+    raw = request.form.get("payload") or ""
+    upload = request.files.get("file")
+    if upload is not None and upload.filename:
+        raw = upload.read().decode("utf-8", "replace")
+
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        flash("That is not valid JSON: %s" % exc, "error")
+        return redirect(url_for("admin.problems_import"))
+
+    items = data if isinstance(data, list) else [data]
+    replace = request.form.get("replace") == "on"
+    added = updated = skipped = 0
+    notes = []
+
+    for item in items:
+        if not isinstance(item, dict):
+            skipped += 1
+            notes.append("skipped a non-object entry")
+            continue
+
+        slug = (item.get("slug") or "").strip().lower()
+        title = (item.get("title") or "").strip()
+        if not slug or not title:
+            skipped += 1
+            notes.append("skipped an entry with no slug or title")
+            continue
+
+        existing = db.session.execute(
+            db.select(Problem).filter_by(slug=slug)).scalar_one_or_none()
+        if existing is not None and not replace:
+            skipped += 1
+            notes.append("%s already exists" % slug)
+            continue
+
+        problem = existing or Problem(slug=slug, statement_md="")
+        problem.title = title
+        problem.statement_md = item.get("statement_md") or ""
+        problem.difficulty = item.get("difficulty") or "easy"
+        problem.topic = item.get("topic") or None
+        try:
+            problem.xp = int(item.get("xp") or 10)
+            problem.time_limit_sec = float(item.get("time_limit_sec") or 2.0)
+            problem.memory_mb = int(item.get("memory_mb") or 256)
+        except (TypeError, ValueError):
+            skipped += 1
+            notes.append("%s has a non-numeric xp/limit" % slug)
+            continue
+
+        if existing is None:
+            db.session.add(problem)
+            added += 1
+        else:
+            problem.tests.clear()      # replacing a problem replaces its tests
+            updated += 1
+        db.session.flush()
+
+        for i, t in enumerate(item.get("tests") or []):
+            db.session.add(ProblemTest(
+                problem_id=problem.id, position=i,
+                stdin=t.get("stdin") or "",
+                expected_stdout=t.get("expected_stdout") or "",
+                is_sample=bool(t.get("is_sample"))))
+
+    db.session.commit()
+    log_action("import_problems", "", "+%d ~%d skip%d" % (added, updated, skipped))
+    return render_template("admin/problems_import.html",
+                           report={"added": added, "updated": updated,
+                                   "skipped": skipped, "notes": notes})
+
+
+@admin_bp.route("/problems/<int:problem_id>/tests/bulk", methods=["POST"])
+@admin_required
+def problem_bulk_tests(problem_id):
+    """Paste many cases at once.
+
+    Cases are separated by a line of '---', input and expected by a line of
+    '==='. A case whose first line is '#sample' is marked as a sample.
+    """
+    problem = _get_or_404(Problem, problem_id)
+    blob = (request.form.get("bulk") or "").replace("\r\n", "\n")
+    if not blob.strip():
+        flash("Nothing pasted.", "error")
+        return redirect(url_for("admin.problem_form", problem_id=problem.id))
+
+    start = len(problem.tests)
+    made = 0
+    for chunk in blob.split("\n---\n"):
+        if not chunk.strip():
+            continue
+        is_sample = False
+        if chunk.lstrip().startswith("#sample"):
+            is_sample = True
+            chunk = chunk.lstrip()[len("#sample"):].lstrip("\n")
+        if "\n===\n" not in chunk:
+            continue
+        stdin, expected = chunk.split("\n===\n", 1)
+        db.session.add(ProblemTest(
+            problem_id=problem.id, position=start + made,
+            stdin=stdin.strip("\n"), expected_stdout=expected.strip("\n"),
+            is_sample=is_sample))
+        made += 1
+
+    db.session.commit()
+    log_action("bulk_tests", problem.id, "+%d" % made)
+    flash("Added %d test case%s." % (made, "" if made == 1 else "s"), "success")
+    return redirect(url_for("admin.problem_form", problem_id=problem.id))
+
+
+@admin_bp.route("/preview", methods=["POST"])
+@admin_required
+def preview():
+    """Render the Markdown subset exactly as the real page will."""
+    from .learning.markdown import render as render_md
+    return jsonify(html=str(render_md(request.form.get("body_md") or "")))

@@ -9,7 +9,8 @@ from .judge.languages import LANGUAGES
 from .models import (Enrollment, LessonProgress, OAuthIdentity, Submission,
                      XpEvent, User, db, delete_account, find_by_username,
                      set_user_password, unlink_identity, update_preferences,
-                     update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request)
+                     update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request,
+                     Problem, Team, TeamMember)
 from .progress import level_progress
 from .session import current_user, login_required
 from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS, DELETION_REASONS,
@@ -83,6 +84,36 @@ def _activity(user, limit=8):
 # public profile
 # --------------------------------------------------------------------------- #
 
+def _showcase(user):
+    """The things worth putting at the top of a profile."""
+    from .community import follow_counts      # imported here: community imports models
+
+    by_topic = db.session.execute(
+        db.select(Problem.topic, db.func.count(db.distinct(Submission.problem_id)))
+        .join(Submission, Submission.problem_id == Problem.id)
+        .where(Submission.user_id == user.id, Submission.verdict == "accepted",
+               Problem.topic.isnot(None))
+        .group_by(Problem.topic)
+        .order_by(db.func.count(db.distinct(Submission.problem_id)).desc())
+    ).all()
+
+    teams = db.session.execute(
+        db.select(Team).join(TeamMember, TeamMember.team_id == Team.id)
+        .where(TeamMember.user_id == user.id)
+        .order_by(TeamMember.joined_at.desc()).limit(3)
+    ).scalars().all()
+
+    languages = db.session.execute(
+        db.select(Submission.language, db.func.count())
+        .where(Submission.user_id == user.id, Submission.verdict == "accepted")
+        .group_by(Submission.language)
+        .order_by(db.func.count().desc()).limit(3)
+    ).all()
+
+    return {"by_topic": by_topic, "teams": teams, "languages": languages,
+            "follows": follow_counts(user)}
+
+
 @profile_bp.route("/u/<username>/")
 def public_profile(username):
     user = find_by_username(username)
@@ -98,6 +129,7 @@ def public_profile(username):
         stats=_counts(user),
         current=_current_track(user),
         activity=_activity(user),
+        showcase=_showcase(user),
     )
 
 

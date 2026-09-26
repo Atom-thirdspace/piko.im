@@ -1,0 +1,38 @@
+{% extends "base-dashboard.html" %}
+{% from "_report.html" import report_button %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <h1>Solutions to {{ problem.title }}</h1>
+
+  {% if mine %}
+    <form method="post"
+          action="{{ url_for('problems.share', slug=problem.slug, sub_id=mine.id) }}">
+      {{ csrf_field() }}
+      <button type="submit">
+        {{ 'Hide my solution' if mine.is_public else 'Share my solution' }}
+      </button>
+    </form>
+  {% endif %}
+
+  {% for sub, u in rows %}
+    <article class="solution {{ 'is-followed' if u.id in follows }}">
+      <p class="solution__by">
+        <a href="{{ url_for('profile.public_profile', username=u.username) }}">
+          {{ u.name or u.username }}
+        </a>
+        {% if u.id in follows %}<span class="solution__tag">you follow</span>{% endif %}
+        &middot; {{ sub.language }} &middot; {{ sub.max_time_ms }}ms
+        {{ report_button('solution', sub.id) }}
+      </p>
+      <pre class="solution__code">{{ sub.source }}</pre>
+    </article>
+  {% else %}
+    <p>Nobody has shared one yet. Be first.</p>
+  {% endfor %}
+</main>
+{% endblock content %}

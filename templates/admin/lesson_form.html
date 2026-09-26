@@ -1,0 +1,78 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>{{ 'Edit lesson' if lesson else 'New lesson' }}</h1>
+
+  <form method="post">
+    {{ csrf_field() }}
+    <p><label>Unit<br>
+      <select name="unit_id">
+        {% for u in units %}
+          <option value="{{ u.id }}"
+            {{ 'selected' if lesson and lesson.unit_id == u.id }}>
+            {{ u.track.title }} / {{ u.title }}
+          </option>
+        {% endfor %}
+      </select></label>
+      {% if errors.unit_id %}<span class="admin-hint">{{ errors.unit_id }}</span>{% endif %}
+    </p>
+
+    <p><label>Title<br>
+      <input type="text" name="title" size="60"
+             value="{{ form.get('title', lesson.title if lesson else '') }}"></label>
+      {% if errors.title %}<span class="admin-hint">{{ errors.title }}</span>{% endif %}
+    </p>
+
+    <p><label>Slug<br>
+      <input type="text" name="slug" size="40"
+             value="{{ form.get('slug', lesson.slug if lesson else '') }}"></label>
+      {% if errors.slug %}<span class="admin-hint">{{ errors.slug }}</span>{% endif %}
+    </p>
+
+    <p><label>Kind<br>
+      <select name="kind">
+        {% for k in kinds %}
+          <option value="{{ k }}" {{ 'selected' if lesson and lesson.kind == k }}>{{ k }}</option>
+        {% endfor %}
+      </select></label>
+    </p>
+
+    <p><label>Problem (code lessons)<br>
+      <select name="problem_id">
+        <option value="">none</option>
+        {% for p in problems %}
+          <option value="{{ p.id }}"
+            {{ 'selected' if lesson and lesson.problem_id == p.id }}>{{ p.slug }}</option>
+        {% endfor %}
+      </select></label>
+      {% if errors.problem_id %}<span class="admin-hint">{{ errors.problem_id }}</span>{% endif %}
+    </p>
+
+    <p>
+      <label>XP <input type="number" name="xp" size="4"
+             value="{{ lesson.xp if lesson else 10 }}"></label>
+      <label>Position <input type="number" name="position" size="4"
+             value="{{ lesson.position if lesson else 0 }}"></label>
+    </p>
+
+    <p><label>Body<br>
+      <textarea name="body_md" rows="22" cols="90">{{ form.get('body_md', lesson.body_md if lesson else '') }}</textarea></label>
+    </p>
+
+    <button class="admin-btn" type="submit">Save</button>
+  </form>
+
+  {# preview widget goes here #}
+
+  {% if lesson %}
+    <div class="admin-danger">
+      <h2>Delete</h2>
+      <form class="admin-inline" method="post"
+            action="{{ url_for('admin.lesson_delete', lesson_id=lesson.id) }}">
+        {{ csrf_field() }}
+        <input type="text" name="confirm" placeholder="Type {{ lesson.slug }}">
+        <button class="admin-btn" type="submit">Delete lesson</button>
+      </form>
+    </div>
+  {% endif %}
+{% endblock admin_content %}

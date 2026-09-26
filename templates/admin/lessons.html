@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+  <h1>Lessons</h1>
+  <p class="admin-sub">
+    <a class="admin-btn" href="{{ url_for('admin.lesson_form') }}">New lesson</a>
+  </p>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Track / unit</th><th>Lesson</th><th>Kind</th>
+        <th>XP</th><th>Pos</th><th>Problem</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for l in lessons %}
+        <tr>
+          <td>{{ l.unit.track.title }} / {{ l.unit.title }}</td>
+          <td>{{ l.title }}<br><span class="admin-hint">{{ l.slug }}</span></td>
+          <td>
+            <span class="admin-badge {{ 'warn' if l.kind == 'quiz' }}">{{ l.kind }}</span>
+          </td>
+          <td>{{ l.xp }}</td>
+          <td>{{ l.position }}</td>
+          <td>{{ l.problem.slug if l.problem else '' }}</td>
+          <td><a href="{{ url_for('admin.lesson_form', lesson_id=l.id) }}">Edit</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="admin-empty">No lessons yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ pager(p, 'admin.lessons') }}
+{% endblock admin_content %}

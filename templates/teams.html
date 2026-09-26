@@ -8,6 +8,7 @@
   <main class="cm">
     <header class="cm__head">
       <h1>Teams</h1>
+      <a class="cm__cta" href="{{ url_for('community.challenge') }}">This week's race</a>
       {% if current_user() %}
         <a class="cm__cta" href="{{ url_for('community.team_new') }}">Start a team</a>
       {% endif %}

@@ -434,7 +434,7 @@ def team_xp_since(team_id, since):
 
 @community_bp.route("/teams/challenge")
 def challenge():
-    since = _utcnow() = timedelta(days = 7)
+    since = _utcnow() - timedelta(days=7)
     earned = (db.select(TeamMember.team_id.label("tid"),
                         db.func.coalesce(db.func.sum(XpEvent.amount), 0).label("xp"),
                         db.func.count(db.distinct(XpEvent.user_id)).label("actives"))
@@ -465,7 +465,7 @@ def challenge():
 @login_required
 def team_invite(slug):
     team = _get_team(slug)
-    mine = membership(team, current_app())
+    mine = membership(team, current_user())
     if mine is None or mine.role != "owner":
         abort(404)
 
@@ -504,4 +504,21 @@ def team_accept(token):
 @community_bp.route("/community/feed")
 @login_required
 def feed():
-    
+    viewer = current_user()
+    ids = following_ids(viewer)
+    if not ids:
+        return render_template("feed.html", events=[], following=0)
+
+    rows = db.session.execute(    
+        db.select(XpEvent, User).join(User, User.id == XpEvent.user_id)
+        .where(XpEvent.user_id.in_(ids))
+        .order_by(XpEvent.created_at.desc()).limit(60)
+    ).all()
+
+    labels = {"lesson": "finished a lesson", "problem": "solved a problem",
+              "streak": "kept a streak going"}
+    events = [{"who": u.name or u.username, "username": u.username,
+               "avatar_url": u.avatar_url, "amount": e.amount,
+               "what": labels.get(e.reason, e.reason), "at": e.created_at}
+              for e, u in rows]
+    return render_template("feed.html", events=events, following=len(ids))    

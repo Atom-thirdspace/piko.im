@@ -21,6 +21,8 @@ from server.leaderboard import leaderboard_bp
 from server.community import community_bp
 from server.blog import blog_bp
 from server.csrf import init_csrf
+from server.moderation import moderation_bp
+from server.judge.worker import register_cli as register_judge_cli
 
 load_dotenv()
 
@@ -49,8 +51,10 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(leaderboard_bp)
 app.register_blueprint(community_bp)
 app.register_blueprint(blog_bp)
+app.register_blueprint(moderation_bp)
 app.register_blueprint(learn_bp)
 register_cli(app)
+register_judge_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels

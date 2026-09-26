@@ -5,6 +5,8 @@ MLE = "memory_limit_exceeded"
 RE = "runtime_error"
 CE = "compile_error"
 IE = "internal_error"          # our bug, not the user's
+QUEUED = "queued"              # waiting for a worker
+RUNNING = "running"            # a worker has it
 
 LABELS = {
     AC: "Accepted",
@@ -14,6 +16,8 @@ LABELS = {
     RE: "Runtime Error",
     CE: "Compilation Error",
     IE: "Internal Error",
+    QUEUED: "Queued",
+    RUNNING: "Running",
 }
 
 QUEUED = "queued"

@@ -272,3 +272,14 @@
     border: 1px solid #e3d6c8; border-radius: 8px; font-size: .85rem;
     max-height: 11rem; overflow: auto; white-space: pre-wrap;
     word-break: break-word; }
+
+/* Community solutions */
+.solution { border: 1px solid #e3d6c8; border-radius: 10px; padding: .8rem;
+    margin: .8rem 0; }
+.solution.is-followed { border-color: #77431d; }
+.solution__by { margin: 0 0 .5rem; font-size: .85rem; color: #5d4a3c; }
+.solution__tag { background: #77431d; color: #fff; border-radius: 999px;
+    padding: .05rem .45rem; font-size: .7rem; }
+.solution__code { margin: 0; padding: .6rem .8rem; background: #fff;
+    border: 1px solid #e3d6c8; border-radius: 8px; overflow-x: auto;
+    font-size: .85rem; max-height: 22rem; }
