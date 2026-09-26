@@ -15,6 +15,7 @@
          class="{{ 'active' if admin_active == endpoint }}">{{ label }}</a>
     {% endfor %}
     <form class="admin-lock" method="post" action="{{ url_for('admin.lock') }}">
+      {{ csrf_field() }}
       <button type="submit">Lock</button>
     </form>
     <a class="admin-exit" href="{{ url_for('dashboard.index') }}">Back to app</a>

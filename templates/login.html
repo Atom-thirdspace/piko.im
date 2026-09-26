@@ -9,6 +9,7 @@
   <h1>Log in to Piko</h1>
 
   <form class="auth-form" method="post" action="{{ url_for('accounts.password_login') }}">
+      {{ csrf_field() }}
     <input type="hidden" name="next" value="{{ next }}">
 
     <label for="identifier">Email or username</label>

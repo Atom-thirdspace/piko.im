@@ -80,6 +80,7 @@
             {% if viewer %}
               <form method="post"
                     action="{{ url_for('community.follow', username=p.username) }}">
+      {{ csrf_field() }}
                 <input type="hidden" name="next" value="{{ request.full_path }}">
                 <button type="submit" class="person__follow {{ 'is-on' if p.you_follow }}">
                   {% if p.you_follow and p.follows_you %}Connected

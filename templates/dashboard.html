@@ -125,6 +125,7 @@
     </p>
 
     <form class="goalform" method="post" action="{{ url_for('profile.save_learning') }}">
+      {{ csrf_field() }}
       <label class="goalform__label" for="daily-goal-xp">Change target</label>
       <select class="goalform__select" id="daily-goal-xp" name="daily_goal_xp">
         {% for choice in goal_choices %}

@@ -1,0 +1,20 @@
+{% macro report_button(kind, target_id, label="Report") %}
+  <details class="report">
+    <summary>{{ label }}</summary>
+    <form method="post" action="{{ url_for('moderation.report') }}">
+      {{ csrf_field() }}
+      <input type="hidden" name="kind" value="{{ kind }}">
+      <input type="hidden" name="target_id" value="{{ target_id }}">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <select name="reason">
+        <option value="abuse">Abusive or hateful</option>
+        <option value="spam">Spam or advertising</option>
+        <option value="nsfw">Sexual or graphic content</option>
+        <option value="impersonation">Pretending to be someone else</option>
+        <option value="other">Something else</option>
+      </select>
+      <input type="text" name="detail" maxlength="300" placeholder="Anything to add?">
+      <button type="submit">Send</button>
+    </form>
+  </details>
+{% endmacro %}

@@ -21,6 +21,7 @@
             {% if pending.detail %}<blockquote>{{ pending.detail }}</blockquote>{% endif %}
 
             <form method="post" action="{{ url_for('profile.leave_cancel') }}">
+      {{ csrf_field() }}
                 <button type="submit">Changed my mind - keep my account</button>
             </form>
         </section>
@@ -33,6 +34,7 @@
                 nothing is deleted until they approve it, and you can cancel before then.
             </p>
             <form action="{{ url_for('profile.leave') }}" class="auth-form" method="post">
+      {{ csrf_field() }}
              <fieldset class="leave-reasons">
                 <legend>Why are you leaving?</legend>
                 {% for key, label in reasons %}

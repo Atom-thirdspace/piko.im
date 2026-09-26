@@ -51,6 +51,7 @@
         <div class="track-actions">
           {% if row.next %}
             <form method="post" action="{{ url_for('learn.enroll', track_slug=track.slug) }}">
+      {{ csrf_field() }}
               <button type="submit" class="btn btn-primary">
                 {% if row.done %}Continue{% elif row.enrolled %}Resume{% else %}Start this path{% endif %}
               </button>

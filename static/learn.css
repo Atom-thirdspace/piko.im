@@ -255,3 +255,20 @@
     .thinking__label { animation: none; color: #7a6455; -webkit-text-fill-color: #7a6455; }
     .thinking__dots i { animation: none; opacity: .6; }
 }
+
+/* Judge feedback: the summary line, then the first failing case. */
+
+.result__line { margin: 0; font-weight: 600; }
+
+.tcase { margin-top: .9rem; }
+.tcase__head { margin: 0 0 .5rem; font-weight: 600; font-size: .9rem; }
+.tcase__hidden { margin: 0; font-size: .85rem; color: #5d4a3c; }
+
+.tcase__grid { display: grid; gap: .6rem;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.tcase__pane b { display: block; font-size: .75rem; text-transform: uppercase;
+    letter-spacing: .04em; color: #5d4a3c; margin-bottom: .2rem; }
+.tcase__pane pre { margin: 0; padding: .55rem .7rem; background: #fff;
+    border: 1px solid #e3d6c8; border-radius: 8px; font-size: .85rem;
+    max-height: 11rem; overflow: auto; white-space: pre-wrap;
+    word-break: break-word; }

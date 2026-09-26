@@ -4,6 +4,7 @@
   <h1>{{ 'Edit post' if post else 'New post' }}</h1>
 
   <form method="post">
+      {{ csrf_field() }}
     <p>
       <label>Title<br>
         <input type="text" name="title" size="60"
@@ -50,6 +51,7 @@
   {% if post %}
     <div class="admin-inline">
       <form method="post" action="{{ url_for('admin.blog_publish', post_id=post.id) }}">
+      {{ csrf_field() }}
         <button class="admin-btn" type="submit">
           {{ 'Move to draft' if post.is_live else 'Publish' }}
         </button>
@@ -61,6 +63,7 @@
       <h2>Delete</h2>
       <form class="admin-inline" method="post"
             action="{{ url_for('admin.blog_delete', post_id=post.id) }}">
+      {{ csrf_field() }}
         <input type="text" name="confirm" placeholder="Type {{ post.slug }}">
         <button class="admin-btn" type="submit">Delete post</button>
       </form>

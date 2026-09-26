@@ -82,6 +82,74 @@
   var run = document.getElementById('run');
   var box = document.getElementById('result');
 
+  function pane(title, text) {
+    var wrap = document.createElement('div');
+    wrap.className = 'tcase__pane';
+    var h = document.createElement('b');
+    h.textContent = title;
+    var pre = document.createElement('pre');
+    // textContent, never innerHTML - this is the learner's own program output.
+    pre.textContent = (text === '' || text == null) ? '(empty)' : text;
+    wrap.appendChild(h);
+    wrap.appendChild(pre);
+    return wrap;
+  }
+
+  function summary(data) {
+    var bits = [data.label + ' - ' + data.passed + '/' + data.total + ' tests'];
+    if (data.max_time_ms) { bits.push(data.max_time_ms + ' ms'); }
+    if (data.xp_awarded) { bits.push('+' + data.xp_awarded + ' XP'); }
+    if (data.lesson_xp_awarded) {
+      bits.push('+' + data.lesson_xp_awarded + ' XP lesson complete');
+    }
+    var p = document.createElement('p');
+    p.className = 'result__line';
+    p.textContent = bits.join(' · ');
+    return p;
+  }
+
+  function failureBlock(fail) {
+    var wrap = document.createElement('div');
+    wrap.className = 'tcase';
+
+    var head = document.createElement('p');
+    head.className = 'tcase__head';
+    head.textContent = 'Test ' + (fail.index + 1) + ' - ' + fail.label;
+    wrap.appendChild(head);
+
+    if (!fail.is_sample) {
+      var note = document.createElement('p');
+      note.className = 'tcase__hidden';
+      note.textContent = 'This is a hidden test, so its input is not shown. '
+                       + 'Re-read the edge cases in the statement.';
+      wrap.appendChild(note);
+      return wrap;
+    }
+
+    var grid = document.createElement('div');
+    grid.className = 'tcase__grid';
+    grid.appendChild(pane('Input', fail.stdin));
+    grid.appendChild(pane('Expected', fail.expected));
+    grid.appendChild(pane('Your output', fail.actual));
+    wrap.appendChild(grid);
+
+    if (fail.stderr) { wrap.appendChild(pane('Error', fail.stderr)); }
+    return wrap;
+  }
+
+  function render(data) {
+    box.textContent = '';
+    var accepted = data.verdict === 'accepted';
+    box.className = 'result ' + (accepted ? 'is-ok' : 'is-fail');
+    box.appendChild(summary(data));
+
+    if (data.compile_output) { box.appendChild(pane('Compiler', data.compile_output)); }
+    if (data.message) { box.appendChild(pane('Judge', data.message)); }
+    if (!accepted && data.first_failure) {
+      box.appendChild(failureBlock(data.first_failure));
+    }
+  }
+
   run.addEventListener('click', async function () {
     var source = document.getElementById('source').value;
     if (!source.trim()) { return; }
@@ -89,12 +157,17 @@
     run.disabled = true;
     run.textContent = 'Judging…';
     box.hidden = false;
+    box.className = 'result';
     box.textContent = 'Running your code against the tests…';
 
     try {
       var res = await fetch(page.dataset.submitUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Same token the forms carry; the guard accepts either.
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        },
         body: JSON.stringify({
           language: document.getElementById('language').value,
           source: source
@@ -108,18 +181,12 @@
         return;
       }
 
-      var accepted = data.verdict === 'accepted';
-      var lines = [data.label + ' — ' + data.passed + '/' + data.total + ' tests'];
-      if (data.max_time_ms) { lines.push(data.max_time_ms + ' ms'); }
-      if (data.xp_awarded) { lines.push('+' + data.xp_awarded + ' XP'); }
-      if (data.lesson_xp_awarded) { lines.push('+' + data.lesson_xp_awarded + ' XP lesson complete'); }
-      if (data.compile_output) { lines.push('\n' + data.compile_output); }
+      render(data);
 
-      box.className = 'result ' + (accepted ? 'is-ok' : 'is-fail');
-      box.textContent = lines.join(' · ');
-
-      // The lesson only closes on the server, so reload to pick up the new state.
-      if (accepted) { setTimeout(function () { location.reload(); }, 1200); }
+      // The lesson only closes on the server, so reload to pick up the state.
+      if (data.verdict === 'accepted') {
+        setTimeout(function () { location.reload(); }, 1500);
+      }
     } catch (err) {
       box.className = 'result is-fail';
       box.textContent = 'Could not reach the judge.';

@@ -13,6 +13,7 @@
     </p>
 
     <form class="cm__form" method="post">
+      {{ csrf_field() }}
       <label>Name
         <input type="text" name="name" value="{{ form.get('name', '') }}"
                maxlength="60" required>

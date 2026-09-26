@@ -18,12 +18,14 @@
       {% if req.detail %}<blockquote>{{ req.detail }}</blockquote>{% endif %}
 
       <form method="post" action="{{ url_for('admin.deletion_approve', req_id=req.id) }}">
+      {{ csrf_field() }}
         <label>Type <b>{{ req.user.username }}</b> to confirm</label>
         <input name="confirm" autocomplete="off" required>
         <button type="submit">Approve and delete</button>
       </form>
 
       <form method="post" action="{{ url_for('admin.deletion_reject', req_id=req.id) }}">
+      {{ csrf_field() }}
         <input name="note" placeholder="Why you're declining (optional)">
         <button type="submit">Decline</button>
       </form>

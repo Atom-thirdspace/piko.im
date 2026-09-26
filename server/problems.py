@@ -63,6 +63,31 @@ def page(slug):
     )
 
 
+def _test_feedback(problem, result):
+    """Per-case rows for the browser.
+
+    Only sample cases carry input and expected output. A hidden case reports
+    that it failed and nothing more - otherwise the test suite is the answer
+    key, and the problem becomes fill-in-the-blank.
+    """
+    ordered = list(problem.tests)       # the exact order the judge received
+    rows = []
+    for outcome in result.tests:
+        row = {"index": outcome.index,
+               "verdict": outcome.verdict,
+               "label": V.LABELS.get(outcome.verdict, outcome.verdict),
+               "time_ms": outcome.time_ms,
+               "is_sample": outcome.is_sample}
+        if outcome.is_sample and outcome.index < len(ordered):
+            test = ordered[outcome.index]
+            row.update(stdin=test.stdin,
+                       expected=test.expected_stdout,
+                       actual=outcome.stdout,
+                       stderr=outcome.stderr)
+        rows.append(row)
+    return rows
+
+
 @problems_bp.route("/problems/<slug>/submit", methods=["POST"])
 @login_required
 def submit(slug):
@@ -101,6 +126,7 @@ def submit(slug):
 
     record_submission(user.id, problem, language, source, result)
 
+    rows = _test_feedback(problem, result)
     return jsonify(
         verdict=result.verdict,
         label=V.LABELS.get(result.verdict, result.verdict),
@@ -108,11 +134,10 @@ def submit(slug):
         total=result.total,
         max_time_ms=result.max_time_ms,
         compile_output=result.compile_output,
+        message=result.message,
         xp_awarded=awarded,
         lesson_xp_awarded=lesson_awarded,
-        tests=[
-            {"index": t.index, "verdict": t.verdict, "time_ms": t.time_ms,
-             "is_sample": t.is_sample, "stdout": t.stdout, "stderr": t.stderr}
-            for t in result.tests
-        ],
+        tests=rows,
+        # The one case worth putting on screen without the learner hunting.
+        first_failure=next((r for r in rows if r["verdict"] != V.AC), None),
     )

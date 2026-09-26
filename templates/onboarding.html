@@ -14,6 +14,7 @@
   <p>Pick a username and tell us what you're here for.</p>
 
   <form class="auth-form" method="post" action="{{ url_for('accounts.onboarding', next=next) }}">
+      {{ csrf_field() }}
     <label for="username">Username</label>
     <input id="username" name="username" type="text" required autofocus
            value="{{ user.username or '' }}">

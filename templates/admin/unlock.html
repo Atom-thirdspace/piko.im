@@ -18,6 +18,7 @@
     {% endif %}
 
     <form method="post" autocomplete="off">
+      {{ csrf_field() }}
       <input type="hidden" name="next" value="{{ next }}">
       <input class="gate__input" type="password" name="passcode"
              placeholder="Passcode" autofocus required

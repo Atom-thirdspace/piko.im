@@ -52,6 +52,9 @@ class User(db.Model):
     identities = db.relationship(
         "OAuthIdentity", back_populates="user", cascade="all, delete-orphan"
     )
+    is_suspended = db.Column(db.Boolean, nullable=False, default=False,
+                             server_default="false")
+
 
     def __repr__(self):
         return f"<User {self.id} {self.email}>"
@@ -310,6 +313,71 @@ class Submission(db.Model):
     user = db.relationship("User")
     problem = db.relationship("Problem")
 
+    test_results = db.relationship("SubmissionTest", back_populates="submission",
+                                   cascade="all, delete-orphan",
+                                   order_by="SubmissionTest.position")
+
+    @property
+    def first_failure(self):
+        """The case that broke - what anyone opening this submission wants."""
+        return next((t for t in self.test_results if t.verdict != "accepted"), None)
+
+
+MAX_CAPTURE = 2000          # per field; a runaway print loop must not fill the disk
+
+
+class SubmissionTest(db.Model):
+    """One test case's outcome within a submission.
+
+    Stored so a learner can reopen an old attempt and still see which case
+    broke, and so an admin can tell a bad test from bad code without
+    re-running anything.
+
+    Only the actual output is kept. Expected output is read live from
+    ProblemTest, so editing a test doesn't rewrite history into a lie - it
+    just means an old submission is shown against today's expectations.
+    """
+
+    __tablename__ = "submission_tests"
+    __table_args__ = (
+        UniqueConstraint("submission_id", "position", name="uq_submission_test"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(db.Integer,
+                              db.ForeignKey("submissions.id", ondelete="CASCADE"),
+                              nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False)
+    verdict = db.Column(db.String(32), nullable=False)
+    time_ms = db.Column(db.Integer, nullable=False, default=0)
+    is_sample = db.Column(db.Boolean, nullable=False, default=False)
+    stdout = db.Column(db.Text, nullable=False, default="")
+    stderr = db.Column(db.Text, nullable=False, default="")
+
+    submission = db.relationship("Submission", back_populates="test_results")
+
+
+def _clip(text):
+    text = text or ""
+    if len(text) <= MAX_CAPTURE:
+        return text
+    return text[:MAX_CAPTURE] + "\n... truncated"
+
+
+def replace_test_results(sub, result):
+    """Swap in the outcomes from a judge run. Used by submit and by re-judge."""
+    sub.test_results.clear()
+    db.session.flush()                  # the delete-orphans go before the inserts
+    for outcome in result.tests:
+        sub.test_results.append(SubmissionTest(
+            position=outcome.index,
+            verdict=outcome.verdict,
+            time_ms=outcome.time_ms,
+            is_sample=outcome.is_sample,
+            stdout=_clip(outcome.stdout),
+            stderr=_clip(outcome.stderr),
+        ))
+
 
 def record_submission(user_id, problem, language, source, result):
     sub = Submission(
@@ -318,6 +386,7 @@ def record_submission(user_id, problem, language, source, result):
         max_time_ms=result.max_time_ms, compile_output=result.compile_output or None,
     )
     db.session.add(sub)
+    replace_test_results(sub, result)
     db.session.commit()
     return sub
 

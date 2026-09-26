@@ -19,6 +19,7 @@
     {% if mine is none and team.visibility != 'closed' %}
       <form class="cm__inline" method="post"
             action="{{ url_for('community.team_join', slug=team.slug) }}">
+      {{ csrf_field() }}
         {% if team.visibility == 'code' %}
           <input type="text" name="join_code" placeholder="Join code" required>
         {% endif %}
@@ -28,6 +29,7 @@
       </form>
     {% elif mine and not is_owner %}
       <form method="post" action="{{ url_for('community.team_leave', slug=team.slug) }}">
+      {{ csrf_field() }}
         <button type="submit" class="cm__quiet">Leave team</button>
       </form>
     {% endif %}
@@ -45,6 +47,7 @@
           {% if is_owner and m.role != 'owner' %}
             <form method="post"
                   action="{{ url_for('community.team_remove', slug=team.slug, user_id=u.id) }}">
+      {{ csrf_field() }}
               <button type="submit" class="cm__quiet">Remove</button>
             </form>
           {% endif %}
@@ -57,6 +60,7 @@
         <h2>Team settings</h2>
         <form class="cm__form" method="post"
               action="{{ url_for('community.team_settings', slug=team.slug) }}">
+      {{ csrf_field() }}
           <label>Name
             <input type="text" name="name" value="{{ team.name }}" maxlength="60" required>
           </label>
@@ -85,6 +89,7 @@
           <h2>Hand over</h2>
           <form class="cm__inline" method="post"
                 action="{{ url_for('community.team_transfer', slug=team.slug) }}">
+      {{ csrf_field() }}
             <select name="user_id">
               {% for m, u in others %}
                 <option value="{{ u.id }}">{{ u.name or u.username }}</option>
@@ -97,6 +102,7 @@
         <h2>Delete</h2>
         <form class="cm__inline cm__danger" method="post"
               action="{{ url_for('community.team_delete', slug=team.slug) }}">
+      {{ csrf_field() }}
           <input type="text" name="confirm" placeholder="Type {{ team.slug }} to confirm">
           <button type="submit">Delete team</button>
         </form>

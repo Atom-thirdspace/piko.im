@@ -9,12 +9,33 @@
     </p>
 
   <form method="post" action="{{ url_for('admin.submission_rejudge', sub_id=s.id) }}">
+      {{ csrf_field() }}
     <button type="submit">Re-judge against current tests</button>
   </form>
 
   {% if s.compile_output %}
     <h2>Compile output</h2>
     <pre class="admin-pre">{{ s.compile_output }}</pre>
+  {% endif %}
+
+  {% if s.test_results %}
+    <h2>Tests</h2>
+    <table class="admin-table">
+      <thead>
+        <tr><th>#</th><th>Verdict</th><th>Time</th><th>Sample</th><th>Output</th></tr>
+      </thead>
+      <tbody>
+        {% for t in s.test_results %}
+          <tr>
+            <td>{{ t.position + 1 }}</td>
+            <td><span class="verdict-{{ t.verdict }}">{{ t.verdict }}</span></td>
+            <td>{{ t.time_ms }}ms</td>
+            <td>{{ 'yes' if t.is_sample else '' }}</td>
+            <td><pre class="admin-pre">{{ t.stderr or t.stdout or '—' }}</pre></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% endif %}
 
   <h2>Source</h2>

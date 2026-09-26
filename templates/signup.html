@@ -11,6 +11,7 @@
   <h1>Create your Piko account</h1>
 
   <form class="auth-form" method="post" action="{{ url_for('accounts.signup') }}">
+      {{ csrf_field() }}
     <input type="hidden" name="next" value="{{ next }}">
 
     <label for="name">Name</label>

@@ -7,7 +7,8 @@ from .models import load_user
 def current_user():
     if "user" not in g:
         uid = session.get("user_id")
-        g.user = load_user(uid) if uid else None
+        user = load_user(uid) if uid else None
+        g.user = None if (user is not None and user.is_suspended) else user
     return g.user
 
 def login_required(view):

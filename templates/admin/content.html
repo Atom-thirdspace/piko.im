@@ -3,6 +3,7 @@
   <h1>Content</h1>
 
   <form method="post" action="{{ url_for('admin.content_seed') }}">
+      {{ csrf_field() }}
     <button type="submit">Re-run seed-catalog</button>
     <span class="admin-hint">Idempotent: updates titles and positions, adds what's missing.</span>
   </form>

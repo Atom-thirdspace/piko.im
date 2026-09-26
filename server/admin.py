@@ -10,7 +10,8 @@ from .learning.seed import seed_catalog
 from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonProgress,
                      OAuthIdentity, Problem, ProblemTest, Submission, Track, Unit,
                      User, XpEvent, db, delete_account, mark_email_verified,
-                     reject_deletion_request, TutorMessage, unlink_identity, Post, _utcnow)
+                     reject_deletion_request, TutorMessage, unlink_identity, Post,
+                     _utcnow, replace_test_results)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -21,6 +22,7 @@ from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
                          recent_failures, session_unlocked, unlock_session,
                          verify_passcode)
 
+
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 PAGE_SIZE = 25
 
@@ -30,7 +32,9 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.content", "Content"), ("admin.blog", "Blog"),
        ("admin.tutor", "Tutor"),
        ("admin.system", "System"),
-       ("admin.audit", "Audit log")]
+       ("admin.audit", "Audit log"),
+       ("admin.reports","Reports")
+       ]
 
 
 @admin_bp.context_processor
@@ -380,6 +384,7 @@ def submission_rejudge(sub_id):
     sub.verdict, sub.passed, sub.total = result.verdict, result.passed, result.total
     sub.max_time_ms = result.max_time_ms
     sub.compile_output = result.compile_output or None
+    replace_test_results(sub, result)
     db.session.commit()
 
     log_action("rejudge", sub.id, "%s -> %s" % (was, sub.verdict))
@@ -627,3 +632,69 @@ def blog_delete(post_id):
     log_action("delete_post", post_id, slug)
     flash("Post deleted.", "success")
     return redirect(url_for("admin.blog"))
+
+@admin_bp.route("/reports/")
+@admin_required
+def reports():
+    status = request.args.get("status","open")
+    if status not in ("open", "actioned","dismissed","all"):
+        status = "open"
+    
+    stmt = db.select(Report).order_by(Report.created_at.desc())
+    if status != "all":
+        stmt = stmt.where(Report.status == status)
+    rows, pager = _paginate(stmt, _page())
+
+    targets = {}
+    for r in rows:
+        if r.kind == "user":
+            targets[r.id] = db.session.get(User, r.target_id)
+        elif r.kind == "team":
+            targets[r.id] = db.session.get(Team, r.target_id)
+        else:
+            targets[r.id] = db.session.get(Submission, r.target_id)
+
+    return render_template("admin/reports.html", rows=rows, p=pager,
+                           status=status, targets=targets,
+                           reasons=REPORT_REASON_LABELS)
+
+@admin_bp.route("/reports/<int:report_id>/resolve", methods=["POST"])
+@admin_required
+def report_resolve(report_id):
+    rep = _get_or_404(Report, report_id)
+    action = request.form.get("action") or "dismiss"
+    note = (request.form.get("note") or "").strip()
+
+    if action == "blank_bio" and rep.kind == "user":
+        target = db.session.get(User, rep.target_id)
+        if target is not None:
+            target.bio = ""
+            target.discoverable = False
+
+    elif action == "blank_blurb" and rep.kind == "team":
+        target = db.session.get(Team, rep.target_id)
+        if target is not None:
+            target.blurb = ""
+
+    elif action == "unshare" and rep.kind == "solution":
+        target = db.session.get(Submission, rep.target_id)
+        if target is not None:
+            target.is_public = False
+
+    elif action == "suspend" and rep.kind == "user":
+        target = db.session.get(User, rep.target_id)
+        if target is not None:
+            # Keeps the account and its history; stops it being seen or used.
+            target.is_suspended = True
+            target.discoverable = False
+            target.show_on_leaderboard = False
+
+    rep.status = "dismissed" if action == "dismiss" else "actioned"
+    rep.handled_by = current_user().id
+    rep.handled_note = note[:500]
+    db.session.commit()
+
+    log_action("report_%s" % action, rep.id, "%s#%s" % (rep.kind, rep.target_id))
+    flash("Report resolved.", "success")
+    return redirect(url_for("admin.reports"))
+

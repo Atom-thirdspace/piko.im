@@ -18,6 +18,7 @@
   <section class="settings-card">
     <h2>Profile</h2>
     <form class="auth-form" method="post" action="{{ url_for('profile.save_profile') }}">
+      {{ csrf_field() }}
       <label for="name">Name</label>
       <input id="name" name="name" type="text"
              value="{{ form.get('name', user.name or '') }}" required>
@@ -44,6 +45,7 @@
   <section class="settings-card">
     <h2>Learning</h2>
     <form class="auth-form" method="post" action="{{ url_for('profile.save_learning') }}">
+      {{ csrf_field() }}
       <label for="daily_goal_xp">Daily goal</label>
       <select id="daily_goal_xp" name="daily_goal_xp" required>
         {% for goal in goals %}
@@ -83,6 +85,7 @@
   <section class="settings-card">
     <h2>{{ 'Change password' if user.password_hash else 'Set a password' }}</h2>
     <form class="auth-form" method="post" action="{{ url_for('profile.save_password') }}">
+      {{ csrf_field() }}
       {% if user.password_hash %}
         <label for="current_password">Current password</label>
         <input id="current_password" name="current_password" type="password"
@@ -124,6 +127,7 @@
             {% if can_unlink %}
               <form method="post"
                     action="{{ url_for('profile.unlink', provider=identity.provider) }}">
+      {{ csrf_field() }}
                 <button class="settings-link" type="submit">Disconnect</button>
               </form>
             {% else %}
@@ -143,6 +147,7 @@
       <div class="settings-connect">
         {% for name, label in connectable %}
           <form method="post" action="{{ url_for('auth.connect', provider=name) }}">
+      {{ csrf_field() }}
             <button type="submit" class="oauth-btn oauth-{{ name }}">
               Connect {{ label }}
             </button>
@@ -155,6 +160,7 @@
     <section class="settings-card" id="privacy">
     <h2>Privacy</h2>
     <form method="post" action="{{ url_for('profile.save_privacy') }}">
+      {{ csrf_field() }}
       <label class="settings-check">
         <input type="checkbox" name="show_on_leaderboard"
                {{ 'checked' if user.show_on_leaderboard }}>
@@ -195,6 +201,7 @@
       </p>
       <form class="settings-2fa" method="post"
             action="{{ url_for('profile.two_factor_disable') }}">
+      {{ csrf_field() }}
         <input type="password" name="proof" autocomplete="one-time-code"
                placeholder="Current code or your password" required>
         <button type="submit">Turn off</button>
@@ -205,6 +212,7 @@
         stolen password isn't enough on its own.
       </p>
       <form method="post" action="{{ url_for('profile.two_factor_start') }}">
+      {{ csrf_field() }}
         <button type="submit">Set up</button>
       </form>
     {% endif %}
@@ -219,6 +227,7 @@
         admin to review. Nothing has been erased yet.
       </p>
       <form method="post" action="{{ url_for('profile.leave_cancel') }}">
+      {{ csrf_field() }}
         <button type="submit">Cancel that request</button>
       </form>
     {% else %}

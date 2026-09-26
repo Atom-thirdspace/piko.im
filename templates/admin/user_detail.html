@@ -28,15 +28,18 @@
         <h2>Email</h2>
         {% if not u.email_verified %}
         <form method="post" action="{{ url_for('admin.user_verify', user_id=u.id) }}">
+      {{ csrf_field() }}
             <button type="submit">Mark verified</button>
         </form>
         {% endif %}
         <form method="post" action="{{ url_for('admin.user_send_verification', user_id=u.id) }}">
+      {{ csrf_field() }}
             <button type="submit">Send confirmation email</button>
       </form>
 
       <h2>XP</h2>
       <form class="admin-inline" method="post" action="{{ url_for('admin.user_xp', user_id=u.id) }}">
+      {{ csrf_field() }}
         <input name="amount" type="number" placeholder="+50 or -50" required>
         <input name="note" placeholder="why">
         <button type="submit">Apply</button>
@@ -44,6 +47,7 @@
 
       <h2>Streak</h2>
       <form method="post" action="{{ url_for('admin.user_reset_streak', user_id=u.id) }}">
+      {{ csrf_field() }}
         <button type="submit">Reset streak to 0</button>
       </form>
     </section>
@@ -53,6 +57,7 @@
         {% for i in identities %}
         <form class="admin-inline" method="post"
               action="{{ url_for('admin.user_unlink', user_id=u.id, provider=i.provider) }}">
+      {{ csrf_field() }}
           <span>{{ provider_labels.get(i.provider, i.provider) }}</span>
           <button type="submit">Disconnect</button>
         </form>
@@ -93,6 +98,7 @@
     <p>Erases their XP, streak, submissions and progress. Can't be undone.</p>
     <form class="admin-inline" method="post"
           action="{{ url_for('admin.user_delete', user_id=u.id) }}">
+      {{ csrf_field() }}
       <input name="confirm" placeholder="type {{ u.username }}" autocomplete="off" required>
       <button class="settings-danger-btn" type="submit">Delete</button>
     </form>

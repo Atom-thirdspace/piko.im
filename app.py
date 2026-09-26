@@ -20,6 +20,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from server.leaderboard import leaderboard_bp
 from server.community import community_bp
 from server.blog import blog_bp
+from server.csrf import init_csrf
 
 load_dotenv()
 
@@ -36,6 +37,7 @@ app.config.update(
 
 init_db(app)
 init_oauth(app)
+init_csrf(app )
 app.register_blueprint(auth_bp)
 app.register_blueprint(accounts_bp)
 app.register_blueprint(onboarding_bp)

@@ -13,6 +13,7 @@
     {% endif %}
 
     <form method="post">
+      {{ csrf_field() }}
       <input class="gate__input" type="text" name="code" inputmode="numeric"
              autocomplete="one-time-code" placeholder="123 456" autofocus required>
       <button type="submit">Verify</button>

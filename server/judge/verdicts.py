@@ -16,6 +16,10 @@ LABELS = {
     IE: "Internal Error",
 }
 
+QUEUED = "queued"
+RUNNING = "running"
+
+
 
 def normalize(text):
     lines = [line.rstrip() for line in text.replace("\r\n", "\n").split("\n")]

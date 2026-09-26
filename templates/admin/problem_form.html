@@ -3,6 +3,7 @@
   <h1>{{ p.slug if p else 'New problem' }}</h1>
 
   <form class="auth-form" method="post">
+      {{ csrf_field() }}
     <label for="slug">Slug</label>
     <input id="slug" name="slug" value="{{ form.get('slug', p.slug if p else '') }}" required>
     {% if errors.slug %}<p class="field-error">{{ errors.slug }}</p>{% endif %}
@@ -48,6 +49,7 @@
           <pre>{{ t.expected_stdout }}</pre>
           <form method="post"
                 action="{{ url_for('admin.problem_delete_test', problem_id=p.id, test_id=t.id) }}">
+      {{ csrf_field() }}
             <button class="settings-link" type="submit">Delete</button>
           </form>
         </div>
@@ -57,6 +59,7 @@
 
       <form class="auth-form" method="post"
             action="{{ url_for('admin.problem_add_test', problem_id=p.id) }}">
+      {{ csrf_field() }}
         <label for="stdin">stdin</label>
         <textarea id="stdin" name="stdin" rows="4"></textarea>
         <label for="expected_stdout">expected stdout</label>
@@ -70,6 +73,7 @@
       <h2>Delete problem</h2>
       <form class="admin-inline" method="post"
             action="{{ url_for('admin.problem_delete', problem_id=p.id) }}">
+      {{ csrf_field() }}
         <input name="confirm" placeholder="type {{ p.slug }}" autocomplete="off" required>
         <button class="settings-danger-btn" type="submit">Delete</button>
       </form>

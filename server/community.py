@@ -1,26 +1,22 @@
-"""People and teams.
-
-Following is one-directional and needs no approval - the friction of an
-accept step buys very little on a learning site, and a mutual follow is
-enough to call two people connected. If this ever needs real privacy, the
-upgrade is a status column on Follow, not a new table.
-"""
-
 import secrets
 
 from flask import (Blueprint, abort, flash, redirect, render_template, request,
-                   url_for)
+                   url_for,current_app)
 
-from .models import (Follow, Team, TeamMember, User, db, find_by_username)
+from .models import (Follow, Team, TeamMember, User, db, find_by_username, XpEvent, _utcnow)
 from .progress import level_for_xp
 from .session import current_user, is_safe_next, login_required
 from .validators import (INTERESTS, MAX_TEAM_MEMBERS, MAX_TEAMS_PER_USER,
                          slugify, validate_blurb, validate_team_name,
                          validate_team_slug)
 
+from datetime import timedelta
+from itsdangerous import BadSignature, URLSafeTimedSerializer
+
 community_bp = Blueprint("community", __name__)
 
 PAGE_SIZE = 24
+INVITE_MAX_AGE = 7 * 24 * 3600
 SORTS = {"active": "Recently active", "xp": "Most XP", "new": "Newest"}
 VISIBILITIES = {"open": "Anyone can join",
                 "code": "Needs a join code",
@@ -424,3 +420,88 @@ def team_delete(slug):
     db.session.commit()
     flash("Team deleted.", "success")
     return redirect(url_for("community.teams"))
+
+def _invite_serializer():
+    return URLSafeTimedSerializer(current_app.secret_key, salt="team-invite")
+
+def team_xp_since(team_id, since):
+    return db.session.execute(
+        db.select(db.func.coalesce(db.func.sum(XpEvent.amount), 0))
+        .select_from(XpEvent)
+        .join(TeamMember, TeamMember.user_id == XpEvent.user_id)
+        .where(TeamMember.team_id == team_id, XpEvent.created_at >= since)
+    ).scalar() or 0
+
+@community_bp.route("/teams/challenge")
+def challenge():
+    since = _utcnow() = timedelta(days = 7)
+    earned = (db.select(TeamMember.team_id.label("tid"),
+                        db.func.coalesce(db.func.sum(XpEvent.amount), 0).label("xp"),
+                        db.func.count(db.distinct(XpEvent.user_id)).label("actives"))
+              .select_from(TeamMember)
+              .join(XpEvent, XpEvent.user_id == TeamMember.user_id)
+              .where(XpEvent.created_at >= since)
+              .group_by(TeamMember.team_id).subquery())
+
+    rows = db.session.execute(
+        db.select(Team, earned.c.xp, earned.c.actives,
+                  _member_count_column().label("members"))
+        .join(earned, earned.c.tid == Team.id)
+        .where(Team.visibility != "closed")
+        .order_by(earned.c.xp.desc()).limit(25)
+    ).all()
+
+    viewer = current_user()
+    mine = None
+    if viewer is not None:
+        mine = db.session.execute(
+            db.select(Team).join(TeamMember, TeamMember.team_id ==  Team.id)
+            .where(TeamMember.user_id == viewer.id).limit(1)
+        ).scalar_one_or_none()
+
+    return render_template("team_challenge.html",rows=rows, mine=mine,since=since)
+
+@community_bp.route("/teams/<slug>/invite", methods=["POST"])
+@login_required
+def team_invite(slug):
+    team = _get_team(slug)
+    mine = membership(team, current_app())
+    if mine is None or mine.role != "owner":
+        abort(404)
+
+    token = _invite_serializer().dumps({"team": team.id})
+    flash("Invite link (valid 7 days): %s"
+          % url_for("community.team_accept", token=token, _external=True), "success")
+    return redirect(url_for("community.team_detail", slug=team.slug))
+
+@community_bp.route("/teams/join/<token>")
+@login_required
+def team_accept(token):
+    try:
+        data = _invite_serializer().loads(token, max_age=INVITE_MAX_AGE)
+    except BadSignature:
+        flash("That invite link is invalid or has expired.", "error")
+        return redirect(url_for("community.teams"))
+
+    team = db.session.get(Team, data.get("team"))
+    if team is None:
+        abort(404)
+
+    user = current_user()
+    if membership(team, user) is None:
+        count = db.session.execute(
+            db.select(db.func.count()).select_from(TeamMember)
+            .where(TeamMember.team_id == team.id)).scalar() or 0
+        if count >= MAX_TEAM_MEMBERS:
+            flash("That team is full.", "error")
+            return redirect(url_for("community.teams"))
+        db.session.add(TeamMember(team_id=team.id, user_id=user.id))
+        db.session.commit()
+        flash("You joined %s." % team.name, "success")
+
+    return redirect(url_for("community.team_detail", slug=team.slug))
+
+@community_bp.route("/community/feed")
+@login_required
+def feed():
+    
