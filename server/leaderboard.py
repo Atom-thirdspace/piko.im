@@ -26,7 +26,7 @@ def _week_totals():
 
 def _row(rank, r, score):
     return {"rank": rank, "user_id": r.id, "username": r.username,
-            "=name": r.name or r.username, "avatar_url": r.avatar_url,
+            "name": r.name or r.username, "avatar_url": r.avatar_url,
             "score": int(score or 0), "streak": r.streak_days or 0,
             "level": level_for_xp(r.xp_total or 0)}
 

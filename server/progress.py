@@ -27,15 +27,6 @@ def user_today(user):
         tz = ZoneInfo("UTC")
     return _utcnow().astimezone(tz).date()
 
-def touch_streak(user, today):
-    last = user.last_active_date
-    if last == today:
-        return False
-    user.streak_days = (user.streak_days or 0) + 1 if last == today - timedelta(days=1) else 1
-    user.streak_best = max(user.streak_best or 0, user.streak_days)
-    user.last_active_date = today
-    return True
-
 def award_xp(user, amount, reason, ref):
     before = user.xp_total or 0
     try:
