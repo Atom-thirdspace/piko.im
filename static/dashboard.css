@@ -28,6 +28,7 @@ body {
 
 .dash__title {
     font-family: "Work Sans", sans-serif !important;
+    color: var(--brand);
     font-size: clamp(1.4rem, 2.6vw, 2.1rem);
     font-weight: 500;
     margin: 0;

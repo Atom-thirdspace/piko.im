@@ -25,8 +25,8 @@
     {% endif %}
 
     <div class="dash__who">
-      <h1 class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
-      <p class="dash__handle">
+      <h1 data-aos="fade-down" class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
+      <p data-aos="fade-down" data-aos-delay="150" class="dash__handle">
         @{{ user.username }}
         {%- set focus = user.interest_keys | interest_labels %}
         {%- if focus %} · {{ focus | join(', ') }}{% endif %}
