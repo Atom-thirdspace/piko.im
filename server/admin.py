@@ -20,11 +20,14 @@ from .progress import level_progress
 from .session import current_user, is_safe_next
 from .validators import (DELETION_REASON_LABELS, SLUG_RE, slugify,
                          validate_post)
+from .admin_code import send_code, verify_code
 from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
-                         admin_emails, is_admin, lock_session,
-                         lockout_minutes_left, passcode_set, record_failure,
-                         recent_failures, session_unlocked, unlock_session,
-                         verify_passcode)
+                         admin_emails, gate_ready, is_admin, lock_session,
+                         lockout_minutes_left, record_failure,
+                         recent_failures, session_unlocked, unlock_methods,
+                         unlock_session)
+from .webauthn_keys import KeyError_ as WebAuthnError
+from .webauthn_keys import begin_authentication, finish_authentication
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -533,26 +536,69 @@ def unlock():
     if not is_safe_next(target):
         target = url_for("admin.overview")
 
-    if not passcode_set() or session_unlocked(user):
+    if not gate_ready(user) or session_unlocked(user):
         return redirect(target)
 
+    methods = unlock_methods(user)
     error = None
     wait = lockout_minutes_left(user)
-    if request.method == "POST":
+    action = request.form.get("action") if request.method == "POST" else None
+
+    if action == "send-code":
         if wait:
-            error = "Too many wrong tries. Try again in about %d min." % wait
-        elif verify_passcode(request.form.get("passcode")):
+            flash("Too many wrong tries. Wait about %d min." % wait, "error")
+        else:
+            sent, message = send_code(user)
+            flash(message, "success" if sent else "error")
+        return redirect(url_for("admin.unlock", next=target))
+
+    if action == "code":
+        if wait:
+            error = "Too many wrong tries. Wait about %d min." % wait
+        elif verify_code(user, request.form.get("code")):
             unlock_session(user)
             return redirect(target)
         else:
             record_failure(user)
             wait = lockout_minutes_left(user)
             left = max(0, MAX_FAILURES - recent_failures(user))
-            error = ("Too many wrong tries. Locked for about %d min." % wait if wait
-                     else "Wrong passcode - %d tr%s left."
+            error = ("Locked for about %d min." % wait if wait
+                     else "Wrong code - %d tr%s left."
                           % (left, "y" if left == 1 else "ies"))
 
-    return render_template("admin/unlock.html", error=error, wait=wait, next=target)
+    return render_template("admin/unlock.html", error=error, wait=wait,
+                           next=target, methods=methods)
+
+
+@admin_bp.route("/unlock/key/begin", methods=["POST"])
+@admin_email_required
+def unlock_key_begin():
+    user = current_user()
+    if lockout_minutes_left(user):
+        return jsonify(error="Too many wrong tries. Wait a few minutes."), 429
+    try:
+        return current_app.response_class(
+            begin_authentication(user, admin_only=True),
+            mimetype="application/json")
+    except WebAuthnError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@admin_bp.route("/unlock/key/finish", methods=["POST"])
+@admin_email_required
+def unlock_key_finish():
+    user = current_user()
+    if lockout_minutes_left(user):
+        return jsonify(error="Too many wrong tries."), 429
+    try:
+        finish_authentication(request.get_json(silent=True) or {},
+                              user=user, admin_only=True)
+    except WebAuthnError as exc:
+        record_failure(user)
+        return jsonify(error=str(exc)), 400
+
+    unlock_session(user)
+    return jsonify(ok=True)
 
 
 @admin_bp.route("/lock", methods=["POST"])

@@ -1,13 +1,13 @@
-import hmac
 import os
 import time
 from datetime import timedelta
 from functools import wraps
 
 from flask import abort, current_app, redirect, request, session, url_for
-from werkzeug.security import check_password_hash
-from .models import AdminAction, _utcnow, db
+
+from .models import AdminAction, _utcnow, credentials_for, db
 from .session import current_user
+from .webauthn_keys import configured as webauthn_configured
 
 SESSION_KEY = "admin_unlock"
 FAIL_ACTION = "admin.unlock_failed"
@@ -17,7 +17,7 @@ MAX_FAILURES = 5
 LOCKOUT = timedelta(minutes=15)
 DEFAULT_TTL_MINUTES = 120
 
-_warned_no_passcode = False
+_warned_no_gate = False
 
 def admin_emails():
     return {e.strip().lower()
@@ -26,26 +26,21 @@ def admin_emails():
 def is_admin(user):
     return user is not None and (user.email or "").lower() in admin_emails()
 
-def _hashed():
-    return (os.environ.get("ADMIN_PASSCODE_HASH") or "").strip()
+def unlock_methods(user):
+    """Which second factors this admin can actually use, right now."""
+    methods = []
+    if webauthn_configured():
+        if any(c.admin_capable for c in credentials_for(user)):
+            methods.append("key")
+    if user.email and user.email_verified_at:
+        methods.append("email")
+    return methods
 
 
-def _plain():
-    return os.environ.get("ADMIN_PASSCODE") or ""
+def gate_ready(user):
+    """False only when this admin has no way through the second wall."""
+    return bool(unlock_methods(user))
 
-
-def passcode_set():
-    return bool(_hashed() or _plain())
-
-def verify_passcode(candidate):
-    candidate = (candidate or "").strip()
-    if not candidate:
-        return False
-    stored = _hashed()
-    if stored:
-        return check_password_hash(stored, candidate)
-    plain = _plain()
-    return bool(plain) and hmac.compare_digest(plain, candidate)
 
 def _ttl_seconds():
     try:
@@ -127,21 +122,24 @@ def admin_required(view):
     @wraps(view)
     @admin_email_required
     def wrapped(*args, **kwargs):
-        global _warned_no_passcode
-        if not passcode_set():
-            # Fail closed where it matters. A gate that quietly disables itself
-            # because a deploy forgot the variable is not a gate.
+        global _warned_no_gate
+        user = current_user()
+
+        if not gate_ready(user):
+            # Fail closed in production. An admin with no enrolled factor is
+            # a configuration mistake, not a reason to drop the wall.
             if os.environ.get("FLASK_ENV") == "production":
                 current_app.logger.error(
-                    "ADMIN_PASSCODE / ADMIN_PASSCODE_HASH is unset - /admin is closed")
+                    "admin %s has no security key and no verified email - "
+                    "/admin is closed", user.id)
                 abort(503)
-            if not _warned_no_passcode:
+            if not _warned_no_gate:
                 current_app.logger.warning(
-                    "No admin passcode set - the /admin gate is open (dev only)")
-                _warned_no_passcode = True
+                    "No admin second factor enrolled - /admin is open (dev only)")
+                _warned_no_gate = True
             return view(*args, **kwargs)
 
-        if not session_unlocked(current_user()):
+        if not session_unlocked(user):
             return redirect(url_for("admin.unlock", next=request.full_path))
         return view(*args, **kwargs)
     return wrapped

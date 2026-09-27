@@ -1,10 +1,15 @@
 import base64
 
-from flask import (Blueprint, abort, flash, redirect, render_template, request,
+from flask import (Blueprint, abort, current_app, flash, jsonify, redirect,
+                   render_template, request,
                    session, url_for)
 
 from . import twofa
 from .achievements import describe
+from .admin_gate import is_admin
+from .webauthn_keys import KeyError_ as WebAuthnError
+from .webauthn_keys import begin_registration, configured as webauthn_configured
+from .webauthn_keys import finish_registration
 from .activity import heatmap
 
 from .judge.languages import LANGUAGES
@@ -12,7 +17,8 @@ from .models import (Enrollment, LessonProgress, OAuthIdentity, Submission,
                      XpEvent, User, db, delete_account, find_by_username,
                      set_user_password, unlink_identity, update_preferences,
                      update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request,
-                     Problem, Team, TeamMember, earned_rows)
+                     Problem, Team, TeamMember, earned_rows,
+                     WebAuthnCredential, credentials_for)
 from .progress import level_progress
 from .session import current_user, login_required
 from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS, DELETION_REASONS,
@@ -171,7 +177,9 @@ def _render_settings(errors=None, form=None, status=200):
         connectable=[(name, label) for name, label in enabled_providers()
                      if name not in linked],        # Don't let someone strand themselves with no way back in.
         can_unlink=bool(user.password_hash) or len(identities) > 1,
-        pending_deletion = pending_deletion_request(user)
+        pending_deletion = pending_deletion_request(user),
+        security_keys=credentials_for(user),
+        webauthn_on=webauthn_configured(),
     ), status
 
 
@@ -179,6 +187,55 @@ def _render_settings(errors=None, form=None, status=200):
 @login_required
 def settings():
     return _render_settings()
+
+
+@profile_bp.route("/settings/keys/begin", methods=["POST"])
+@login_required
+def key_begin():
+    if not webauthn_configured():
+        return jsonify(error="Security keys are not switched on here."), 503
+    try:
+        return current_app.response_class(
+            begin_registration(current_user()), mimetype="application/json")
+    except WebAuthnError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@profile_bp.route("/settings/keys/finish", methods=["POST"])
+@login_required
+def key_finish():
+    body = request.get_json(silent=True) or {}
+    user = current_user()
+    try:
+        # A key becomes admin-capable only if enrolled while the account is
+        # already on the admin allowlist. Adding someone to ADMIN_EMAILS
+        # later does not silently promote a key they already had.
+        cred = finish_registration(user, body,
+                                   name=body.get("name") or "Security key",
+                                   admin_capable=is_admin(user))
+    except WebAuthnError as exc:
+        return jsonify(error=str(exc)), 400
+    return jsonify(ok=True, id=cred.id, name=cred.name)
+
+
+@profile_bp.route("/settings/keys/<int:cred_id>/delete", methods=["POST"])
+@login_required
+def key_delete(cred_id):
+    user = current_user()
+    cred = db.session.get(WebAuthnCredential, cred_id)
+    if cred is None or cred.user_id != user.id:
+        abort(404)
+
+    # Removing the last factor from an account with no password would lock
+    # the person out of their own account.
+    if not user.password_hash and len(credentials_for(user)) == 1:
+        flash("Set a password before removing your only security key.", "error")
+        return redirect(url_for("profile.settings"))
+
+    db.session.delete(cred)
+    db.session.commit()
+    flash("Security key removed.", "success")
+    return redirect(url_for("profile.settings"))
 
 
 @profile_bp.route("/settings/profile", methods=["POST"])

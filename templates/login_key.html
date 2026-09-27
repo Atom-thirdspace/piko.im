@@ -1,0 +1,63 @@
+{% extends "base-login.html" %}
+
+{% block content %}
+  <main class="gate">
+    <h1>One more step</h1>
+    <p class="gate__sub">
+      Your password was right. Now confirm it is you with your security key -
+      Windows Hello, Touch ID, or a hardware key. You may be asked for your
+      PIN or fingerprint.
+    </p>
+
+    <p class="gate__error" id="key-error" role="alert" hidden></p>
+
+    <button type="button" id="key-btn">Use my security key</button>
+
+    <p class="gate__foot">
+      <a href="{{ url_for('accounts.two_factor') }}">Use an authenticator code</a>
+      &middot;
+      <a href="{{ url_for('auth.login_page') }}">Start again</a>
+    </p>
+  </main>
+{% endblock content %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='webauthn.js') }}"></script>
+<script>
+  var btn = document.getElementById('key-btn');
+  var err = document.getElementById('key-error');
+
+  function fail(message) {
+    err.hidden = false;
+    err.textContent = message;
+    btn.disabled = false;
+    btn.textContent = 'Use my security key';
+  }
+
+  async function prompt() {
+    err.hidden = true;
+    btn.disabled = true;
+    btn.textContent = 'Waiting for your key…';
+    try {
+      var out = await window.webauthnAuthenticate(
+        '{{ url_for("accounts.login_key_begin") }}',
+        '{{ url_for("accounts.login_key_finish") }}');
+      window.location = out.redirect;
+    } catch (e) {
+      // NotAllowedError is the person cancelling, or the prompt timing out.
+      // That is not a failure worth alarming them about.
+      fail(e.name === 'NotAllowedError'
+        ? 'No key was used. Try again when you are ready.'
+        : (e.message || 'That did not work.'));
+    }
+  }
+
+  if (!window.webauthnSupported()) {
+    fail('This browser cannot use security keys. Use an authenticator code.');
+    btn.disabled = true;
+  } else {
+    btn.addEventListener('click', prompt);
+    prompt();          // most people expect the prompt without a second click
+  }
+</script>
+{% endblock js %}

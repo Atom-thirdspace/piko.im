@@ -218,6 +218,53 @@
     {% endif %}
   </section>
 
+  <section class="settings-card" id="keys">
+    <h2>Security keys</h2>
+    {% if not webauthn_on %}
+      <p class="settings-hint">
+        Security keys are not switched on for this site yet.
+      </p>
+    {% else %}
+      <p class="settings-hint">
+        Windows Hello, Touch ID, or a hardware key. Unlike a code, a key
+        cannot be phished - it only works on this site.
+      </p>
+
+      {% if security_keys %}
+        <ul class="key-list">
+          {% for k in security_keys %}
+            <li class="key-row">
+              <span class="key-name">
+                {{ k.name }}
+                {% if k.admin_capable %}
+                  <span class="key-tag">admin</span>
+                {% endif %}
+              </span>
+              <span class="key-when">
+                added {{ k.created_at.strftime('%d %b %Y') }}
+                {%- if k.last_used_at %} &middot; last used
+                  {{ k.last_used_at.strftime('%d %b') }}{% endif %}
+              </span>
+              <form method="post"
+                    action="{{ url_for('profile.key_delete', cred_id=k.id) }}">
+                {{ csrf_field() }}
+                <button type="submit" class="settings-quiet">Remove</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="settings-hint">No keys registered yet.</p>
+      {% endif %}
+
+      <div class="key-add">
+        <input type="text" id="key-name" maxlength="80" placeholder="Name this key">
+        <button type="button" id="key-add-btn">Add a security key</button>
+      </div>
+      <p class="settings-hint" id="key-status" hidden></p>
+    {% endif %}
+  </section>
+
   <section class="settings-card settings-danger">
     <h2>Delete account</h2>
     {% if pending_deletion %}
@@ -243,3 +290,35 @@
 
 </main>
 {% endblock content %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='webauthn.js') }}"></script>
+<script>
+  var addBtn = document.getElementById('key-add-btn');
+  if (addBtn) {
+    var status = document.getElementById('key-status');
+    if (!window.webauthnSupported()) {
+      addBtn.disabled = true;
+      addBtn.textContent = 'This browser has no security key support';
+    }
+    addBtn.addEventListener('click', async function () {
+      var name = (document.getElementById('key-name').value || '').trim();
+      addBtn.disabled = true;
+      status.hidden = false;
+      status.textContent = 'Follow your browser’s prompt…';
+      try {
+        await window.webauthnRegister(
+          '{{ url_for("profile.key_begin") }}',
+          '{{ url_for("profile.key_finish") }}',
+          { name: name || 'Security key' });
+        window.location.reload();
+      } catch (e) {
+        status.textContent = e.name === 'NotAllowedError'
+          ? 'Cancelled. Nothing was added.'
+          : (e.message || 'That did not work.');
+        addBtn.disabled = false;
+      }
+    });
+  }
+</script>
+{% endblock js %}

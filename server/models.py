@@ -1178,3 +1178,61 @@ def publish_generated(draft, reviewer):
     draft.reviewed_at = _utcnow()
     db.session.commit()
     return problem
+
+class WebAuthnCredential(db.Model):
+    __tablename__ = "webauthn_credentials"
+    __table_args__ = (
+        UniqueConstraint("credential_id", name="uq_credential_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    credential_id = db.Column(db.LargeBinary, nullable=False)
+    public_key = db.Column(db.LargeBinary, nullable=False)
+    sign_count = db.Column(db.BigInteger, nullable=False, default=0)
+    transports = db.Column(db.String(120), nullable=False, default="")
+    aaguid = db.Column(db.String(64), nullable=False, default="")
+    name = db.Column(db.String(80), nullable=False, default="Security key")
+    admin_capable = db.Column(db.Boolean, nullable=False, default=False,
+                              server_default="false")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    last_used_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+
+
+def credentials_for(user):
+    return db.session.execute(
+        db.select(WebAuthnCredential)
+        .where(WebAuthnCredential.user_id == user.id)
+        .order_by(WebAuthnCredential.created_at)
+    ).scalars().all()
+
+
+def credential_by_raw_id(raw_id):
+    return db.session.execute(
+        db.select(WebAuthnCredential).filter_by(credential_id=raw_id)
+    ).scalar_one_or_none()
+
+
+def has_security_key(user):
+    return db.session.execute(
+        db.select(WebAuthnCredential.id)
+        .where(WebAuthnCredential.user_id == user.id).limit(1)
+    ).scalar_one_or_none() is not None
+
+
+class AdminLoginCode(db.Model):
+    __tablename__ = "admin_login_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    code_hash = db.Column(db.String(255), nullable=False)
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True))

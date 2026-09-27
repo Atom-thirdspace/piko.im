@@ -520,3 +520,13 @@ img {
     gap: .3rem; margin-top: .8rem; }
 .settings-check--stacked textarea { width: 100%; font: inherit; padding: .5rem;
     border: 1px solid #d9cec4; border-radius: 8px; resize: vertical; }
+
+/* Security keys */
+.key-list { list-style: none; margin: .6rem 0; padding: 0; }
+.key-row { display: flex; align-items: center; gap: .6rem; padding: .5rem 0;
+    border-bottom: 1px solid #f0e7dd; flex-wrap: wrap; }
+.key-name { font-weight: 600; }
+.key-tag { background: #77431d; color: #fff; border-radius: 999px;
+    padding: .05rem .45rem; font-size: .7rem; font-weight: 400; }
+.key-when { color: #7a6455; font-size: .8rem; flex: 1; }
+.key-add { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .6rem; }

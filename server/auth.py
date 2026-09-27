@@ -2,13 +2,16 @@ import os
 import secrets
 
 from flask import (
-    Blueprint, abort, current_app, flash, make_response, redirect, render_template,
-    request, session, url_for
+    Blueprint, abort, current_app, flash, jsonify, make_response, redirect,
+    render_template, request, session, url_for
 )
 from .devices import notify_new_device, remember_device
 from .oauth import oauth, enabled_providers, OIDC_PROVIDERS, PROVIDERS
 from .profile import fetch_profile
-from .models import upsert_user, mark_welcome_sent, link_identity
+from .models import upsert_user, mark_welcome_sent, link_identity, touch_login
+from .webauthn_keys import KeyError_ as WebAuthnError
+from .webauthn_keys import begin_authentication, configured as webauthn_configured
+from .webauthn_keys import finish_authentication
 from .mailer import send_welcome_email
 from .session import current_user, is_safe_next, login_required
 from . import twofa
@@ -134,6 +137,46 @@ def callback(provider):
     else:
         notify_new_device(user, response)
     return response
+
+@auth_bp.route("/login/passkey/begin", methods=["POST"])
+def passkey_begin():
+    """Passwordless sign-in.
+
+    No user yet, so allow_credentials is left empty: the browser offers
+    whichever resident key it holds and the assertion tells us who it is.
+    """
+    if not webauthn_configured():
+        return jsonify(error="Passkeys are not switched on here."), 503
+    try:
+        return current_app.response_class(
+            begin_authentication(None), mimetype="application/json")
+    except WebAuthnError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@auth_bp.route("/login/passkey/finish", methods=["POST"])
+def passkey_finish():
+    try:
+        user, _cred = finish_authentication(request.get_json(silent=True) or {})
+    except WebAuthnError as exc:
+        return jsonify(error=str(exc)), 400
+
+    if user.is_suspended:
+        return jsonify(error="That account is suspended."), 403
+
+    touch_login(user)
+    session.clear()
+    session["user_id"] = user.id
+    session.permanent = True
+
+    if user.needs_onboarding:
+        target = url_for("accounts.onboarding")
+    elif user.needs_questionnaire:
+        target = url_for("onboarding.page")
+    else:
+        target = url_for("dashboard.index")
+    return jsonify(ok=True, redirect=target)
+
 
 @auth_bp.route("/logout", methods=["POST"])
 def logout():

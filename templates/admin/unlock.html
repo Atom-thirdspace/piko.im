@@ -1,31 +1,82 @@
-{% extends "base.html" %}
+{% extends "admin/base.html" %}
 
-{% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
-{% endblock head %}
+{% block admin_content %}
+  <h1>Unlock the admin panel</h1>
+  <p class="admin-sub">
+    You are signed in as an admin. This second step proves it is you at the
+    keyboard, and lasts for the session.
+  </p>
 
-{% block content %}
-  <main class="gate">
-    <h1>Admin passcode</h1>
-    <p class="gate__sub">
-      Your account is on the admin list. Enter the passcode to open the admin
-      screens for the next couple of hours.
+  {% if error %}<p class="admin-warn">{{ error }}</p>{% endif %}
+
+  {% if 'key' in methods %}
+    <section class="admin-test">
+      <h2>Security key</h2>
+      <p class="admin-hint">
+        Windows Hello, Touch ID, or a hardware key. You will be asked for your
+        PIN or fingerprint.
+      </p>
+      <button class="admin-btn" id="unlock-key" {{ 'disabled' if wait }}>
+        Use my security key
+      </button>
+      <p class="admin-hint" id="key-status" hidden></p>
+    </section>
+  {% endif %}
+
+  {% if 'email' in methods %}
+    <section class="admin-test">
+      <h2>Emailed code</h2>
+      <form class="admin-inline" method="post">
+        {{ csrf_field() }}
+        <input type="hidden" name="action" value="send-code">
+        <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>
+          Email me a code
+        </button>
+      </form>
+      <form class="admin-inline" method="post">
+        {{ csrf_field() }}
+        <input type="hidden" name="action" value="code">
+        <input type="hidden" name="next" value="{{ next }}">
+        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code"
+               pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code" required>
+        <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>Unlock</button>
+      </form>
+    </section>
+  {% endif %}
+
+  {% if not methods %}
+    <p class="admin-warn">
+      No second factor is enrolled for this account. Register a security key
+      in <a href="{{ url_for('profile.settings') }}">settings</a>, or verify
+      your email address.
     </p>
+  {% endif %}
+{% endblock admin_content %}
 
-
-    {% if error %}
-        <p class="gate__error" role="alert">{{ error }}</p>
-    {% endif %}
-
-    <form method="post" autocomplete="off">
-      {{ csrf_field() }}
-      <input type="hidden" name="next" value="{{ next }}">
-      <input class="gate__input" type="password" name="passcode"
-             placeholder="Passcode" autofocus required
-             {{ 'disabled' if wait }}>
-      <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>Unlock</button>
-    </form>
-
-    <p class="gate__foot"><a href="{{ url_for('dashboard.index') }}">Back to the app</a></p>
-  </main>
-{% endblock content %}
+{% block js %}
+<script src="{{ url_for('static', filename='webauthn.js') }}"></script>
+<script>
+  var btn = document.getElementById('unlock-key');
+  if (btn) {
+    if (!window.webauthnSupported()) {
+      btn.disabled = true;
+      btn.textContent = 'This browser has no security key support';
+    }
+    btn.addEventListener('click', async function () {
+      var status = document.getElementById('key-status');
+      btn.disabled = true;
+      status.hidden = false;
+      status.textContent = 'Waiting for your key…';
+      try {
+        await window.webauthnAuthenticate(
+          '{{ url_for("admin.unlock_key_begin") }}',
+          '{{ url_for("admin.unlock_key_finish") }}');
+        window.location = {{ next | tojson }};
+      } catch (err) {
+        status.textContent = err.message || 'That did not work.';
+        btn.disabled = false;
+      }
+    });
+  }
+</script>
+{% endblock js %}

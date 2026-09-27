@@ -33,8 +33,43 @@
     {% endfor %}
   {% endif %}
 
+  <p class="auth-alt" id="passkey-wrap" hidden>
+    <button type="button" class="oauth-btn" id="passkey-btn">
+      Sign in with a passkey
+    </button>
+  </p>
+
   <p class="auth-alt">
     New here? <a href="{{ url_for('accounts.signup', next=next) }}">Create an account</a>
   </p>
 </main>
 {% endblock content %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='webauthn.js') }}"></script>
+<script>
+  var wrap = document.getElementById('passkey-wrap');
+  var btn = document.getElementById('passkey-btn');
+
+  // Only offered when the browser can actually do it, so nobody clicks a
+  // button that cannot work.
+  if (window.webauthnSupported()) { wrap.hidden = false; }
+
+  btn.addEventListener('click', async function () {
+    btn.disabled = true;
+    btn.textContent = 'Waiting for your key…';
+    try {
+      var out = await window.webauthnAuthenticate(
+        '{{ url_for("auth.passkey_begin") }}',
+        '{{ url_for("auth.passkey_finish") }}');
+      window.location = out.redirect;
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Sign in with a passkey';
+      if (e.name !== 'NotAllowedError') {
+        alert(e.message || 'That did not work.');
+      }
+    }
+  });
+</script>
+{% endblock js %}

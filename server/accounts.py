@@ -1,17 +1,19 @@
 from datetime import datetime, timedelta, timezone
 
 from flask import (
-    Blueprint, current_app, flash, make_response, redirect, render_template,
-    request, session, url_for,
+    Blueprint, current_app, flash, jsonify, make_response, redirect,
+    render_template, request, session, url_for,
 )
 from .devices import notify_new_device, remember_device
 from .oauth import enabled_providers, PROVIDERS
 from .mailer import send_verification_email
 from .models import (
     complete_profile, create_email_user, db, find_by_email, find_by_login,
-    find_by_username, load_user, mark_email_verified, mark_welcome_sent,
-    touch_login, touch_verification_sent,
+    find_by_username, has_security_key, load_user, mark_email_verified,
+    mark_welcome_sent, touch_login, touch_verification_sent,
 )
+from .webauthn_keys import KeyError_ as WebAuthnError
+from .webauthn_keys import begin_authentication, finish_authentication
 from . import twofa
 from .session import current_user, is_safe_next, login_required
 from .tokens import make_verify_token, read_verify_token
@@ -125,9 +127,14 @@ def password_login():
         flash("Wrong email/username or password.", "error")
         return redirect(url_for("auth.login_page", next=nxt))
 
+    # Before touch_login and before any session id is issued: a correct
+    # password is half a login, not a login. A security key is preferred
+    # over TOTP where both exist - it is the stronger of the two.
+    if has_security_key(user):
+        twofa.begin_challenge(user, nxt)
+        return redirect(url_for("accounts.login_key"))
+
     if twofa.enabled(user):
-        # Before touch_login and before any session id is issued: a correct
-        # password is half a login, not a login.
         twofa.begin_challenge(user, nxt)
         return redirect(url_for("accounts.two_factor"))
 
@@ -144,6 +151,56 @@ def password_login():
     response = make_response(redirect(target))
     notify_new_device(user, response)
     return response
+
+
+@accounts_bp.route("/login/key/")
+def login_key():
+    """The security-key step of a password login."""
+    if twofa.pending() is None:
+        return redirect(url_for("auth.login_page"))
+    return render_template("login_key.html")
+
+
+@accounts_bp.route("/login/key/begin", methods=["POST"])
+def login_key_begin():
+    state = twofa.pending()
+    if state is None:
+        return jsonify(error="Your sign-in expired. Start again."), 400
+    try:
+        return current_app.response_class(
+            begin_authentication(load_user(state["uid"])),
+            mimetype="application/json")
+    except WebAuthnError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@accounts_bp.route("/login/key/finish", methods=["POST"])
+def login_key_finish():
+    state = twofa.pending()
+    if state is None:
+        return jsonify(error="Your sign-in expired. Start again."), 400
+
+    user = load_user(state["uid"])
+    try:
+        finish_authentication(request.get_json(silent=True) or {}, user=user)
+    except WebAuthnError as exc:
+        if twofa.count_try():
+            return jsonify(error="Too many tries. Sign in again.",
+                           redirect=url_for("auth.login_page")), 400
+        return jsonify(error=str(exc)), 400
+
+    nxt = state.get("next") or url_for("dashboard.index")
+    twofa.end_challenge()
+    touch_login(user)
+    start_session(user)
+
+    if user.needs_onboarding:
+        target = url_for("accounts.onboarding", next=nxt)
+    elif user.needs_questionnaire:
+        target = url_for("onboarding.page")
+    else:
+        target = nxt if is_safe_next(nxt) else url_for("dashboard.index")
+    return jsonify(ok=True, redirect=target)
 
 
 @accounts_bp.route("/login/2fa/", methods=["GET", "POST"])
