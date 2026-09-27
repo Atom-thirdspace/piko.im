@@ -1,12 +1,21 @@
 import io
 import subprocess
 import tarfile
+import threading
 import time
 import uuid
 from dataclasses import dataclass
 
 DOCKER = "docker"
-MAX_CAPTURE_BYTES=64*1024
+MAX_CAPTURE_BYTES = 64 * 1024
+
+# What we keep is MAX_CAPTURE_BYTES, but truncating after the fact does nothing
+# for the host: capture_output=True buffers the whole stream in our memory
+# first. A submission that only prints can push hundreds of MB through the pipe
+# inside its time limit, and the container's --memory does not cover it - those
+# bytes live in the worker, not the cgroup. So we stop reading at this ceiling
+# and kill the run.
+MAX_STREAM_BYTES = 4 * 1024 * 1024
 
 class SandboxError(RuntimeError):
     """Docker itself failed - not the user's code."""
@@ -20,6 +29,7 @@ class ExecResult:
     duration_ms: int
     timed_out: bool = False
     oom_killed: bool = False
+    output_exceeded: bool = False
 
 
 def _tar_bytes(name, data, mode=0o644):
@@ -38,6 +48,43 @@ def _decode(raw):
         raw = raw[:MAX_CAPTURE_BYTES]
         return raw.decode("utf-8", "replace") + "\n...[output truncated]"
     return raw.decode("utf-8", "replace")
+
+def _drain(stream, sink, limit, overflow):
+    """Read until EOF, keeping at most `limit` bytes; flag and stop past it."""
+    total = 0
+    try:
+        while True:
+            chunk = stream.read(65536)
+            if not chunk:
+                return
+            total += len(chunk)
+            if total > limit:
+                overflow.set()
+                return
+            sink.append(chunk)
+    except (OSError, ValueError):
+        return                      # pipe closed under us; nothing to salvage
+    finally:
+        try:
+            stream.close()
+        except (OSError, ValueError):
+            pass
+
+
+def _feed(stream, data):
+    """Write stdin on its own thread so a program that ignores it cannot wedge us."""
+    try:
+        if data:
+            stream.write(data)
+        stream.flush()
+    except (OSError, ValueError):
+        pass                        # child exited early; its output still counts
+    finally:
+        try:
+            stream.close()
+        except (OSError, ValueError):
+            pass
+
 
 class Sandbox:
     def __init__(self, image, memory_mb=256, pids=64, cpus="1.0", workdir_mb=64):
@@ -98,27 +145,51 @@ class Sandbox:
             raise SandboxError("docker cp failed: " + _decode(proc.stderr)) 
 
 
-    def exec(self, argv, stdin="", timeout_sec=5):
+    def exec(self, argv, stdin="", timeout_sec=5, output_limit=MAX_STREAM_BYTES):
         started = time.monotonic()
-        cmd = [DOCKER, "exec", "-i", self.cid] + list(argv)
-        try:
-            proc = subprocess.run(
-                cmd, input = stdin.encode("utf-8"),
-                capture_output=True, timeout=timeout_sec,
-            )
-        except subprocess.TimeoutExpired:
-            self.destroy()
-            return ExecResult(
-                exit_code=-1, stdout="", stderr="",
-                duration_ms=int((time.monotonic() - started) * 1000),
-                timed_out=True,
-            )
+        proc = subprocess.Popen(
+            [DOCKER, "exec", "-i", self.cid] + list(argv),
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        out, err = [], []
+        overflow = threading.Event()
+        for target, args in (
+            (_feed, (proc.stdin, stdin.encode("utf-8"))),
+            (_drain, (proc.stdout, out, output_limit, overflow)),
+            (_drain, (proc.stderr, err, output_limit, overflow)),
+        ):
+            t = threading.Thread(target=target, args=args, daemon=True)
+            t.start()
+
+        timed_out = False
+        deadline = started + timeout_sec
+        while proc.poll() is None:
+            if overflow.is_set():
+                break
+            if time.monotonic() >= deadline:
+                timed_out = True
+                break
+            time.sleep(0.005)
 
         duration_ms = int((time.monotonic() - started) * 1000)
+
+        if timed_out or overflow.is_set():
+            # Killing the client leaves the process running inside the
+            # container, so the container itself has to go - same as before.
+            self.destroy()
+            proc.kill()
+            proc.wait()
+            return ExecResult(
+                exit_code=-1,
+                stdout="" if timed_out else _decode(b"".join(out)),
+                stderr="", duration_ms=duration_ms,
+                timed_out=timed_out, output_exceeded=overflow.is_set(),
+            )
+
         return ExecResult(
             exit_code=proc.returncode,
-            stdout=_decode(proc.stdout),
-            stderr=_decode(proc.stderr),
+            stdout=_decode(b"".join(out)),
+            stderr=_decode(b"".join(err)),
             duration_ms=duration_ms,
             # 137 == SIGKILL, which for us almost always means the cgroup OOM killer.
             oom_killed=proc.returncode == 137,
