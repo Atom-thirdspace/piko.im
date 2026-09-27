@@ -4,6 +4,7 @@ TLE = "time_limit_exceeded"
 MLE = "memory_limit_exceeded"
 RE = "runtime_error"
 CE = "compile_error"
+OLE = "output_limit_exceeded"
 IE = "internal_error"          # our bug, not the user's
 QUEUED = "queued"              # waiting for a worker
 RUNNING = "running"            # a worker has it
@@ -15,6 +16,7 @@ LABELS = {
     MLE: "Memory Limit Exceeded",
     RE: "Runtime Error",
     CE: "Compilation Error",
+    OLE: "Output Limit Exceeded",
     IE: "Internal Error",
     QUEUED: "Queued",
     RUNNING: "Running",

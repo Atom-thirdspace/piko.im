@@ -51,6 +51,9 @@ def judge(source, language_key, tests, time_limit_sec=2.0, memory_mb=None,
                 if comp.timed_out:
                     return JudgeResult(verdict=V.CE, total=len(tests),
                                        compile_output="Compilation timed out.")
+                if comp.output_exceeded:
+                    return JudgeResult(verdict=V.CE, total=len(tests),
+                                       compile_output="Compiler produced too much output.")
                 if comp.exit_code != 0:
                     return JudgeResult(verdict=V.CE, total=len(tests),
                                        compile_output=comp.stderr or comp.stdout)
@@ -60,6 +63,8 @@ def judge(source, language_key, tests, time_limit_sec=2.0, memory_mb=None,
                 run = box.exec(lang.run_cmd, stdin=test.stdin,timeout_sec=time_limit_sec)
                 if run.timed_out:
                     verdict = V.TLE
+                elif run.output_exceeded:
+                    verdict = V.OLE
                 elif run.oom_killed:
                     verdict = V.MLE
                 elif run.exit_code != 0:
@@ -82,8 +87,9 @@ def judge(source, language_key, tests, time_limit_sec=2.0, memory_mb=None,
                     result.passed += 1
                 else:
                     result.verdict = verdict
-                    # A TLE destroys the container, so we cannot continue regardless.
-                    if stop_on_first_failure or verdict == V.TLE:
+                    # TLE and OLE both destroy the container, so we cannot
+                    # continue regardless of the caller's preference.
+                    if stop_on_first_failure or verdict in (V.TLE, V.OLE):
                         break
 
     except SandboxError as exc:
