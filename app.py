@@ -25,6 +25,8 @@ from server.moderation import moderation_bp
 from server.judge.worker import register_cli as register_judge_cli
 from server.achievements import register_cli as register_achievement_cli
 from server.similarity import register_cli as register_similarity_cli
+from server.publicapi import api_bp
+from server.generation import register_cli as register_generation_cli
 
 load_dotenv()
 
@@ -55,10 +57,12 @@ app.register_blueprint(community_bp)
 app.register_blueprint(blog_bp)
 app.register_blueprint(moderation_bp)
 app.register_blueprint(learn_bp)
+app.register_blueprint(api_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)
 register_similarity_cli(app)
+register_generation_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels

@@ -13,7 +13,8 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      User, XpEvent, db, delete_account, mark_email_verified,
                      reject_deletion_request, TutorMessage, unlink_identity, Post,
                      _utcnow, replace_test_results, Report, REPORT_REASON_LABELS,
-                     Team, open_report_count, SimilarityFlag)
+                     Team, open_report_count, SimilarityFlag,
+                     GeneratedProblem, publish_generated)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -38,7 +39,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.system", "System"),
        ("admin.audit", "Audit log"),
        ("admin.reports","Reports"),
-       ("admin.similarity", "Similarity")
+       ("admin.similarity", "Similarity"),
+       ("admin.generated", "Generated")
        ]
 
 
@@ -1002,3 +1004,43 @@ def similarity_resolve(flag_id):
     log_action("similarity_%s" % flag.status, flag.id, "%.2f" % flag.score)
     flash("Flag resolved.", "success")
     return redirect(url_for("admin.similarity"))
+
+@admin_bp.route("/generated/")
+@admin_required
+def generated():
+    status = request.args.get("status", "draft")
+    if status not in ("draft", "approved", "rejected", "all"):
+        status = "draft"
+
+    stmt = db.select(GeneratedProblem).order_by(GeneratedProblem.created_at.desc())
+    if status != "all":
+        stmt = stmt.where(GeneratedProblem.status == status)
+    rows, pager = _paginate(stmt, _page())
+    return render_template("admin/generated.html", rows=rows, p=pager,
+                           status=status)
+
+
+@admin_bp.route("/generated/<int:draft_id>/resolve", methods=["POST"])
+@admin_required
+def generated_resolve(draft_id):
+    draft = _get_or_404(GeneratedProblem, draft_id)
+    action = request.form.get("action")
+    draft.note = (request.form.get("note") or "").strip()[:1000]
+
+    if action == "approve":
+        problem = publish_generated(draft, current_user())
+        if problem is None:
+            flash("A problem with slug %r already exists. Rename the draft "
+                  "first." % draft.slug, "error")
+            return redirect(url_for("admin.generated"))
+        log_action("approve_generated", draft.id, draft.slug)
+        flash("Published as %s." % problem.slug, "success")
+        return redirect(url_for("admin.problem_form", problem_id=problem.id))
+
+    draft.status = "rejected"
+    draft.reviewed_by = current_user().id
+    draft.reviewed_at = _utcnow()
+    db.session.commit()
+    log_action("reject_generated", draft.id, draft.slug)
+    flash("Draft rejected.", "success")
+    return redirect(url_for("admin.generated"))

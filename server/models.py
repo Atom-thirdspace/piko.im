@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 db = SQLAlchemy()
 
@@ -1096,12 +1096,6 @@ class SubmissionFingerprint(db.Model):
 
 
 class SimilarityFlag(db.Model):
-    """A pair of submissions close enough that a person should look.
-
-    Never a verdict - two correct solutions to a small problem are
-    legitimately near-identical, which is why this lands in a queue.
-    """
-
     __tablename__ = "similarity_flags"
     __table_args__ = (
         UniqueConstraint("submission_id", "matched_id", name="uq_sim_pair"),
@@ -1121,3 +1115,67 @@ class SimilarityFlag(db.Model):
 
     submission = db.relationship("Submission", foreign_keys=[submission_id])
     matched = db.relationship("Submission", foreign_keys=[matched_id])
+
+class GeneratedProblem(db.Model):
+    """A problem waiting for a human to approve it.
+
+    Nothing generated goes live on its own. Approval is what copies it into
+    the real Problem table; until then it is inert.
+    """
+
+    __tablename__ = "generated_problems"
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_generated_slug"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(64), nullable=False)
+    slug = db.Column(db.String(80), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    topic = db.Column(db.String(64), nullable=False)
+    difficulty = db.Column(db.String(16), nullable=False)
+    xp = db.Column(db.Integer, nullable=False, default=15)
+    statement_md = db.Column(db.Text, nullable=False)
+    payload = db.Column(JSONB, nullable=False, default=dict)
+    status = db.Column(db.String(16), nullable=False, default="draft")
+    note = db.Column(db.Text, nullable=False, default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    reviewed_by = db.Column(db.Integer,
+                            db.ForeignKey("users.id", ondelete="SET NULL"))
+    reviewed_at = db.Column(db.DateTime(timezone=True))
+
+    reviewer = db.relationship("User")
+
+
+def publish_generated(draft, reviewer):
+    """Copy an approved draft into the real Problem tables."""
+    if db.session.execute(
+       db.select(Problem.id).filter_by(slug=draft.slug)
+    ).scalar_one_or_none() is not None:
+        return None                       # slug taken; reviewer renames first
+
+    problem = Problem(
+        slug=draft.slug, title=draft.title, statement_md=draft.statement_md,
+        difficulty=draft.difficulty, topic=draft.topic, xp=draft.xp,
+        time_limit_sec=draft.payload.get("time_limit_sec", 2.0),
+        memory_mb=draft.payload.get("memory_mb", 256))
+    db.session.add(problem)
+    db.session.flush()
+
+    for i, t in enumerate(draft.payload.get("tests", [])):
+        db.session.add(ProblemTest(
+            problem_id=problem.id, position=i,
+            stdin=t["stdin"], expected_stdout=t["expected_stdout"],
+            is_sample=bool(t.get("is_sample"))))
+
+    for i, h in enumerate(draft.payload.get("hints", [])):
+        db.session.add(ProblemHint(
+            problem_id=problem.id, position=i,
+            body_md=h["body"], cost_xp=int(h.get("cost_xp", 3))))
+
+    draft.status = "approved"
+    draft.reviewed_by = reviewer.id
+    draft.reviewed_at = _utcnow()
+    db.session.commit()
+    return problem

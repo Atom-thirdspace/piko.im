@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+  <h1>Generated problems</h1>
+  <p class="admin-sub">
+    Expected outputs were produced by running the reference solution in the
+    sandbox, so the tests are self-consistent. What still needs a human: is
+    the statement clear, is it the right difficulty, and does the reference
+    actually solve the stated problem?
+  </p>
+  <p class="admin-filters">
+    {% for key in ['draft', 'approved', 'rejected', 'all'] %}
+      <a href="{{ url_for('admin.generated', status=key) }}"
+         class="{{ 'active' if key == status }}">{{ key }}</a>
+    {% endfor %}
+  </p>
+
+  {% for d in rows %}
+    <div class="admin-test">
+      <p>
+        <b>{{ d.title }}</b> &middot; <code>{{ d.slug }}</code> &middot;
+        {{ d.topic }} &middot; {{ d.difficulty }} &middot; {{ d.xp }} XP
+        &middot; <span class="admin-hint">{{ d.source }}</span>
+        <span class="admin-badge {{ 'warn' if d.status == 'draft' }}">{{ d.status }}</span>
+      </p>
+
+      <details>
+        <summary>Statement</summary>
+        <pre class="admin-pre">{{ d.statement_md }}</pre>
+      </details>
+
+      <details>
+        <summary>Reference solution ({{ d.payload.reference_language }})</summary>
+        <pre class="admin-pre">{{ d.payload.reference_source }}</pre>
+      </details>
+
+      <details>
+        <summary>{{ d.payload.tests | length }} tests</summary>
+        <table class="admin-table">
+          <thead><tr><th>#</th><th>stdin</th><th>expected</th><th></th></tr></thead>
+          <tbody>
+            {% for t in d.payload.tests %}
+              <tr>
+                <td>{{ loop.index0 }}</td>
+                <td><pre class="admin-pre">{{ t.stdin }}</pre></td>
+                <td><pre class="admin-pre">{{ t.expected_stdout }}</pre></td>
+                <td>{{ 'sample' if t.is_sample }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </details>
+
+      {% if d.payload.hints %}
+        <details>
+          <summary>{{ d.payload.hints | length }} hints</summary>
+          <ul>
+            {% for h in d.payload.hints %}
+              <li>{{ h.body }} <span class="admin-hint">({{ h.cost_xp }} XP)</span></li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+
+      {% if d.status == 'draft' %}
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.generated_resolve', draft_id=d.id) }}">
+          {{ csrf_field() }}
+          <input type="text" name="note" placeholder="Note (optional)">
+          <button class="admin-btn" type="submit" name="action" value="reject">
+            Reject
+          </button>
+          <button class="admin-btn" type="submit" name="action" value="approve">
+            Approve &mdash; publish
+          </button>
+        </form>
+      {% elif d.note %}
+        <p class="admin-hint">{{ d.note }}</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <p class="admin-empty">Nothing here.</p>
+  {% endfor %}
+
+  {{ pager(p, 'admin.generated', status=status) }}
+{% endblock admin_content %}

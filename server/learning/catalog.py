@@ -22,8 +22,6 @@ TOPIC_KEYS = {key for key, _ in TOPICS}
 
 @dataclass(frozen=True)
 class QuizQuestion:
-    """Same shape as the placement bank, minus the tier - lesson quizzes are
-    not scored for level, they only gate completion."""
     id: str
     prompt: str
     choices: Tuple[Tuple[str, str], ...]
