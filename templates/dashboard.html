@@ -46,22 +46,39 @@
     </div>
   </header>
 
-  <!-- ---------- level ---------- -->
-  <section data-aos="fade-in" data-aos-delay="200" class="dash__level card" aria-labelledby="level-h">
-    <div class="card__head">
-      <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
-      <span class="card__meta">{{ progress.xp }} total XP</span>
-    </div>
-
-    <div class="meter" role="img"
-         aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
-      <span class="meter__fill" style="width: {{ level_pct }}%"></span>
-    </div>
-
-    <p class="card__foot">
-      {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
-    </p>
-  </section>
+  <div class="one">
+    <!-- ---------- level ---------- -->
+    <section data-aos="fade-in" data-aos-delay="200" class="dash__level card cardstyle" aria-labelledby="level-h">
+      <div class="card__head">
+        <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
+        <span class="card__meta">{{ progress.xp }} total XP</span>
+      </div>
+      <div class="meter" role="img"
+           aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
+        <span class="meter__fill" style="width: {{ level_pct }}%"></span>
+      </div>
+      <p class="card__foot">
+        {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
+      </p>
+    </section>
+    <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card cardstyle" aria-labelledby="goal-h">
+      <div class="card__head">
+        <h2 class="card__title" id="goal-h">Today's goal</h2>
+        <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
+      </div>
+      <div class="meter meter--goal" role="img"
+           aria-label="{{ goal_pct }} percent of today's goal">
+        <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
+      </div>
+      <p class="card__foot">
+        {% if daily_goal.remaining_xp %}
+          {{ daily_goal.remaining_xp }} XP to go.
+        {% else %}
+          Goal hit. Anything more is a bonus.
+        {% endif %}
+      </p>
+    </section>
+  </div>
 
   <!-- ---------- continue ---------- -->
   <section data-aos="fade-in" data-aos-delay="300" class="dash__continue card" aria-labelledby="continue-h">
@@ -106,40 +123,7 @@
     {% endif %}
   </section>
 
-  <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card" aria-labelledby="goal-h">
-    <div class="card__head">
-      <h2 class="card__title" id="goal-h">Today's goal</h2>
-      <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
-    </div>
-
-    <div class="meter meter--goal" role="img"
-         aria-label="{{ goal_pct }} percent of today's goal">
-      <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
-    </div>
-
-    <p class="card__foot">
-      {% if daily_goal.remaining_xp %}
-        {{ daily_goal.remaining_xp }} XP to go.
-      {% else %}
-        Goal hit. Anything more is a bonus.
-      {% endif %}
-    </p>
-
-    <form class="goalform" method="post" action="{{ url_for('profile.save_learning') }}">
-      {{ csrf_field() }}
-      <label class="goalform__label" for="daily-goal-xp">Change target</label>
-      <select class="goalform__select" id="daily-goal-xp" name="daily_goal_xp">
-        {% for choice in goal_choices %}
-          <option value="{{ choice }}"{% if choice == user.daily_goal_xp %} selected{% endif %}>
-            {{ choice }} XP
-          </option>
-        {% endfor %}
-      </select>
-      <input type="hidden" name="preferred_language" value="{{ user.preferred_language or '' }}">
-      <input type="hidden" name="timezone" value="{{ user.timezone or 'UTC' }}">
-      <button class="btn btn--quiet" type="submit">Save</button>
-    </form>
-  </section>
+  
 
   <section class="dash__stats" aria-label="Your totals">
     {% set tiles = [
@@ -156,28 +140,7 @@
     {% endfor %}
   </section>
 
-  <section class="dash__activity card" aria-labelledby="activity-h">
-    <div class="card__head">
-      <h2 class="card__title" id="activity-h">Recent activity</h2>
-    </div>
-
-    {% if activity %}
-      <ul class="feed">
-        {% for row in activity %}
-          <li class="feed__item" data-reason="{{ row.reason }}" data-ref="{{ row.ref }}">
-            <span class="feed__dot feed__dot--{{ row.reason }}" aria-hidden="true"></span>
-            <span class="feed__label">{{ row.label }}</span>
-            <strong class="feed__xp">+{{ row.amount }} XP</strong>
-            <time class="feed__time" datetime="{{ row.at.isoformat() }}">
-              {{ row.at.strftime('%d %b') }}
-            </time>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="empty">Nothing yet. Finish a lesson and it shows up here.</p>
-    {% endif %}
-  </section>
+  
 
   <aside class="dash__links" aria-label="Shortcuts">
     <a class="quicklink" href="{{ url_for('learn.index') }}">
@@ -194,63 +157,82 @@
     </a>
   </aside>
 
-  <section class="hm-card">
-    <h2>Your year</h2>
-    {{ heatmap_grid(heatmap) }}
-  </section>
-
-  {% if achievements %}
-    <section class="ach">
-      <h2>Achievements</h2>
-      <ul class="ach__list">
-        {% for a in achievements %}
-          <li class="ach__item ach__item--{{ a.group }}" title="{{ a.description }}">
-            <b>{{ a.title }}</b>
-            <small>{{ a.description }}</small>
-          </li>
-        {% endfor %}
-      </ul>
+  <div class="last">
+    <section class="hm-card">
+      <h2>Your year</h2>
+      {{ heatmap_grid(heatmap) }}
     </section>
-  {% endif %}
-
-    <section class="streak-card streak-card--{{ streak.status }}">
-    <div class="streak-card__head">
-      <b class="streak-card__days">{{ streak.days }}</b>
-      <span>day{{ '' if streak.days == 1 else 's' }} in a row</span>
-    </div>
-
-    <p class="streak-card__say">
-      {% if streak.status == 'safe' %}
-        Practised today. Nothing to do.
-      {% elif streak.status == 'at_risk' %}
-        Practise today to keep it.
-      {% elif streak.status == 'frozen' %}
-        {{ streak.covered_by }} day{{ '' if streak.covered_by == 1 else 's' }} missed -
-        come back today and a freeze covers it.
-      {% elif streak.status == 'broken' %}
-        {% if streak.lost %}Your {{ streak.lost }}-day streak ended.{% endif %}
-        Start a new one.
-      {% else %}
-        No streak yet. Finish anything today to start one.
-      {% endif %}
-    </p>
-
-    <p class="streak-card__freezes" title="One free freeze a month, up to {{ max_freezes }}.">
-      {% for i in range(max_freezes) %}
-        <span class="freeze {{ 'is-held' if i < streak.freezes }}">&#10052;</span>
-      {% endfor %}
-      <span class="streak-card__count">{{ streak.freezes }} / {{ max_freezes }}</span>
-    </p>
-
-    {% if freeze_uses %}
-      <p class="streak-card__log">
-        Saved you on
-        {% for use in freeze_uses %}
-          {{ use.covered_date.strftime('%d %b') }}{{ '' if loop.last else ',' }}
-        {% endfor %}
-      </p>
+    
+    {% if achievements %}
+      <section class="ach">
+        <h2>Achievements</h2>
+        <ul class="ach__list">
+          {% for a in achievements %}
+            <li class="ach__item ach__item--{{ a.group }}" title="{{ a.description }}">
+              <b>{{ a.title }}</b>
+              <small>{{ a.description }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
     {% endif %}
-  </section>
+      <section class="streak-card streak-card--{{ streak.status }}">
+      <div class="streak-card__head">
+        <b class="streak-card__days">{{ streak.days }}</b>
+        <span>day{{ '' if streak.days == 1 else 's' }} in a row</span>
+      </div>
+      <p class="streak-card__say">
+        {% if streak.status == 'safe' %}
+          Practised today. Nothing to do.
+        {% elif streak.status == 'at_risk' %}
+          Practise today to keep it.
+        {% elif streak.status == 'frozen' %}
+          {{ streak.covered_by }} day{{ '' if streak.covered_by == 1 else 's' }} missed -
+          come back today and a freeze covers it.
+        {% elif streak.status == 'broken' %}
+          {% if streak.lost %}Your {{ streak.lost }}-day streak ended.{% endif %}
+          Start a new one.
+        {% else %}
+          No streak yet. Finish anything today to start one.
+        {% endif %}
+      </p>
+      <p class="streak-card__freezes" title="One free freeze a month, up to {{ max_freezes }}.">
+        {% for i in range(max_freezes) %}
+          <span class="freeze {{ 'is-held' if i < streak.freezes }}">&#10052;</span>
+        {% endfor %}
+        <span class="streak-card__count">{{ streak.freezes }} / {{ max_freezes }}</span>
+      </p>
+      {% if freeze_uses %}
+        <p class="streak-card__log">
+          Saved you on
+          {% for use in freeze_uses %}
+            {{ use.covered_date.strftime('%d %b') }}{{ '' if loop.last else ',' }}
+          {% endfor %}
+        </p>
+      {% endif %}
+    </section>
+    <section class="dash__activity card" aria-labelledby="activity-h">
+      <div class="card__head">
+        <h2 class="card__title" id="activity-h">Recent activity</h2>
+      </div>
+      {% if activity %}
+        <ul class="feed">
+          {% for row in activity %}
+            <li class="feed__item" data-reason="{{ row.reason }}" data-ref="{{ row.ref }}">
+              <span class="feed__dot feed__dot--{{ row.reason }}" aria-hidden="true"></span>
+              <span class="feed__label">{{ row.label }}</span>
+              <strong class="feed__xp">+{{ row.amount }} XP</strong>
+              <time class="feed__time" datetime="{{ row.at.isoformat() }}">
+                {{ row.at.strftime('%d %b') }}
+              </time>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="empty">Nothing yet. Finish a lesson and it shows up here.</p>
+      {% endif %}
+    </section>
+  </div>
 
 
 </main>
