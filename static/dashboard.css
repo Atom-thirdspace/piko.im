@@ -454,5 +454,12 @@ body {
 
 .last {
     display: flex;
-    flex-direction: column;
+    width: 100%;
+    grid-column: span 12;
+    gap: 1.25rem;
+    align-items:first baseline;
+}
+
+.last > * {
+    flex: 1;
 }
