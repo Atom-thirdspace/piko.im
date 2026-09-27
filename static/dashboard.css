@@ -37,7 +37,7 @@ body {
 }
 
 .dash__intro    { grid-column: span 12; }
-.dash__continue { grid-column: span 7; }
+.dash__continue { grid-column: span 11; }
 .dash__level    { grid-column: span 5; }
 .dash__goal     { grid-column: span 5; }
 .dash__stats    { grid-column: span 7; }
@@ -148,22 +148,77 @@ body {
 /* ---------------------------------------------------------------- meter */
 
 .meter {
-    height: .55rem;
-    background: #ece0d5;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    border: 2px solid #3b2416;
     border-radius: 999px;
+    background: #e7ddd5;
+    box-shadow: 0 2px 0 #3b2416;
     overflow: hidden;
 }
 
 .meter__fill {
     display: block;
+    width: 0;
     height: 100%;
+    margin: 0;
+    padding: 0;
     border-radius: 999px;
-    background: var(--brand);
-    transition: width .4s ease;
+
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--brand) 80%, white),
+        var(--brand)
+    );
+
+    box-shadow:
+        0 0 6px color-mix(in srgb, var(--brand) 65%, transparent),
+        0 0 14px color-mix(in srgb, var(--brand) 35%, transparent);
+
+    position: relative;
+    overflow: hidden;
+    transition: width .4s cubic-bezier(.22, 1, .36, 1);
 }
 
-.meter--goal .meter__fill { background: var(--good); }
+/* moving shine */
+.meter__fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, .25),
+        transparent
+    );
+    animation: meter-shine 2.2s ease-in-out infinite;
+}
 
+.meter--goal .meter__fill {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--good) 80%, white),
+        var(--good)
+    );
+
+    box-shadow:
+        0 0 6px color-mix(in srgb, var(--good) 65%, transparent),
+        0 0 14px color-mix(in srgb, var(--good) 35%, transparent);
+}
+
+@keyframes meter-shine {
+    from { transform: translateX(-150%); }
+    to { transform: translateX(400%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .meter__fill::after {
+        animation: none;
+    }
+}
 /* ---------------------------------------------------------------- continue */
 
 .dash__path { margin: 0; font-weight: 600; }
@@ -349,3 +404,11 @@ body {
 .freeze.is-held { color: #4a90b8; }
 .streak-card__count { margin-left: .4rem; font-size: .8rem; color: #7a6455; }
 .streak-card__log { margin: .5rem 0 0; font-size: .8rem; color: #7a6455; }
+
+
+.one {
+    display: flex;
+    flex-direction:column;
+    gap: 1.38rem;
+    width: 40vw;
+}

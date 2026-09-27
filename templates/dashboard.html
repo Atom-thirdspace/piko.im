@@ -46,22 +46,39 @@
     </div>
   </header>
 
-  <!-- ---------- level ---------- -->
-  <section data-aos="fade-in" data-aos-delay="200" class="dash__level card" aria-labelledby="level-h">
-    <div class="card__head">
-      <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
-      <span class="card__meta">{{ progress.xp }} total XP</span>
-    </div>
-
-    <div class="meter" role="img"
-         aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
-      <span class="meter__fill" style="width: {{ level_pct }}%"></span>
-    </div>
-
-    <p class="card__foot">
-      {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
-    </p>
-  </section>
+  <div class="one">
+    <!-- ---------- level ---------- -->
+    <section data-aos="fade-in" data-aos-delay="200" class="dash__level card" aria-labelledby="level-h">
+      <div class="card__head">
+        <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
+        <span class="card__meta">{{ progress.xp }} total XP</span>
+      </div>
+      <div class="meter" role="img"
+           aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
+        <span class="meter__fill" style="width: {{ level_pct }}%"></span>
+      </div>
+      <p class="card__foot">
+        {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
+      </p>
+    </section>
+    <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card" aria-labelledby="goal-h">
+      <div class="card__head">
+        <h2 class="card__title" id="goal-h">Today's goal</h2>
+        <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
+      </div>
+      <div class="meter meter--goal" role="img"
+           aria-label="{{ goal_pct }} percent of today's goal">
+        <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
+      </div>
+      <p class="card__foot">
+        {% if daily_goal.remaining_xp %}
+          {{ daily_goal.remaining_xp }} XP to go.
+        {% else %}
+          Goal hit. Anything more is a bonus.
+        {% endif %}
+      </p>
+    </section>
+  </div>
 
   <!-- ---------- continue ---------- -->
   <section data-aos="fade-in" data-aos-delay="300" class="dash__continue card" aria-labelledby="continue-h">
@@ -106,40 +123,7 @@
     {% endif %}
   </section>
 
-  <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card" aria-labelledby="goal-h">
-    <div class="card__head">
-      <h2 class="card__title" id="goal-h">Today's goal</h2>
-      <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
-    </div>
-
-    <div class="meter meter--goal" role="img"
-         aria-label="{{ goal_pct }} percent of today's goal">
-      <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
-    </div>
-
-    <p class="card__foot">
-      {% if daily_goal.remaining_xp %}
-        {{ daily_goal.remaining_xp }} XP to go.
-      {% else %}
-        Goal hit. Anything more is a bonus.
-      {% endif %}
-    </p>
-
-    <form class="goalform" method="post" action="{{ url_for('profile.save_learning') }}">
-      {{ csrf_field() }}
-      <label class="goalform__label" for="daily-goal-xp">Change target</label>
-      <select class="goalform__select" id="daily-goal-xp" name="daily_goal_xp">
-        {% for choice in goal_choices %}
-          <option value="{{ choice }}"{% if choice == user.daily_goal_xp %} selected{% endif %}>
-            {{ choice }} XP
-          </option>
-        {% endfor %}
-      </select>
-      <input type="hidden" name="preferred_language" value="{{ user.preferred_language or '' }}">
-      <input type="hidden" name="timezone" value="{{ user.timezone or 'UTC' }}">
-      <button class="btn btn--quiet" type="submit">Save</button>
-    </form>
-  </section>
+  
 
   <section class="dash__stats" aria-label="Your totals">
     {% set tiles = [
