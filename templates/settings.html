@@ -294,9 +294,13 @@
 {% block js %}
 <script src="{{ url_for('static', filename='webauthn.js') }}"></script>
 <script>
+  // Scoped in a function: at classic-script top level `var status` would
+  // assign to window.status, a legacy string property, and the element
+  // would be coerced away with every message silently lost.
+  (function () {
   var addBtn = document.getElementById('key-add-btn');
   if (addBtn) {
-    var status = document.getElementById('key-status');
+    var note = document.getElementById('key-status');
     if (!window.webauthnSupported()) {
       addBtn.disabled = true;
       addBtn.textContent = 'This browser has no security key support';
@@ -304,8 +308,8 @@
     addBtn.addEventListener('click', async function () {
       var name = (document.getElementById('key-name').value || '').trim();
       addBtn.disabled = true;
-      status.hidden = false;
-      status.textContent = 'Follow your browser’s prompt…';
+      note.hidden = false;
+      note.textContent = 'Follow your browser’s prompt…';
       try {
         await window.webauthnRegister(
           '{{ url_for("profile.key_begin") }}',
@@ -313,12 +317,13 @@
           { name: name || 'Security key' });
         window.location.reload();
       } catch (e) {
-        status.textContent = e.name === 'NotAllowedError'
+        note.textContent = e.name === 'NotAllowedError'
           ? 'Cancelled. Nothing was added.'
           : (e.message || 'That did not work.');
         addBtn.disabled = false;
       }
     });
   }
+  }());
 </script>
 {% endblock js %}

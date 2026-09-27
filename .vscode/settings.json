@@ -1,0 +1,22 @@
+{
+  // These are Jinja templates, not plain HTML. Without this the HTML
+  // language server reports {% if %} and {% block %} as syntax errors and
+  // the real problems get lost in the noise.
+  "files.associations": {
+    "templates/**/*.html": "jinja-html"
+  },
+  "html.validate.scripts": false,
+  "html.validate.styles": false,
+  "emmet.includeLanguages": {
+    "jinja-html": "html"
+  },
+  "[jinja-html]": {
+    "editor.formatOnSave": false
+  },
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": ["${workspaceFolder}"],
+  "files.exclude": {
+    "**/__pycache__": true,
+    ".venv.old": true
+  }
+}

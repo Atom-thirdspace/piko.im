@@ -18,14 +18,17 @@
   {% endif %}
 
   {% if 'key' in methods %}
-    <section class="admin-test">
+    <section class="admin-test" id="key-panel"
+             data-begin-url="{{ url_for('admin.unlock_key_begin') }}"
+             data-finish-url="{{ url_for('admin.unlock_key_finish') }}"
+             data-next="{{ next }}">
       <h2>Security key</h2>
       <p class="admin-hint">
         Windows Hello, Touch ID, or a hardware key. You will be asked for your
         PIN or fingerprint.
       </p>
       <button type="button" class="admin-btn" id="unlock-key"
-              {{ 'disabled' if wait }}>
+              data-locked="{{ 1 if wait else 0 }}">
         Use my security key
       </button>
       <p class="admin-warn" id="key-error" role="alert" hidden></p>
@@ -53,7 +56,8 @@
         {# Carried explicitly, not relied on from the query string, so the
            destination survives however this form is posted. #}
         <input type="hidden" name="next" value="{{ next }}">
-        <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>
+        <button class="admin-btn" type="submit"
+                data-locked="{{ 1 if wait else 0 }}">
           Email me a code
         </button>
       </form>
@@ -64,8 +68,10 @@
         <label class="admin-hint" for="code">Code</label>
         <input id="code" type="text" name="code" inputmode="numeric"
                autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"
-               placeholder="123456" required {{ 'disabled' if wait }}>
-        <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>
+               placeholder="123456" required
+               data-locked="{{ 1 if wait else 0 }}">
+        <button class="admin-btn" type="submit"
+                data-locked="{{ 1 if wait else 0 }}">
           Unlock
         </button>
       </form>
@@ -85,31 +91,41 @@
 {% block js %}
 <script src="{{ url_for('static', filename='webauthn.js') }}"></script>
 <script>
-  var btn = document.getElementById('unlock-key');
-  if (btn) {
+  /* No template syntax below this line: everything the script needs arrives
+     on data- attributes, which keeps the file valid HTML and valid JS. */
+  (function () {
+    // Server-rendered lockout. Applied here rather than as a conditional
+    // attribute so the markup stays parseable by ordinary HTML tooling.
+    var locked = document.querySelectorAll('[data-locked="1"]');
+    for (var i = 0; i < locked.length; i++) { locked[i].disabled = true; }
+
+    var panel = document.getElementById('key-panel');
+    var btn = document.getElementById('unlock-key');
+    if (!panel || !btn) { return; }
+
     var err = document.getElementById('key-error');
-    var status = document.getElementById('key-status');
+    var note = document.getElementById('key-status');
     var unsupported = document.getElementById('key-unsupported');
 
     if (!window.webauthnSupported()) {
       btn.disabled = true;
       btn.textContent = 'This browser has no security key support';
       if (unsupported) { unsupported.hidden = false; }
+      return;
     }
 
     btn.addEventListener('click', async function () {
       err.hidden = true;
-      status.hidden = false;
-      status.textContent = 'Waiting for your key…';
+      note.hidden = false;
+      note.textContent = 'Waiting for your key…';
       btn.disabled = true;
       try {
-        await window.webauthnAuthenticate(
-          '{{ url_for("admin.unlock_key_begin") }}',
-          '{{ url_for("admin.unlock_key_finish") }}');
-        status.textContent = 'Unlocked. Taking you through…';
-        window.location = {{ next | tojson }};
+        await window.webauthnAuthenticate(panel.dataset.beginUrl,
+                                          panel.dataset.finishUrl);
+        note.textContent = 'Unlocked. Taking you through…';
+        window.location = panel.dataset.next;
       } catch (e) {
-        status.hidden = true;
+        note.hidden = true;
         err.hidden = false;
         // Cancelling or letting the prompt time out is not a failure worth
         // shouting about, and it must not look like a rejected key.
@@ -119,6 +135,6 @@
         btn.disabled = false;
       }
     });
-  }
+  }());
 </script>
 {% endblock js %}
