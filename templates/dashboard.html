@@ -48,7 +48,7 @@
 
   <div class="one">
     <!-- ---------- level ---------- -->
-    <section data-aos="fade-in" data-aos-delay="200" class="dash__level card" aria-labelledby="level-h">
+    <section data-aos="fade-in" data-aos-delay="200" class="dash__level card cardstyle" aria-labelledby="level-h">
       <div class="card__head">
         <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
         <span class="card__meta">{{ progress.xp }} total XP</span>
@@ -61,7 +61,7 @@
         {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
       </p>
     </section>
-    <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card" aria-labelledby="goal-h">
+    <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card cardstyle" aria-labelledby="goal-h">
       <div class="card__head">
         <h2 class="card__title" id="goal-h">Today's goal</h2>
         <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
