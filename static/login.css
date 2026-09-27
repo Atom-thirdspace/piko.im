@@ -50,7 +50,7 @@ body{
 
     padding: 10px;
     border-radius: 12px;
-    background-color: white;
+    background-color: rgb(255, 222, 169);
 }
 .oauth-btn {
     background: transparent;
@@ -62,6 +62,12 @@ form {
     left: 50%;
     transform: translateX(18%);
 }
+
+.auth-form input,
+.auth-form button {
+    background-color: rgb(255, 222, 169);
+}
+
 .auth-form input:focus {
     outline: none;
     border-color: #77431d;
