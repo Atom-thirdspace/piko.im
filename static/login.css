@@ -84,3 +84,9 @@ label{
 .green {
     color: green;
 }
+.auth-form input:-webkit-autofill,
+.auth-form input:-webkit-autofill:hover,
+.auth-form input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #fffdfb inset;
+    -webkit-text-fill-color: #2a1a10;
+}
