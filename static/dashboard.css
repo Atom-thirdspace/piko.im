@@ -112,7 +112,6 @@ body {
 
 .fire {
     width: 5rem;
-    transform: rotate(5deg);
     animation: fadeing 1s linear;
 }
 
