@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+
 :root {
     --bg: rgb(251, 246, 244);
     --card: #fffdfb;
@@ -23,6 +25,14 @@ body {
 .flash { padding: .6rem .9rem; border-radius: .5rem; margin-bottom: .4rem; font-size: .9rem; }
 .flash-success { background: #eef7f1; border: 1px solid var(--good); }
 .flash-error { background: #fdf0ed; border: 1px solid #b3402f; }
+
+.dash__title {
+    font-family: "Work Sans", sans-serif !important;
+    font-size: clamp(1.4rem, 2.6vw, 2.1rem);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.15;
+}
 
 /* ---------------------------------------------------------------- layout */
 
@@ -55,6 +65,9 @@ body {
     border-bottom: 1px solid var(--line);
 }
 
+
+
+
 .dash__avatar {
     width: 64px;
     height: 64px;
@@ -73,10 +86,10 @@ body {
     font-family: face, serif;
 }
 
-.dash__who { min-width: 0; }
+
 
 .dash__title {
-    font-family: face, Georgia, serif;
+    font-family: "Work Sans", face, Georgia, serif !important; 
     font-size: clamp(1.4rem, 2.6vw, 2.1rem);
     font-weight: 500;
     margin: 0;
