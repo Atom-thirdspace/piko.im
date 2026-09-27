@@ -7,7 +7,15 @@
     keyboard, and lasts for the session.
   </p>
 
-  {% if error %}<p class="admin-warn">{{ error }}</p>{% endif %}
+  {% if error %}
+    <p class="admin-warn" role="alert">{{ error }}</p>
+  {% elif wait %}
+    {# Without this the buttons are simply dead and nothing says why. #}
+    <p class="admin-warn" role="alert">
+      Too many wrong tries. This unlocks again in about
+      {{ wait }} minute{{ '' if wait == 1 else 's' }}.
+    </p>
+  {% endif %}
 
   {% if 'key' in methods %}
     <section class="admin-test">
@@ -16,19 +24,35 @@
         Windows Hello, Touch ID, or a hardware key. You will be asked for your
         PIN or fingerprint.
       </p>
-      <button class="admin-btn" id="unlock-key" {{ 'disabled' if wait }}>
+      <button type="button" class="admin-btn" id="unlock-key"
+              {{ 'disabled' if wait }}>
         Use my security key
       </button>
+      <p class="admin-warn" id="key-error" role="alert" hidden></p>
       <p class="admin-hint" id="key-status" hidden></p>
+      {% if 'email' not in methods %}
+        <p class="admin-hint" id="key-unsupported" hidden>
+          This browser cannot use security keys, and no other method is
+          enrolled on this account. Open the panel in a browser that supports
+          them, or verify your email address to enable the code fallback.
+        </p>
+      {% endif %}
     </section>
   {% endif %}
 
   {% if 'email' in methods %}
     <section class="admin-test">
       <h2>Emailed code</h2>
+      <p class="admin-hint">
+        Sent to the address on the admin allowlist. It lasts ten minutes and
+        works once.
+      </p>
       <form class="admin-inline" method="post">
         {{ csrf_field() }}
         <input type="hidden" name="action" value="send-code">
+        {# Carried explicitly, not relied on from the query string, so the
+           destination survives however this form is posted. #}
+        <input type="hidden" name="next" value="{{ next }}">
         <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>
           Email me a code
         </button>
@@ -37,18 +61,23 @@
         {{ csrf_field() }}
         <input type="hidden" name="action" value="code">
         <input type="hidden" name="next" value="{{ next }}">
-        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code"
-               pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code" required>
-        <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>Unlock</button>
+        <label class="admin-hint" for="code">Code</label>
+        <input id="code" type="text" name="code" inputmode="numeric"
+               autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"
+               placeholder="123456" required {{ 'disabled' if wait }}>
+        <button class="admin-btn" type="submit" {{ 'disabled' if wait }}>
+          Unlock
+        </button>
       </form>
     </section>
   {% endif %}
 
   {% if not methods %}
-    <p class="admin-warn">
-      No second factor is enrolled for this account. Register a security key
-      in <a href="{{ url_for('profile.settings') }}">settings</a>, or verify
-      your email address.
+    <p class="admin-warn" role="alert">
+      No second factor is enrolled for this account, so there is no way to
+      unlock it. Register a security key in
+      <a href="{{ url_for('profile.settings') }}#keys">your settings</a>, or
+      confirm your email address from there, then come back.
     </p>
   {% endif %}
 {% endblock admin_content %}
@@ -58,22 +87,35 @@
 <script>
   var btn = document.getElementById('unlock-key');
   if (btn) {
+    var err = document.getElementById('key-error');
+    var status = document.getElementById('key-status');
+    var unsupported = document.getElementById('key-unsupported');
+
     if (!window.webauthnSupported()) {
       btn.disabled = true;
       btn.textContent = 'This browser has no security key support';
+      if (unsupported) { unsupported.hidden = false; }
     }
+
     btn.addEventListener('click', async function () {
-      var status = document.getElementById('key-status');
-      btn.disabled = true;
+      err.hidden = true;
       status.hidden = false;
       status.textContent = 'Waiting for your key…';
+      btn.disabled = true;
       try {
         await window.webauthnAuthenticate(
           '{{ url_for("admin.unlock_key_begin") }}',
           '{{ url_for("admin.unlock_key_finish") }}');
+        status.textContent = 'Unlocked. Taking you through…';
         window.location = {{ next | tojson }};
-      } catch (err) {
-        status.textContent = err.message || 'That did not work.';
+      } catch (e) {
+        status.hidden = true;
+        err.hidden = false;
+        // Cancelling or letting the prompt time out is not a failure worth
+        // shouting about, and it must not look like a rejected key.
+        err.textContent = e.name === 'NotAllowedError'
+          ? 'No key was used. Try again when you are ready.'
+          : (e.message || 'That did not work.');
         btn.disabled = false;
       }
     });
