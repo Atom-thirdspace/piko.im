@@ -2,10 +2,12 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
 {% endblock head %}
 
 {% block content %}
 <main class="auth">
+<img draggable="false" id="letter" src="https://user-cdn.hackclub-assets.com/01a0e485-111b-7ffb-977f-45f865ccc53e/background.avif" alt="">
   <h1>Log in to Piko</h1>
 
   <form class="auth-form" method="post" action="{{ url_for('accounts.password_login') }}">
@@ -13,31 +15,45 @@
     <input type="hidden" name="next" value="{{ next }}">
 
     <label for="identifier">Email or username</label>
-    <input id="identifier" name="identifier" type="text"
+    <input class="curve bold" id="identifier" name="identifier" type="text"
            autocomplete="username" required autofocus>
 
     <label for="password">Password</label>
-    <input id="password" name="password" type="password"
+    <input class="curve bold" id="password" name="password" type="password"
            autocomplete="current-password" required>
 
-    <button type="submit">Log in</button>
+    <button class="curve bold" type="submit">Log in</button>
   </form>
 
-  {% if providers %}
-    <div class="auth-divider"><span>or</span></div>
-    {% for name, label in providers %}
-      <a class="oauth-btn oauth-{{ name }}"
-         href="{{ url_for('auth.login', provider=name, next=next) }}">
-        Continue with {{ label }}
-      </a>
-    {% endfor %}
+{% if providers %}
+  <div class="auth-divider"><span>or</span></div>
+
+  <div class="providers">
+  {% for name, label in providers %}
+    <a class="oauth-btn oauth-{{ name }} curve"
+   href="{{ url_for('auth.login', provider=name, next=next) }}"
+   aria-label="Continue with {{ label }}">
+
+  {% if name == "google" %}
+    <img src="https://cdn.hackclub.com/01a0e4b1-6d35-77d1-8b46-7ed949e4257b/google-icon-logo-svgrepo-com.svg" alt="">
+  {% elif name == "github" %}
+    <img src="https://cdn.hackclub.com/01a0e4b2-ff4d-7c38-9aed-0887a6c921f1/github.svg" alt="">
+  {% elif name == "discord" %}
+    <img src="https://cdn.hackclub.com/01a0e4b3-862f-7a28-bf13-b8649d628c39/discord-icon-svgrepo-com.svg" alt="">
+  {% elif name == "hackclub" %}
+    <img src="https://cdn.hackclub.com/01a0e4b4-8748-7a91-aeb8-c33ba9230a37/icon-rounded.svg" alt="">
   {% endif %}
 
-  <p class="auth-alt" id="passkey-wrap" hidden>
-    <button type="button" class="oauth-btn" id="passkey-btn">
-      Sign in with a passkey
-    </button>
-  </p>
+</a>
+  {% endfor %}
+
+  <button type="button" class="oauth-btn curve" id="passkey-btn" hidden>
+    Sign in with a passkey
+  </button>
+</div>
+{% endif %}
+
+
 
   <p class="auth-alt">
     New here? <a href="{{ url_for('accounts.signup', next=next) }}">Create an account</a>
@@ -48,12 +64,11 @@
 {% block js %}
 <script src="{{ url_for('static', filename='webauthn.js') }}"></script>
 <script>
-  var wrap = document.getElementById('passkey-wrap');
-  var btn = document.getElementById('passkey-btn');
+var btn = document.getElementById('passkey-btn');
 
-  // Only offered when the browser can actually do it, so nobody clicks a
-  // button that cannot work.
-  if (window.webauthnSupported()) { wrap.hidden = false; }
+if (window.webauthnSupported()) {
+  btn.hidden = false;
+}
 
   btn.addEventListener('click', async function () {
     btn.disabled = true;

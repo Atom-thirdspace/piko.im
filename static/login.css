@@ -1,0 +1,76 @@
+/* --------------------------login */
+
+#letter {
+    width: 80rem;
+    position: absolute;
+
+    transform: translateX(-35.2%);
+    z-index: -1;
+    top: -14rem;
+}
+body{
+    overflow: hidden;
+}
+
+.curve {
+    border-radius: 12px;
+}
+.providers {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1px;
+}
+
+.providers .oauth-btn {
+    width: 60px;
+}
+
+#passkey-btn {
+    flex-basis: 100%;
+    width: 160;
+}
+
+.auth {
+    position: fixed;
+    top: 55%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+    margin-top: 0;
+}
+.bold {
+    border: 2px solid #77431d;
+}
+
+.oauth-btn img {
+    width: 35px;
+    display: block;
+    margin: auto;
+    border: 2px solid #77431d;
+
+    padding: 10px;
+    border-radius: 12px;
+    background-color: white;
+}
+.oauth-btn {
+    background: transparent;
+    border: transparent;
+}
+
+form {
+    width: 70%;
+    left: 50%;
+    transform: translateX(18%);
+}
+.auth-form input:focus {
+    outline: none;
+    border-color: #77431d;
+    box-shadow: 0 0 0 2px rgba(119, 67, 29, 0.15);
+}
+h1 {
+    transform: translateY(-25%) translateX(21%);
+    color: #77431d;
+}
+label{
+    color: #77431d;
+}
