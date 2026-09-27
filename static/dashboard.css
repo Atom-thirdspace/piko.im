@@ -60,7 +60,7 @@ body {
     height: 64px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--brand);
+    border: 1.5px solid var(--brand);
     flex: 0 0 auto;
 }
 
