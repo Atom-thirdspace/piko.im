@@ -53,9 +53,15 @@ body{
     border-radius: 12px;
     background-color: rgb(255, 222, 169);
 }
+
+.oauth-btn:hover {
+    width: 40px;
+}
+
 .oauth-btn {
     background: transparent;
     border: transparent;
+    transition: 0.3s;
 }
 
 form {
