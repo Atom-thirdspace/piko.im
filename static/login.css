@@ -114,3 +114,15 @@ label{
 #leaf:hover {
     transform: rotate(20deg) translateY(1rem);
 }
+
+#back {
+    width: 2.5rem;
+    position: sticky;
+    top: 4vh;
+    left: 4rem;
+    transition: 0.2s;
+}
+
+#back:hover {
+    transform: scale(1.1);
+}
