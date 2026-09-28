@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
@@ -875,6 +875,55 @@ class JudgeJob(db.Model):
     finished_at = db.Column(db.DateTime(timezone=True))
 
     submission = db.relationship("Submission")
+
+
+class ScratchRun(db.Model):
+    """A Run-button execution: the learner's code against their own input.
+
+    Kept apart from Submission on purpose - a run is not an attempt. It earns
+    no XP, sets no verdict on the problem, never touches the streak, and is
+    not what the similarity checker or the leaderboard look at. Rows are
+    disposable; prune_scratch_runs clears them out.
+    """
+    __tablename__ = "scratch_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    # Null means the playground rather than a specific problem.
+    problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           index=True)
+    language = db.Column(db.String(16), nullable=False)
+    source = db.Column(db.Text, nullable=False)
+    stdin = db.Column(db.Text, nullable=False, default="", server_default="")
+
+    status = db.Column(db.String(16), nullable=False, default="queued", index=True)
+    verdict = db.Column(db.String(32), nullable=False, default="", server_default="")
+    stdout = db.Column(db.Text, nullable=False, default="", server_default="")
+    stderr = db.Column(db.Text, nullable=False, default="", server_default="")
+    compile_output = db.Column(db.Text, nullable=False, default="", server_default="")
+    time_ms = db.Column(db.Integer, nullable=False, default=0)
+    error = db.Column(db.Text, nullable=False, default="", server_default="")
+
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False, index=True)
+    claimed_at = db.Column(db.DateTime(timezone=True))
+    finished_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+    problem = db.relationship("Problem")
+
+
+def prune_scratch_runs(older_than_hours=6):
+    """Runs are scratch paper. Drop anything that has been sitting a while."""
+    cutoff = _utcnow() - timedelta(hours=older_than_hours)
+    deleted = db.session.execute(
+        db.delete(ScratchRun).where(ScratchRun.created_at < cutoff)
+    ).rowcount
+    db.session.commit()
+    return deleted or 0
+
 
 class UserAchievement(db.Model):
     __tablename__ = "user_achievements"

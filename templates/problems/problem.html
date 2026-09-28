@@ -2,12 +2,17 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='editor.css') }}">
 {% endblock head %}
 
 {% block content %}
-<main class="learn problem-page"
+<main class="learn problem-page is-split"
       data-submit-url="{{ url_for('problems.submit', slug=problem.slug) }}"
-      data-result-url="{{ url_for('problems.result', slug=problem.slug, sub_id=0)[:-1] }}">
+      data-result-url="{{ url_for('problems.result', slug=problem.slug, sub_id=0)[:-1] }}"
+      data-run-url="{{ url_for('problems.run', slug=problem.slug) }}"
+      data-run-result-url="{{ url_for('problems.run_result', slug=problem.slug, run_id=0)[:-1] }}"
+      data-slug="{{ problem.slug }}"
+      data-language="{{ default_language or 'python' }}">
   <header class="learn-head">
     <p class="learn-crumbs">
       {% if lesson %}
@@ -31,181 +36,435 @@
     </p>
   </header>
 
-  <article class="prose">{{ statement }}</article>
+  <div class="split">
+    <div class="split__doc">
+      <article class="prose">{{ statement }}</article>
 
-  {% if samples %}
-    <section class="samples">
-      <h2>Samples</h2>
-      {% for test in samples %}
-        <div class="sample">
-          <div><h3>Input</h3><pre>{{ test.stdin }}</pre></div>
-          <div><h3>Output</h3><pre>{{ test.expected_stdout }}</pre></div>
+      {% if samples %}
+        <section class="samples">
+          <h2>Samples</h2>
+          {% for test in samples %}
+            <div class="sample">
+              <div><h3>Input</h3><pre>{{ test.stdin }}</pre></div>
+              <div><h3>Output</h3><pre>{{ test.expected_stdout }}</pre></div>
+            </div>
+          {% endfor %}
+        </section>
+      {% endif %}
+
+      {% if hints %}
+        <section class="hints"
+                 data-reveal-url="{{ url_for('problems.reveal', slug=problem.slug, hint_id=0)[:-1] }}">
+          <h2>Stuck?</h2>
+          <p class="hints__meta">
+            {% if solved %}
+              You have solved this - hints are free now.
+            {% else %}
+              Solving this now pays <b data-award>{{ award_now }}</b> XP{% if award_now < problem.xp %}
+              (down from {{ problem.xp }}){% endif %}.
+            {% endif %}
+          </p>
+
+          {% for h in hints %}
+            <div class="hint {{ 'is-open' if h.id in revealed_hints }}" data-hint="{{ h.id }}">
+              {% if h.id in revealed_hints %}
+                <div class="hint__body">{{ hint_bodies[h.id] }}</div>
+              {% else %}
+                <button type="button" class="hint__open">
+                  Hint {{ loop.index }}{% if not solved %} &middot; costs {{ h.cost_xp }} XP{% endif %}
+                </button>
+                <div class="hint__body" hidden></div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </section>
+      {% endif %}
+
+      {% if recent %}
+        <section class="submissions">
+          <h2>Your recent submissions</h2>
+          <ul>
+            {% for sub in recent %}
+              <li>
+                <span class="pill pill-{{ 'done' if sub.verdict == 'accepted' else 'fail' }}">
+                  {{ verdict_labels.get(sub.verdict, sub.verdict) }}
+                </span>
+                <span>{{ sub.passed }}/{{ sub.total }} tests · {{ sub.language }}</span>
+                <time datetime="{{ sub.created_at.isoformat() }}">{{ sub.created_at.strftime('%d %b %H:%M') }}</time>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+    </div>
+
+    <div class="split__work">
+      <section class="ws">
+        <div class="ws__bar">
+          <label for="language">Language</label>
+          <select id="language">
+            {% for lang in languages %}
+              <option value="{{ lang }}"{% if lang == default_language %} selected{% endif %}>{{ lang }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="ws__ghost" id="reset">Reset</button>
+          <span class="ws__spacer"></span>
+          <button type="button" class="ws__run" id="run">Run</button>
+          <button type="button" class="ws__go" id="submit">Submit</button>
         </div>
-      {% endfor %}
-    </section>
-  {% endif %}
 
-  {% if hints %}
-    <section class="hints"
-             data-reveal-url="{{ url_for('problems.reveal', slug=problem.slug, hint_id=0)[:-1] }}">
-      <h2>Stuck?</h2>
-      <p class="hints__meta">
-        {% if solved %}
-          You have solved this - hints are free now.
-        {% else %}
-          Solving this now pays <b data-award>{{ award_now }}</b> XP{% if award_now < problem.xp %}
-          (down from {{ problem.xp }}){% endif %}.
-        {% endif %}
-      </p>
+        <div id="editor"></div>
 
-      {% for h in hints %}
-        <div class="hint {{ 'is-open' if h.id in revealed_hints }}" data-hint="{{ h.id }}">
-          {% if h.id in revealed_hints %}
-            <div class="hint__body">{{ hint_bodies[h.id] }}</div>
-          {% else %}
-            <button type="button" class="hint__open">
-              Hint {{ loop.index }}{% if not solved %} &middot; costs {{ h.cost_xp }} XP{% endif %}
-            </button>
-            <div class="hint__body" hidden></div>
-          {% endif %}
+        <div class="io">
+          <div class="io__tabs" role="tablist" aria-label="Input and output">
+            <button type="button" class="io__tab" role="tab" id="tab-in"
+                    aria-controls="panel-in" aria-selected="true" data-tab="in">Input</button>
+            <button type="button" class="io__tab" role="tab" id="tab-out"
+                    aria-controls="panel-out" aria-selected="false" data-tab="out">Output</button>
+          </div>
+
+          <div class="io__panel" id="panel-in" role="tabpanel" aria-labelledby="tab-in">
+            <p class="io__hint">
+              What your program reads from stdin when you press Run. Submit ignores
+              this and uses the real tests.
+            </p>
+            <textarea class="io__in" id="stdin" spellcheck="false"
+                      aria-label="Custom input"></textarea>
+            {% if samples %}
+              <div class="io__fills">
+                {% for test in samples %}
+                  <button type="button" class="io__fill"
+                          data-fill="{{ test.stdin }}">Use sample {{ loop.index }}</button>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="io__panel" id="panel-out" role="tabpanel"
+               aria-labelledby="tab-out" hidden>
+            <div id="out"><p class="out__idle">Run your code to see what it prints.</p></div>
+          </div>
         </div>
-      {% endfor %}
-    </section>
-  {% endif %}
+      </section>
 
-  <section class="editor">
-    <h2>Your solution</h2>
-    <label for="language">Language</label>
-    <select id="language">
-      {% for lang in languages %}
-        <option value="{{ lang }}"{% if lang == default_language %} selected{% endif %}>{{ lang }}</option>
-      {% endfor %}
-    </select>
-
-    <textarea id="source" rows="18" spellcheck="false"
-              placeholder="Read from stdin, print to stdout."></textarea>
-
-    <button id="run" type="button" class="btn btn-primary">Submit</button>
-    <div id="result" class="result" hidden></div>
-  </section>
-
-  {% if recent %}
-    <section class="submissions">
-      <h2>Your recent submissions</h2>
-      <ul>
-        {% for sub in recent %}
-          <li>
-            <span class="pill pill-{{ 'done' if sub.verdict == 'accepted' else 'fail' }}">
-              {{ verdict_labels.get(sub.verdict, sub.verdict) }}
-            </span>
-            <span>{{ sub.passed }}/{{ sub.total }} tests · {{ sub.language }}</span>
-            <time datetime="{{ sub.created_at.isoformat() }}">{{ sub.created_at.strftime('%d %b %H:%M') }}</time>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% endif %}
+      <p class="ws__note">Ctrl+Enter runs &middot; Ctrl+Shift+Enter submits</p>
+    </div>
+  </div>
 </main>
 {% endblock content %}
 
 {% block js %}
+<script src="{{ url_for('static', filename='editor.js') }}"></script>
 <script>
 (function () {
-  var page = document.querySelector('.problem-page');
-  var run = document.getElementById('run');
-  var box = document.getElementById('result');
+  "use strict";
 
-  function pane(title, text) {
-    var wrap = document.createElement('div');
-    wrap.className = 'tcase__pane';
-    var h = document.createElement('b');
-    h.textContent = title;
-    var pre = document.createElement('pre');
-    // textContent, never innerHTML - this is the learner's own program output.
-    pre.textContent = (text === '' || text == null) ? '(empty)' : text;
-    wrap.appendChild(h);
+  var page = document.querySelector('.problem-page');
+  var runBtn = document.getElementById('run');
+  var subBtn = document.getElementById('submit');
+  var resetBtn = document.getElementById('reset');
+  var langSel = document.getElementById('language');
+  var stdinBox = document.getElementById('stdin');
+  var out = document.getElementById('out');
+  var tabIn = document.getElementById('tab-in');
+  var tabOut = document.getElementById('tab-out');
+  var panelIn = document.getElementById('panel-in');
+  var panelOut = document.getElementById('panel-out');
+
+  function token() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
+  /* ------------------------------------------------------------ drafts */
+
+  function key(lang) { return 'piko:draft:' + page.dataset.slug + ':' + lang; }
+
+  function loadDraft(lang) {
+    try {
+      var saved = localStorage.getItem(key(lang));
+      if (saved !== null) { return saved; }
+    } catch (err) { /* private window, or storage is off */ }
+    return window.PikoEditor.starter(lang);
+  }
+
+  function saveDraft(lang, text) {
+    try { localStorage.setItem(key(lang), text); } catch (err) { /* ignore */ }
+  }
+
+  /* ------------------------------------------------------------ editor */
+
+  var lang = langSel.value || page.dataset.language || 'python';
+
+  var editor = window.PikoEditor.create(document.getElementById('editor'), {
+    language: lang,
+    value: loadDraft(lang),
+    label: 'Your solution',
+    onRun: function () { doRun(); },
+    onSubmit: function () { doSubmit(); },
+    onChange: function (ed) { saveDraft(lang, ed.getValue()); }
+  });
+
+  langSel.addEventListener('change', function () {
+    saveDraft(lang, editor.getValue());          // keep what was there
+    lang = langSel.value;
+    editor.setLanguage(lang);
+    editor.setValue(loadDraft(lang));
+    editor.focus();
+  });
+
+  resetBtn.addEventListener('click', function () {
+    if (!window.confirm('Replace your code with the starter template?')) { return; }
+    editor.setValue(window.PikoEditor.starter(lang));
+    editor.focus();
+  });
+
+  /* -------------------------------------------------------------- tabs */
+
+  function show(which) {
+    var isIn = which === 'in';
+    tabIn.setAttribute('aria-selected', isIn ? 'true' : 'false');
+    tabOut.setAttribute('aria-selected', isIn ? 'false' : 'true');
+    panelIn.hidden = !isIn;
+    panelOut.hidden = isIn;
+  }
+
+  tabIn.addEventListener('click', function () { show('in'); });
+  tabOut.addEventListener('click', function () { show('out'); });
+
+  var fills = document.querySelectorAll('.io__fill');
+  for (var i = 0; i < fills.length; i++) {
+    fills[i].addEventListener('click', function (ev) {
+      stdinBox.value = ev.currentTarget.dataset.fill;
+      stdinBox.focus();
+    });
+  }
+
+  /* ------------------------------------------------------------ output */
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) { node.className = cls; }
+    if (text != null) { node.textContent = text; }
+    return node;
+  }
+
+  // Always textContent: this is the learner's own program output.
+  function block(title, text, bad) {
+    var wrap = el('div', 'out__block' + (bad ? ' is-err' : ''));
+    wrap.appendChild(el('b', null, title));
+    var pre = el('pre');
+    if (text === '' || text == null) {
+      pre.appendChild(el('span', 'out__empty', '(no output)'));
+    } else {
+      pre.textContent = text;
+    }
     wrap.appendChild(pre);
     return wrap;
   }
 
-  function summary(data) {
-    var bits = [data.label + ' - ' + data.passed + '/' + data.total + ' tests'];
-    if (data.max_time_ms) { bits.push(data.max_time_ms + ' ms'); }
-    if (data.xp_awarded) { bits.push('+' + data.xp_awarded + ' XP'); }
-    if (data.lesson_xp_awarded) {
-      bits.push('+' + data.lesson_xp_awarded + ' XP lesson complete');
-    }
-    if (data.solve && data.solve.percentile !== null && data.solve.percentile !== undefined) {
-      bits.push('faster than ' + data.solve.percentile + '% of '
-                + data.solve.solvers + ' solvers');
-    }
-    if (data.streak && data.streak.froze) {
-      bits.push('\u2744 a freeze saved your ' + data.streak.days + '-day streak');
-    } else if (data.streak && data.streak.days) {
-      bits.push(data.streak.days + '-day streak');
-    }
-    var p = document.createElement('p');
-    p.className = 'result__line';
-    p.textContent = bits.join(' · ');
-    return p;
-  }
-
-  function failureBlock(fail) {
-    var wrap = document.createElement('div');
-    wrap.className = 'tcase';
-
-    var head = document.createElement('p');
-    head.className = 'tcase__head';
-    head.textContent = 'Test ' + (fail.index + 1) + ' - ' + fail.label;
-    wrap.appendChild(head);
-
-    if (!fail.is_sample) {
-      var note = document.createElement('p');
-      note.className = 'tcase__hidden';
-      note.textContent = 'This is a hidden test, so its input is not shown. '
-                       + 'Re-read the edge cases in the statement.';
-      wrap.appendChild(note);
-      return wrap;
-    }
-
-    var grid = document.createElement('div');
-    grid.className = 'tcase__grid';
-    grid.appendChild(pane('Input', fail.stdin));
-    grid.appendChild(pane('Expected', fail.expected));
-    grid.appendChild(pane('Your output', fail.actual));
-    wrap.appendChild(grid);
-
-    if (fail.stderr) { wrap.appendChild(pane('Error', fail.stderr)); }
+  function head(label, ok, meta) {
+    var wrap = el('p', 'out__head');
+    wrap.appendChild(el('span', 'out__verdict ' + (ok ? 'is-ok' : 'is-fail'), label));
+    if (meta) { wrap.appendChild(el('span', 'out__meta', meta)); }
     return wrap;
   }
 
-  function render(data) {
-    box.textContent = '';
-    var accepted = data.verdict === 'accepted';
-    box.className = 'result ' + (accepted ? 'is-ok' : 'is-fail');
-    box.appendChild(summary(data));
-
-    if (data.compile_output) { box.appendChild(pane('Compiler', data.compile_output)); }
-    if (data.message) { box.appendChild(pane('Judge', data.message)); }
-    if (!accepted && data.first_failure) {
-      box.appendChild(failureBlock(data.first_failure));
-    }
+  function busy(text) {
+    show('out');
+    out.textContent = '';
+    out.appendChild(el('p', 'out__idle', text));
   }
 
-  var POLL_MS = 900;
+  function mark(ok) {
+    var old = tabOut.querySelector('.dot');
+    if (old) { old.remove(); }
+    if (ok === null) { return; }
+    tabOut.appendChild(el('span', 'dot ' + (ok ? 'dot-ok' : 'dot-fail')));
+  }
 
-  // The judge runs in a worker now, so a submission comes back as an id and
-  // we ask for the verdict until it lands.
-  function poll(id, tries) {
-    return fetch(page.dataset.resultUrl + id)
+  function fail(message) {
+    show('out');
+    out.textContent = '';
+    out.appendChild(head('Could not run', false, ''));
+    out.appendChild(el('p', 'out__idle', message));
+    mark(false);
+  }
+
+  /* --------------------------------------------------------------- run */
+
+  var POLL_MS = 700;
+
+  function poll(url, id, tries) {
+    return fetch(url + id, { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.status !== 'pending') { return data; }
         if (tries <= 0) { throw new Error('timeout'); }
         return new Promise(function (ok) { setTimeout(ok, POLL_MS); })
-          .then(function () { return poll(id, tries - 1); });
+          .then(function () { return poll(url, id, tries - 1); });
       });
   }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token()
+      },
+      body: JSON.stringify(body)
+    });
+  }
+
+  function renderRun(data) {
+    show('out');
+    out.textContent = '';
+
+    var ok = data.verdict === 'ok';
+    var meta = data.time_ms ? data.time_ms + ' ms' : '';
+    out.appendChild(head(data.label || data.verdict, ok, meta));
+
+    if (data.compile_output) { out.appendChild(block('Compiler', data.compile_output, true)); }
+    if (data.error) { out.appendChild(block('Judge', data.error, true)); }
+
+    if (data.verdict === 'time_limit_exceeded') {
+      out.appendChild(el('p', 'out__idle', 'It was still running when the clock ran out.'));
+    } else if (data.verdict === 'memory_limit_exceeded') {
+      out.appendChild(el('p', 'out__idle', 'It asked for more memory than the box has.'));
+    } else if (data.verdict === 'output_limit_exceeded') {
+      out.appendChild(el('p', 'out__idle', 'It printed far too much - check for a runaway loop.'));
+    }
+
+    if (data.verdict !== 'compile_error') {
+      out.appendChild(block('Output', data.stdout));
+      if (data.stderr) { out.appendChild(block('Errors', data.stderr, true)); }
+    }
+    mark(ok);
+  }
+
+  async function doRun() {
+    var source = editor.getValue();
+    if (!source.trim()) { return; }
+
+    runBtn.disabled = subBtn.disabled = true;
+    runBtn.textContent = 'Running…';
+    busy('Starting a container…');
+
+    try {
+      var res = await post(page.dataset.runUrl, {
+        language: lang, source: source, stdin: stdinBox.value
+      });
+      var data = await res.json();
+
+      if (!res.ok) { fail(data.error || 'Something went wrong.'); return; }
+
+      if (data.status === 'queued') {
+        busy('Waiting for a judge…');
+        data = await poll(page.dataset.runResultUrl, data.run_id, 40);
+      }
+      renderRun(data);
+    } catch (err) {
+      fail('The judge is taking too long. Try again in a moment.');
+    } finally {
+      runBtn.disabled = subBtn.disabled = false;
+      runBtn.textContent = 'Run';
+    }
+  }
+
+  /* ------------------------------------------------------------ submit */
+
+  function testRows(tests) {
+    var list = el('ul', 'tests');
+    tests.forEach(function (t) {
+      var li = el('li');
+      li.appendChild(el('span', 'n', 'Test ' + (t.index + 1)));
+      li.appendChild(el('span', 'v ' + (t.verdict === 'accepted' ? 'is-ok' : 'is-fail'),
+                        t.label));
+      if (t.is_sample) { li.appendChild(el('span', 'tag', 'sample')); }
+      li.appendChild(el('span', 'ms', (t.time_ms || 0) + ' ms'));
+      list.appendChild(li);
+    });
+    return list;
+  }
+
+  function renderSubmit(data) {
+    show('out');
+    out.textContent = '';
+
+    var ok = data.verdict === 'accepted';
+    var bits = [data.passed + '/' + data.total + ' tests'];
+    if (data.max_time_ms) { bits.push(data.max_time_ms + ' ms'); }
+    if (data.solve && data.solve.percentile != null) {
+      bits.push('faster than ' + data.solve.percentile + '% of '
+                + data.solve.solvers + ' solvers');
+    }
+    if (data.streak && data.streak.froze) {
+      bits.push('❄ a freeze saved your ' + data.streak.days + '-day streak');
+    } else if (data.streak && data.streak.days) {
+      bits.push(data.streak.days + '-day streak');
+    }
+    out.appendChild(head(data.label || data.verdict, ok, bits.join(' · ')));
+
+    if (data.compile_output) { out.appendChild(block('Compiler', data.compile_output, true)); }
+    if (data.message) { out.appendChild(block('Judge', data.message, true)); }
+
+    var fail_ = data.first_failure;
+    if (!ok && fail_) {
+      if (fail_.is_sample) {
+        out.appendChild(block('Input', fail_.stdin));
+        out.appendChild(block('Expected', fail_.expected));
+        out.appendChild(block('You printed', fail_.actual, true));
+        if (fail_.stderr) { out.appendChild(block('Errors', fail_.stderr, true)); }
+      } else {
+        out.appendChild(el('p', 'out__idle',
+          'Test ' + (fail_.index + 1) + ' is a hidden case, so its input stays '
+          + 'hidden. Re-read the edge cases in the statement.'));
+      }
+    }
+
+    if (data.tests && data.tests.length) { out.appendChild(testRows(data.tests)); }
+    mark(ok);
+  }
+
+  async function doSubmit() {
+    var source = editor.getValue();
+    if (!source.trim()) { return; }
+
+    runBtn.disabled = subBtn.disabled = true;
+    subBtn.textContent = 'Judging…';
+    busy('Queued…');
+
+    try {
+      var res = await post(page.dataset.submitUrl, { language: lang, source: source });
+      var data = await res.json();
+
+      if (!res.ok) { fail(data.error || 'Something went wrong.'); return; }
+
+      if (data.status === 'queued') {
+        busy('Waiting for a judge…');
+        data = await poll(page.dataset.resultUrl, data.submission_id, 60);
+      }
+      renderSubmit(data);
+
+      // The lesson and the XP only settle on the server, so pick the new
+      // state up once the learner has had a moment to read the verdict.
+      if (data.verdict === 'accepted') {
+        setTimeout(function () { location.reload(); }, 2200);
+      }
+    } catch (err) {
+      fail('The judge is taking too long. Your submission is saved and will '
+           + 'finish in the background.');
+    } finally {
+      runBtn.disabled = subBtn.disabled = false;
+      subBtn.textContent = 'Submit';
+    }
+  }
+
+  runBtn.addEventListener('click', doRun);
+  subBtn.addEventListener('click', doSubmit);
+
+  /* ------------------------------------------------------------- hints */
 
   var hintBox = document.querySelector('.hints');
   if (hintBox) {
@@ -224,9 +483,7 @@
       try {
         var res = await fetch(hintBox.dataset.revealUrl + card.dataset.hint, {
           method: 'POST',
-          headers: {
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-          }
+          headers: { 'X-CSRF-Token': token() }
         });
         if (!res.ok) { btn.disabled = false; return; }
 
@@ -242,58 +499,6 @@
       }
     });
   }
-
-  run.addEventListener('click', async function () {
-    var source = document.getElementById('source').value;
-    if (!source.trim()) { return; }
-
-    run.disabled = true;
-    run.textContent = 'Judging…';
-    box.hidden = false;
-    box.className = 'result';
-    box.textContent = 'Queued…';
-
-    try {
-      var res = await fetch(page.dataset.submitUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Same token the forms carry; the guard accepts either.
-          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({
-          language: document.getElementById('language').value,
-          source: source
-        })
-      });
-      var data = await res.json();
-
-      if (!res.ok) {
-        box.className = 'result is-fail';
-        box.textContent = data.error || 'Something went wrong.';
-        return;
-      }
-
-      if (data.status === 'queued') {
-        box.textContent = 'Waiting for a judge…';
-        data = await poll(data.submission_id, 60);      // roughly a minute
-      }
-
-      render(data);
-
-      // The lesson only closes on the server, so reload to pick up the state.
-      if (data.verdict === 'accepted') {
-        setTimeout(function () { location.reload(); }, 1500);
-      }
-    } catch (err) {
-      box.className = 'result is-fail';
-      box.textContent = 'The judge is taking too long. Your submission is saved '
-                      + 'and will finish in the background.';
-    } finally {
-      run.disabled = false;
-      run.textContent = 'Submit';
-    }
-  });
 })();
 </script>
 {% endblock js %}

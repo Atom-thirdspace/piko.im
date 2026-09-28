@@ -1,4 +1,5 @@
 AC = "accepted"
+OK = "ok"                       # a Run finished; nothing was scored
 WA = "wrong_answer"
 TLE = "time_limit_exceeded"
 MLE = "memory_limit_exceeded"
@@ -11,6 +12,7 @@ RUNNING = "running"            # a worker has it
 
 LABELS = {
     AC: "Accepted",
+    OK: "Finished",
     WA: "Wrong Answer",
     TLE: "Time Limit Exceeded",
     MLE: "Memory Limit Exceeded",

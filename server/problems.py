@@ -5,16 +5,18 @@ from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
 
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
-from .models import (JudgeJob, Lesson, Problem, ProblemHint, StreakFreezeUse,
-                     Submission, User, award_after_hints, db, hint_penalty,
-                     reveal_hint, revealed_hint_ids, solve_percentile)
+from .models import (JudgeJob, Lesson, Problem, ProblemHint, ScratchRun,
+                     StreakFreezeUse, Submission, User, award_after_hints, db,
+                     hint_penalty, reveal_hint, revealed_hint_ids,
+                     solve_percentile)
 from .progress import streak_state, user_today
-from .ratelimit import submit_block_reason
+from .ratelimit import run_block_reason, submit_block_reason
 from .session import current_user, login_required
 
 problems_bp = Blueprint("problems", __name__)
 
 MAX_SOURCE_BYTES = 64 * 1024
+MAX_STDIN_BYTES = 16 * 1024
 
 
 def _problem_or_404(slug):
@@ -209,6 +211,66 @@ def result(slug, sub_id):
     body = {"submission_id": sub.id, "status": "pending" if pending else "done"}
     body.update(_result_payload(problem, sub))
     return jsonify(**body)
+
+
+# --------------------------------------------------------------------------- #
+# the Run button - the learner's own input, nothing scored
+# --------------------------------------------------------------------------- #
+
+def _run_payload(run):
+    pending = run.status != "done"
+    return {
+        "run_id": run.id,
+        "status": "pending" if pending else "done",
+        "verdict": run.verdict,
+        "label": V.LABELS.get(run.verdict, run.verdict),
+        "stdout": run.stdout,
+        "stderr": run.stderr,
+        "compile_output": run.compile_output,
+        "time_ms": run.time_ms,
+        "error": run.error,
+    }
+
+
+@problems_bp.route("/problems/<slug>/run", methods=["POST"])
+@login_required
+def run(slug):
+    problem = _problem_or_404(slug)
+    user = current_user()
+
+    payload = request.get_json(silent=True) or {}
+    language = payload.get("language", "")
+    source = payload.get("source", "")
+    stdin = payload.get("stdin", "") or ""
+
+    if language not in LANGUAGES:
+        return jsonify(error="Unsupported language."), 400
+    if not source.strip():
+        return jsonify(error="There is nothing to run yet."), 400
+    if len(source.encode("utf-8")) > MAX_SOURCE_BYTES:
+        return jsonify(error="Your code is too large to run."), 413
+    if len(stdin.encode("utf-8")) > MAX_STDIN_BYTES:
+        return jsonify(error="That input is too large."), 413
+
+    blocked = run_block_reason(user)
+    if blocked:
+        return jsonify(error=blocked), 429
+
+    row = ScratchRun(user_id=user.id, problem_id=problem.id, language=language,
+                     source=source, stdin=stdin)
+    db.session.add(row)
+    db.session.commit()
+    return jsonify(run_id=row.id, status="queued"), 202
+
+
+@problems_bp.route("/problems/<slug>/run/<int:run_id>")
+@login_required
+def run_result(slug, run_id):
+    problem = _problem_or_404(slug)
+    row = db.session.get(ScratchRun, run_id)
+    if row is None or row.user_id != current_user().id or row.problem_id != problem.id:
+        abort(404)
+    return jsonify(**_run_payload(row))
 
 
 # --------------------------------------------------------------------------- #

@@ -3,13 +3,20 @@ import time
 from flask import current_app
 
 from . import verdicts as V
-from .runner import TestCase, judge
-from ..models import (JudgeJob, Problem, _utcnow, db, first_accepted,
-                      replace_test_results)
+from .runner import TestCase, judge, run_once
+from ..models import (JudgeJob, Problem, ScratchRun, _utcnow, db,
+                      first_accepted, replace_test_results)
 from ..progress import award_xp
 
-POLL_SECONDS = 2
+# Someone is watching a spinner while a run executes, so poll tighter than we
+# would for scored submissions.
+POLL_SECONDS = 1
 MAX_ATTEMPTS = 2
+
+# A run is the learner's own input, so it gets less rope than a graded
+# submission: shorter wall clock, and no per-problem override.
+RUN_TIME_LIMIT_SEC = 5.0
+RUN_MEMORY_MB = 256
 
 
 def _claim():
@@ -28,6 +35,38 @@ def _claim():
         job.submission.verdict = V.RUNNING
     db.session.commit()
     return job
+
+
+def _claim_run():
+    run = db.session.execute(
+        db.select(ScratchRun).where(ScratchRun.status == "queued")
+        .order_by(ScratchRun.created_at).limit(1)
+        .with_for_update(skip_locked=True)
+    ).scalar_one_or_none()
+    if run is None:
+        return None
+
+    run.status = "running"
+    run.attempts += 1
+    run.claimed_at = _utcnow()
+    db.session.commit()
+    return run
+
+
+def execute_run(run):
+    """A Run button press. Nothing here touches XP, streaks or verdicts."""
+    result = run_once(run.source, run.language, stdin=run.stdin,
+                      time_limit_sec=RUN_TIME_LIMIT_SEC,
+                      memory_mb=RUN_MEMORY_MB)
+    run.verdict = result.verdict
+    run.stdout = result.stdout
+    run.stderr = result.stderr
+    run.compile_output = result.compile_output
+    run.time_ms = result.time_ms
+    run.error = result.message or ""
+    run.status = "done"
+    run.finished_at = _utcnow()
+    db.session.commit()
 
 
 def run_job(job):
@@ -86,6 +125,25 @@ def run_job(job):
 
 
 def tick():
+    # Runs first: a submission can wait a second, a person staring at the
+    # editor cannot.
+    run = _claim_run()
+    if run is not None:
+        run_id = run.id
+        try:
+            execute_run(run)
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.exception("scratch run %s failed", run_id)
+            run = db.session.get(ScratchRun, run_id)
+            if run is not None:
+                run.status = "done"
+                run.verdict = V.IE
+                run.error = str(exc)[:500]
+                run.finished_at = _utcnow()
+                db.session.commit()
+        return True
+
     job = _claim()
     if job is None:
         return False
@@ -125,6 +183,12 @@ def register_cli(app):
             except Exception:
                 app.logger.exception("worker loop error")
                 time.sleep(POLL_SECONDS)
+
+    @app.cli.command("judge-prune")
+    def _prune():
+        """Delete scratch runs older than a few hours."""
+        from ..models import prune_scratch_runs
+        print("pruned %d scratch runs" % prune_scratch_runs())
 
     @app.cli.command("judge-drain")
     def _drain():
