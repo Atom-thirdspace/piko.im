@@ -126,3 +126,8 @@ label{
 #back:hover {
     transform: scale(1.1);
 }
+
+#sub {
+    font-size: 1.1rem;
+
+}
