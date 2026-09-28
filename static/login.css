@@ -7,6 +7,7 @@
     transform: translateX(-35.2%);
     z-index: -1;
     top: -14rem;
+    pointer-events: none;
 }
 body{
     overflow: hidden;
@@ -89,4 +90,17 @@ label{
 .auth-form input:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 1000px #fffdfb inset;
     -webkit-text-fill-color: #2a1a10;
+}
+
+#leaf {
+    width: 15rem;
+    position: absolute;
+    left: 23rem;
+    top: 20rem;
+    z-index: -2;
+    transition: 0.3s;
+}
+
+#leaf:hover {
+    transform: rotate(20deg) translateY(1rem);
 }
