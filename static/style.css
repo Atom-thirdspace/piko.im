@@ -213,7 +213,7 @@ img {
 .oauth-hackclub { background: #ec3750; border-color: #ec3750; color: #fff; }
 .oauth-discord { background: #5865f2; border-color: #5865f2; color: #fff; }
 .auth-divider { margin: 1.4rem 0 .6rem; text-align: center; opacity: .6; }
-.auth-alt { margin-top: 1.4rem; text-align: center; }
+.auth-alt { margin-top: 7rem; text-align: center; }
 .field-error { color: #c0392b; font-size: .85rem; margin: 0 0 .4rem; }
 .flashes { list-style: none; padding: 0; max-width: 380px; margin: 1rem auto; }
 .flash-error { color: #c0392b; }
@@ -530,3 +530,5 @@ img {
     padding: .05rem .45rem; font-size: .7rem; font-weight: 400; }
 .key-when { color: #7a6455; font-size: .8rem; flex: 1; }
 .key-add { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .6rem; }
+
+

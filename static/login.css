@@ -1,0 +1,133 @@
+/* --------------------------login */
+
+#letter {
+    width: 80rem;
+    position: absolute;
+
+    transform: translateX(-35.2%);
+    z-index: -1;
+    top: -14rem;
+    pointer-events: none;
+}
+body{
+    overflow: hidden;
+}
+
+.curve {
+    border-radius: 12px;
+}
+.providers {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1px;
+}
+
+.providers .oauth-btn {
+    width: 60px;
+}
+
+#passkey-btn {
+    flex-basis: 100%;
+    width: 160;
+}
+
+.auth {
+    position: fixed;
+    top: 55%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+    margin-top: 0;
+}
+.bold {
+    border: 2px solid #77431d;
+}
+
+.oauth-btn img {
+    width: 35px;
+    display: block;
+    margin: auto;
+    border: 2px solid #77431d;
+
+    padding: 10px;
+    transition: 0.3s;
+    border-radius: 12px;
+    background-color: rgb(255, 222, 169);
+}
+
+.oauth-btn img:hover {
+    transform: translateY(-10%);
+}
+.oauth-btn img:active {
+    transform: translateY(0);
+    transition: 0.1s;
+}
+
+.oauth-btn {
+    background: transparent;
+    border: transparent;
+}
+
+form {
+    width: 70%;
+    left: 50%;
+    transform: translateX(18%);
+}
+
+.auth-form input,
+.auth-form button {
+    background-color: rgb(255, 222, 169);
+}
+
+.auth-form input:focus {
+    outline: none;
+    border-color: #77431d;
+    box-shadow: 0 0 0 2px rgba(119, 67, 29, 0.15);
+}
+h1 {
+    transform: translateY(-25%) translateX(21%);
+    color: #77431d;
+}
+label{
+    color: #77431d;
+}
+
+.green {
+    color: green;
+}
+.auth-form input:-webkit-autofill,
+.auth-form input:-webkit-autofill:hover,
+.auth-form input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #fffdfb inset;
+    -webkit-text-fill-color: #2a1a10;
+}
+
+#leaf {
+    width: 15rem;
+    position: absolute;
+    left: 23rem;
+    top: 20rem;
+    z-index: -2;
+    transition: 0.3s;
+}
+
+#leaf:hover {
+    transform: rotate(20deg) translateY(1rem);
+}
+
+#back {
+    width: 2.5rem;
+    position: sticky;
+    top: 4vh;
+    left: 4rem;
+    transition: 0.2s;
+}
+
+#back:hover {
+    transform: scale(1.1);
+}
+
+#sub {
+    font-size: 1.1rem;
+
+}

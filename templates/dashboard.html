@@ -25,8 +25,8 @@
     {% endif %}
 
     <div class="dash__who">
-      <h1 class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
-      <p class="dash__handle">
+      <h1 data-aos="fade-down" class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
+      <p data-aos="fade-down" data-aos-delay="150" class="dash__handle">
         @{{ user.username }}
         {%- set focus = user.interest_keys | interest_labels %}
         {%- if focus %} · {{ focus | join(', ') }}{% endif %}
@@ -34,7 +34,7 @@
     </div>
 
     <div class="dash__streak" title="Current streak">
-    <img class="fire" src="https://cdn.hackclub.com/01a0c993-cc49-78c4-b25a-de6a32cfe2b3/Untitled%20design%20(81).avif" alt="">
+<img class="fire" src="https://cdn.pixabay.com/animation/2025/06/26/05/26/05-26-59-506_512.gif" alt="">
 
       <div data-aos="fade-in" data-aos-delay="200" >
         <span class="dash__streak-num">{{ user.streak_days or 0 }}</span>
@@ -146,14 +146,6 @@
     <a class="quicklink" href="{{ url_for('learn.index') }}">
       <span class="quicklink__title">Course paths</span>
       <span class="quicklink__sub">Browse and switch</span>
-    </a>
-    <a class="quicklink" href="{{ url_for('profile.me') }}">
-      <span class="quicklink__title">Profile</span>
-      <span class="quicklink__sub">How others see you</span>
-    </a>
-    <a class="quicklink" href="{{ url_for('profile.settings') }}">
-      <span class="quicklink__title">Settings</span>
-      <span class="quicklink__sub">Goal, language, account</span>
     </a>
   </aside>
 
