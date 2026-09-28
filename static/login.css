@@ -50,18 +50,22 @@ body{
     border: 2px solid #77431d;
 
     padding: 10px;
+    transition: 0.3s;
     border-radius: 12px;
     background-color: rgb(255, 222, 169);
 }
 
-.oauth-btn:hover {
-    width: 40px;
+.oauth-btn img:hover {
+    transform: translateY(-10%);
+}
+.oauth-btn img:active {
+    transform: translateY(0);
+    transition: 0.1s;
 }
 
 .oauth-btn {
     background: transparent;
     border: transparent;
-    transition: 0.3s;
 }
 
 form {
