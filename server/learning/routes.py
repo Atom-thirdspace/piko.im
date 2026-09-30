@@ -1,27 +1,35 @@
-"""The learning surface: choose a path, read the concepts, solve the problems.
-
-The catalog/enrollment tables already existed; this is the UI and the state
-transitions on top of them.
-"""
-
 from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    url_for)
 
 from ..models import (Enrollment, Lesson, LessonProgress, Problem, Submission,
-                      Track, Unit, db)
+                      Track, Unit, db, PUBLISHED)
 from ..progress import award_xp
 from ..session import current_user, login_required
 from .catalog import quiz_for
 from .markdown import render as render_md
+from ..admin_gate import is_admin
 
 learn_bp = Blueprint("learn", __name__, url_prefix="/learn")
 
 
 # ---------------------------------------------------------------- lookups
 
+def _may_preview():
+    """Authors and admins see their own unpublished work in place."""
+    user = current_user()
+    return user is not None and (is_admin(user) or user.is_author)
+
+
+def _visible(stmt, model):
+    """Learners only ever reach published rows."""
+    if _may_preview():
+        return stmt
+    return stmt.where(model.status == PUBLISHED)
+
+
 def _track_or_404(slug):
     track = db.session.execute(
-        db.select(Track).filter_by(slug=slug)
+        _visible(db.select(Track).filter_by(slug=slug), Track)
     ).scalar_one_or_none()
     if track is None:
         abort(404)
@@ -30,26 +38,35 @@ def _track_or_404(slug):
 
 def _lesson_or_404(track, unit_slug, lesson_slug):
     unit = db.session.execute(
-        db.select(Unit).filter_by(track_id=track.id, slug=unit_slug)
+        _visible(db.select(Unit).filter_by(track_id=track.id, slug=unit_slug), Unit)
     ).scalar_one_or_none()
     if unit is None:
         abort(404)
     lesson = db.session.execute(
-        db.select(Lesson).filter_by(unit_id=unit.id, slug=lesson_slug)
+        _visible(db.select(Lesson).filter_by(unit_id=unit.id, slug=lesson_slug), Lesson)
     ).scalar_one_or_none()
     if lesson is None:
         abort(404)
     return unit, lesson
 
 
+def _visible_units(track):
+    """track.units is an unfiltered relationship - drafts would show through."""
+    return [u for u in track.units if u.status == PUBLISHED or _may_preview()]
+
+
+def _visible_lessons(unit):
+    return [l for l in unit.lessons if l.status == PUBLISHED or _may_preview()]
+
+
 def _ordered_lessons(track):
     """Every lesson in the track, in the order a learner walks them."""
-    return db.session.execute(
-        db.select(Lesson)
-        .join(Unit, Lesson.unit_id == Unit.id)
-        .where(Unit.track_id == track.id)
-        .order_by(Unit.position, Lesson.position)
-    ).scalars().all()
+    stmt = (db.select(Lesson)
+            .join(Unit, Lesson.unit_id == Unit.id)
+            .where(Unit.track_id == track.id)
+            .order_by(Unit.position, Lesson.position))
+    stmt = _visible(_visible(stmt, Lesson), Unit)
+    return db.session.execute(stmt).scalars().all()
 
 
 def _completed_ids(user):
@@ -98,7 +115,7 @@ def _track_summary(track, done_ids):
         "done": done,
         "percent": round(done * 100 / total) if total else 0,
         "xp_total": sum(lesson.xp for lesson in lessons),
-        "levels": sorted({unit.level for unit in track.units}),
+        "levels": sorted({unit.level for unit in _visible_units(track)}),
         "next": _next_lesson(track, done_ids),
     }
 
@@ -173,7 +190,7 @@ def index():
     done_ids = _completed_ids(user)
     enrollments = _enrollments_by_track(user)
     tracks = db.session.execute(
-        db.select(Track).order_by(Track.position)
+        _visible(db.select(Track).order_by(Track.position), Track)
     ).scalars().all()
 
     summaries = []
@@ -200,9 +217,9 @@ def track(track_slug):
     next_lesson = summary["next"]
 
     units = []
-    for unit in track.units:
+    for unit in _visible_units(track):
         rows = []
-        for lesson in unit.lessons:
+        for lesson in _visible_lessons(unit):
             rows.append({
                 "lesson": lesson,
                 "done": lesson.id in done_ids,
@@ -335,7 +352,8 @@ def complete_lessons_for_problem(user, problem_id):
     wrapping that problem is finished by definition, so close it out and pay
     the lesson XP. Returns the total lesson XP awarded."""
     lessons = db.session.execute(
-        db.select(Lesson).where(Lesson.problem_id == problem_id)
+        db.select(Lesson).where(Lesson.problem_id == problem_id,
+                                Lesson.status == PUBLISHED)
     ).scalars().all()
     if not lessons:
         return 0

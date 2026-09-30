@@ -1,0 +1,123 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>Authors</h1>
+
+  {% if fresh %}
+    <div class="admin-note" data-fresh-invite>
+      <h2>New invite link</h2>
+      <p class="admin-hint">
+        This is the only time it is shown. The database keeps a hash, not the
+        link, so it cannot be recovered - issue a new one if you lose it.
+      </p>
+      <p class="admin-inline">
+        <input type="text" readonly size="70" value="{{ fresh }}" data-invite-url>
+        <button class="admin-btn" type="button" data-copy>Copy</button>
+      </p>
+    </div>
+  {% endif %}
+
+  <h2>Invite someone</h2>
+  <form method="post" action="{{ url_for('admin.author_invite') }}">
+    {{ csrf_field() }}
+    <p><label>Email (optional)<br>
+      <input type="email" name="email" size="40"
+             placeholder="leave blank for a link anyone can use"></label>
+      <span class="admin-hint">
+        With an address, only that account can accept.
+      </span>
+    </p>
+    <p><label>Note<br>
+      <input type="text" name="note" size="60"
+             placeholder="shown to them when they open the link"></label>
+    </p>
+    <p>
+      <label>Uses <input type="number" name="max_uses" value="1" min="1" max="50" size="4"></label>
+      <label>Valid for (days)
+        <input type="number" name="ttl_days" value="14" min="1" max="{{ max_ttl }}" size="4"></label>
+    </p>
+    <button class="admin-btn" type="submit">Create invite link</button>
+  </form>
+
+  <h2>Invites</h2>
+  {% if not invites %}
+    <p class="admin-hint">None yet.</p>
+  {% else %}
+    <table class="admin-table">
+      <thead>
+        <tr><th>Issued to</th><th>Note</th><th>Uses</th><th>Expires</th>
+            <th>State</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for inv in invites %}
+          <tr>
+            <td>{{ inv.email or 'anyone with the link' }}</td>
+            <td>{{ inv.note }}</td>
+            <td>{{ inv.uses }} / {{ inv.max_uses }}</td>
+            <td>{{ inv.expires_at.strftime('%d %b %Y') }}</td>
+            <td>
+              {% if inv.revoked_at %}revoked
+              {% elif inv.is_live %}live
+              {% else %}spent{% endif %}
+            </td>
+            <td>
+              {% if inv.is_live %}
+                <form class="admin-inline" method="post"
+                      action="{{ url_for('admin.author_invite_revoke', invite_id=inv.id) }}">
+                  {{ csrf_field() }}
+                  <button class="admin-btn" type="submit">Revoke</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <h2>Current authors</h2>
+  {% if not people %}
+    <p class="admin-hint">Nobody has accepted an invite yet.</p>
+  {% else %}
+    <table class="admin-table">
+      <thead><tr><th>Who</th><th>Email</th><th>Since</th><th></th></tr></thead>
+      <tbody>
+        {% for person in people %}
+          <tr>
+            <td>{{ person.username or person.name or person.id }}</td>
+            <td>{{ person.email }}</td>
+            <td>{{ person.author_since.strftime('%d %b %Y') if person.author_since }}</td>
+            <td>
+              <form class="admin-inline" method="post"
+                    action="{{ url_for('admin.author_remove', user_id=person.id) }}">
+                {{ csrf_field() }}
+                <button class="admin-btn" type="submit">Remove</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock admin_content %}
+
+{% block js %}
+<script>
+(function () {
+  var box = document.querySelector('[data-fresh-invite]');
+  if (!box) { return; }
+  var field = box.querySelector('[data-invite-url]');
+  var btn = box.querySelector('[data-copy]');
+
+  btn.addEventListener('click', function () {
+    field.select();
+    var done = function () { btn.textContent = 'Copied'; };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(field.value).then(done, function () {});
+    } else {
+      try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ }
+    }
+  });
+})();
+</script>
+{% endblock js %}

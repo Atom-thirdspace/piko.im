@@ -1,0 +1,28 @@
+{#- Shared chrome for the three author forms: heading, status line, and any
+    editor feedback left on a rejected submission. -#}
+
+{% macro head(title, row) %}
+  <header class="learn-head">
+    <p class="learn-crumbs"><a href="{{ url_for('authors.index') }}">Author dashboard</a></p>
+    <h1>{{ title }}</h1>
+    {% if row %}
+      <p class="track-meta">
+        <span class="pill pill-{{ 'done' if row.status == 'published'
+                                  else ('quiz' if row.status == 'review' else 'reading') }}">
+          {{ row.status }}
+        </span>
+        {% if row.status == 'review' %}&middot; waiting on an editor{% endif %}
+      </p>
+      {% if row.review_note %}
+        <div class="auth-feedback">
+          <b>An editor sent this back</b>
+          <p>{{ row.review_note }}</p>
+        </div>
+      {% endif %}
+    {% endif %}
+  </header>
+{% endmacro %}
+
+{% macro err(errors, field) %}
+  {% if errors.get(field) %}<span class="auth-err">{{ errors[field] }}</span>{% endif %}
+{% endmacro %}

@@ -1,0 +1,81 @@
+{% extends "base-dashboard.html" %}
+{% import "authors/_form.html" as f %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='authors.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  {{ f.head('Edit lesson' if lesson else 'New lesson', lesson) }}
+
+  {% if not units %}
+    <p class="learn-lede">
+      You need a unit before a lesson can live in one.
+      <a href="{{ url_for('authors.unit_form') }}">Start a unit</a>.
+    </p>
+  {% else %}
+    <form method="post" class="auth-form">
+      {{ csrf_field() }}
+
+      <p><label>Unit<br>
+        <select name="unit_id">
+          {% for u in units %}
+            <option value="{{ u.id }}"
+              {{ 'selected' if lesson and lesson.unit_id == u.id }}>
+              {{ u.track.title }} / {{ u.title }}{% if u.status != 'published' %} ({{ u.status }}){% endif %}
+            </option>
+          {% endfor %}
+        </select></label>
+        {{ f.err(errors, 'unit_id') }}
+      </p>
+
+      <p><label>Title<br>
+        <input type="text" name="title" size="60"
+               value="{{ form.get('title', lesson.title if lesson else '') }}"></label>
+        {{ f.err(errors, 'title') }}
+      </p>
+
+      <p><label>Slug<br>
+        <input type="text" name="slug" size="40"
+               value="{{ form.get('slug', lesson.slug if lesson else '') }}"></label>
+        {{ f.err(errors, 'slug') }}
+      </p>
+
+      <p><label>Kind<br>
+        <select name="kind">
+          {% for k in kinds %}
+            <option value="{{ k }}" {{ 'selected' if lesson and lesson.kind == k }}>{{ k }}</option>
+          {% endfor %}
+        </select></label>
+        <span class="auth-hint">A code lesson has to name a problem.</span>
+      </p>
+
+      <p><label>Problem<br>
+        <select name="problem_id">
+          <option value="">none</option>
+          {% for p in problems %}
+            <option value="{{ p.id }}"
+              {{ 'selected' if lesson and lesson.problem_id == p.id }}>{{ p.slug }}</option>
+          {% endfor %}
+        </select></label>
+        {{ f.err(errors, 'problem_id') }}
+      </p>
+
+      <p>
+        <label>XP <input type="number" name="xp" size="4"
+               value="{{ lesson.xp if lesson else 10 }}"></label>
+        <label>Position <input type="number" name="position" size="4"
+               value="{{ lesson.position if lesson else 0 }}"></label>
+      </p>
+
+      <p><label>Body (Markdown)<br>
+        <textarea name="body_md" rows="22" cols="88">{{ form.get('body_md', lesson.body_md if lesson else '') }}</textarea></label>
+      </p>
+
+      <button type="submit" class="btn btn-primary">Save draft</button>
+    </form>
+  {% endif %}
+</main>
+{% endblock content %}

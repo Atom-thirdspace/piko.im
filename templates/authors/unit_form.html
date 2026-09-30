@@ -1,0 +1,67 @@
+{% extends "base-dashboard.html" %}
+{% import "authors/_form.html" as f %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='authors.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  {{ f.head('Edit unit' if unit else 'New unit', unit) }}
+
+  {% if not tracks %}
+    <p class="learn-lede">
+      You need a course before a unit can live in one.
+      <a href="{{ url_for('authors.track_form') }}">Start a course</a>.
+    </p>
+  {% else %}
+    <form method="post" class="auth-form">
+      {{ csrf_field() }}
+
+      <p><label>Course<br>
+        <select name="track_id">
+          {% for t in tracks %}
+            <option value="{{ t.id }}"
+              {{ 'selected' if unit and unit.track_id == t.id }}>
+              {{ t.title }}{% if t.status != 'published' %} ({{ t.status }}){% endif %}
+            </option>
+          {% endfor %}
+        </select></label>
+        {{ f.err(errors, 'track_id') }}
+      </p>
+
+      <p><label>Title<br>
+        <input type="text" name="title" size="60"
+               value="{{ form.get('title', unit.title if unit else '') }}"></label>
+        {{ f.err(errors, 'title') }}
+      </p>
+
+      <p><label>Slug<br>
+        <input type="text" name="slug" size="40"
+               value="{{ form.get('slug', unit.slug if unit else '') }}"></label>
+        {{ f.err(errors, 'slug') }}
+      </p>
+
+      <p><label>Level<br>
+        <select name="level">
+          {% for lv in levels %}
+            <option value="{{ lv }}" {{ 'selected' if unit and unit.level == lv }}>{{ lv }}</option>
+          {% endfor %}
+        </select></label>
+      </p>
+
+      <p>
+        <label>Topic
+          <input type="text" name="topic" size="24"
+                 value="{{ form.get('topic', (unit.topic or '') if unit else '') }}"></label>
+        <label>Position
+          <input type="number" name="position" size="4"
+                 value="{{ unit.position if unit else 0 }}"></label>
+      </p>
+
+      <button type="submit" class="btn btn-primary">Save draft</button>
+    </form>
+  {% endif %}
+</main>
+{% endblock content %}

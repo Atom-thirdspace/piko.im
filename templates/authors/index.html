@@ -1,0 +1,87 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='authors.css') }}">
+{% endblock head %}
+
+{#- Jinja has no ** unpacking in calls, so each kind names its own argument. -#}
+{% macro edit_url(kind, row) -%}
+  {%- if kind == 'track' -%}{{ url_for('authors.track_form', track_id=row.id) }}
+  {%- elif kind == 'unit' -%}{{ url_for('authors.unit_form', unit_id=row.id) }}
+  {%- else -%}{{ url_for('authors.lesson_form', lesson_id=row.id) }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro status_pill(status) -%}
+  <span class="pill pill-{{ 'done' if status == 'published'
+                            else ('quiz' if status == 'review' else 'reading') }}">
+    {{ status }}
+  </span>
+{%- endmacro %}
+
+{% macro section(kind, label, items, new_url) %}
+  <section class="auth-group">
+    <h2>{{ label }}</h2>
+    {% if not items %}
+      <p class="learn-lede">Nothing yet. <a href="{{ new_url }}">Start one</a>.</p>
+    {% else %}
+      <ul class="auth-list">
+        {% for row in items %}
+          <li class="auth-row">
+            {{ status_pill(row.status) }}
+            <a class="auth-title" href="{{ edit_url(kind, row) }}">{{ row.title }}</a>
+
+            {% if row.review_note %}
+              <p class="auth-note">Sent back: {{ row.review_note }}</p>
+            {% endif %}
+
+            <span class="auth-actions">
+              {% if row.status == 'draft' %}
+                <form method="post"
+                      action="{{ url_for('authors.submit', kind=kind, row_id=row.id) }}">
+                  {{ csrf_field() }}
+                  <button type="submit" class="auth-btn">Send for review</button>
+                </form>
+              {% elif row.status == 'review' %}
+                <form method="post"
+                      action="{{ url_for('authors.withdraw', kind=kind, row_id=row.id) }}">
+                  {{ csrf_field() }}
+                  <button type="submit" class="auth-btn">Withdraw</button>
+                </form>
+              {% else %}
+                <span class="auth-live">live &middot; ask an editor to change it</span>
+              {% endif %}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+{% endmacro %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Author dashboard</h1>
+    <p class="track-meta">
+      {{ counts.draft }} draft &middot;
+      {{ counts.review }} in review &middot;
+      {{ counts.published }} live
+    </p>
+    <p class="auth-new">
+      <a class="btn btn-primary" href="{{ url_for('authors.track_form') }}">New course</a>
+      <a class="btn" href="{{ url_for('authors.unit_form') }}">New unit</a>
+      <a class="btn" href="{{ url_for('authors.lesson_form') }}">New lesson</a>
+    </p>
+    <p class="learn-lede">
+      Everything starts as a draft. Sending it for review hands it to an
+      editor - once they publish it, it appears in the course paths.
+    </p>
+  </header>
+
+  {{ section('track', 'Courses', tracks, url_for('authors.track_form')) }}
+  {{ section('unit', 'Units', units, url_for('authors.unit_form')) }}
+  {{ section('lesson', 'Lessons', lessons, url_for('authors.lesson_form')) }}
+</main>
+{% endblock content %}

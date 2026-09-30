@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>Review queue</h1>
+
+  {% if not queue %}
+    <p class="admin-hint">Nothing waiting. Authors submit from their dashboard.</p>
+  {% else %}
+    <p class="admin-hint">
+      {{ queue|length }} item{{ '' if queue|length == 1 else 's' }} waiting.
+      A lesson cannot go live above a draft unit, so publish from the course down.
+    </p>
+
+    {% for kind, row in queue %}
+      <div class="admin-card">
+        <h2>{{ row.title }}</h2>
+        <p class="admin-hint">
+          {{ kind }} &middot; <code>{{ row.slug }}</code>
+          {% if row.created_by %}
+            &middot; by {{ row.created_by.username or row.created_by.email }}
+          {% endif %}
+          {% if row.submitted_at %}
+            &middot; sent {{ row.submitted_at.strftime('%d %b %H:%M') }}
+          {% endif %}
+        </p>
+
+        {% if kind == 'unit' and row.track %}
+          <p class="admin-hint">In course: {{ row.track.title }} ({{ row.track.status }})</p>
+        {% elif kind == 'lesson' and row.unit %}
+          <p class="admin-hint">
+            In unit: {{ row.unit.title }} ({{ row.unit.status }})
+            {% if row.unit.track %}
+              &middot; course: {{ row.unit.track.title }} ({{ row.unit.track.status }})
+            {% endif %}
+          </p>
+        {% endif %}
+
+        {% if kind == 'lesson' %}
+          <p class="admin-hint">{{ row.kind }} &middot; {{ row.xp }} XP</p>
+          {% if row.body_md %}
+            <details>
+              <summary>Body</summary>
+              <pre class="admin-pre">{{ row.body_md }}</pre>
+            </details>
+          {% endif %}
+        {% elif kind == 'track' and row.description %}
+          <p>{{ row.description }}</p>
+        {% endif %}
+
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.review_publish', kind=kind, row_id=row.id) }}">
+          {{ csrf_field() }}
+          <button class="admin-btn" type="submit">Publish</button>
+        </form>
+
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.review_reject', kind=kind, row_id=row.id) }}">
+          {{ csrf_field() }}
+          <input type="text" name="note" size="50"
+                 placeholder="What needs changing? (sent to the author)">
+          <button class="admin-btn" type="submit">Send back</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock admin_content %}

@@ -1,0 +1,42 @@
+{% extends "base-dashboard.html" %}
+{% import "authors/_form.html" as f %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='authors.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  {{ f.head('Edit course' if track else 'New course', track) }}
+
+  <form method="post" class="auth-form">
+    {{ csrf_field() }}
+
+    <p><label>Title<br>
+      <input type="text" name="title" size="60"
+             value="{{ form.get('title', track.title if track else '') }}"></label>
+      {{ f.err(errors, 'title') }}
+    </p>
+
+    <p><label>Slug<br>
+      <input type="text" name="slug" size="40"
+             value="{{ form.get('slug', track.slug if track else '') }}"></label>
+      <span class="auth-hint">Leave blank to build one from the title.</span>
+      {{ f.err(errors, 'slug') }}
+    </p>
+
+    <p><label>Description<br>
+      <textarea name="description" rows="5" cols="70">{{ form.get('description', track.description if track else '') }}</textarea></label>
+    </p>
+
+    <p><label>Position
+      <input type="number" name="position" size="4"
+             value="{{ track.position if track else 0 }}"></label>
+      <span class="auth-hint">Lower numbers sort first.</span>
+    </p>
+
+    <button type="submit" class="btn btn-primary">Save draft</button>
+  </form>
+</main>
+{% endblock content %}

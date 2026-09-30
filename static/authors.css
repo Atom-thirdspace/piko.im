@@ -1,0 +1,87 @@
+/* Author dashboard and the three content forms. Sits on top of learn.css,
+   which already supplies .learn, .pill and .btn. */
+
+.auth-new { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0 .75rem; }
+
+.auth-group { margin-top: 2rem; }
+
+.auth-list { list-style: none; margin: .5rem 0 0; padding: 0; }
+
+.auth-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .6rem;
+    padding: .6rem 0;
+    border-bottom: 1px solid #f0e6dc;
+}
+.auth-row:last-child { border-bottom: 0; }
+
+.auth-title { font-weight: 600; color: #77431d; text-decoration: none; }
+.auth-title:hover { text-decoration: underline; }
+
+.auth-actions { margin-left: auto; display: flex; gap: .4rem; }
+.auth-actions form { margin: 0; }
+
+.auth-btn {
+    border: 1px solid #d8c8ba;
+    background: #fff;
+    color: #5d4a3c;
+    border-radius: .35rem;
+    padding: .28rem .6rem;
+    font-size: .82rem;
+    cursor: pointer;
+}
+.auth-btn:hover { background: #f6efe8; }
+
+.auth-live { font-size: .78rem; color: #9b8878; align-self: center; }
+
+/* An editor's rejection note - the one thing on the page an author must read. */
+.auth-note {
+    flex-basis: 100%;
+    margin: .15rem 0 0;
+    font-size: .82rem;
+    color: #8a3423;
+}
+
+.auth-feedback {
+    margin: .75rem 0 0;
+    padding: .7rem .9rem;
+    background: #fdf0ed;
+    border: 1px solid #b3402f;
+    border-radius: .5rem;
+}
+.auth-feedback b { display: block; font-size: .8rem; margin-bottom: .2rem; }
+.auth-feedback p { margin: 0; font-size: .9rem; }
+
+/* forms */
+
+.auth-form { margin-top: 1.25rem; max-width: 46rem; }
+.auth-form p { margin: 0 0 1rem; }
+.auth-form label { font-size: .9rem; color: #5d4a3c; }
+
+.auth-form input[type="text"],
+.auth-form input[type="number"],
+.auth-form input[type="email"],
+.auth-form select,
+.auth-form textarea {
+    margin-top: .2rem;
+    padding: .4rem .5rem;
+    border: 1px solid #d8c8ba;
+    border-radius: .35rem;
+    background: #fffdfb;
+    color: #2a1a10;
+    font-size: .9rem;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.auth-form textarea {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .85rem;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.auth-hint { display: block; font-size: .78rem; color: #7a6455; margin-top: .2rem; }
+.auth-err { display: block; font-size: .8rem; color: #b3402f; margin-top: .2rem; }

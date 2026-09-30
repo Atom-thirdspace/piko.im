@@ -3,7 +3,7 @@ import os
 from functools import wraps
 from uuid import uuid4
 from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
-                   redirect, render_template, request, url_for)
+                   redirect, render_template, request, url_for, session)
 
 from sqlalchemy import or_
 from .judge import LANGUAGES, TestCase, judge
@@ -28,7 +28,9 @@ from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
                          unlock_session)
 from .webauthn_keys import KeyError_ as WebAuthnError
 from .webauthn_keys import begin_authentication, finish_authentication
-
+from .authors.invites import MAX_TTL_DAYS, create_invite, revoke
+from .models import (DRAFT, PUBLISHED, REVIEW, AuthorInvite, AuthorInviteUse,
+                     _utcnow)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 PAGE_SIZE = 25
@@ -43,7 +45,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.audit", "Audit log"),
        ("admin.reports","Reports"),
        ("admin.similarity", "Similarity"),
-       ("admin.generated", "Generated")
+       ("admin.generated", "Generated"),
+       ("admin.authors", "Authors"), ("admin.review", "Review")
        ]
 
 
@@ -1090,3 +1093,134 @@ def generated_resolve(draft_id):
     log_action("reject_generated", draft.id, draft.slug)
     flash("Draft rejected.", "success")
     return redirect(url_for("admin.generated"))
+
+@admin_bp.route("/authors/")
+@admin_required
+def authors():
+    invites = db.session.execute(
+      db.select(AuthorInvite).order_by(AuthorInvite.created_at.desc()).limit(50)
+    ).scalars().all()
+    people = db.session.execute(
+        db.select(User).where(User.is_author.is_(True)).order_by(User.author_since.desc())
+    ).scalars().all()
+    fresh = session.pop("fresh_invite", None)
+    return render_template("admin/authors.html", invites=invites, people=people,
+                           fresh=fresh, max_ttl=MAX_TTL_DAYS)
+
+
+@admin_bp.route("/authors/invite", methods=["POST"])
+@admin_required
+def author_invite():
+    form = request.form
+    try:
+        uses = int(form.get("max_uses") or 1)
+        ttl = int(form.get("ttl_days") or 14)
+    except (TypeError, ValueError):
+        uses, ttl = 1, 14
+
+    row, raw = create_invite(current_user(), email=form.get("email"),
+                             note=form.get("note") or "", max_uses=uses,
+                             ttl_days=ttl)
+    log_action("author_invite", row.id, row.email or "open link")
+
+    session["fresh_invite"] = url_for("authors.join", token=raw, _external=True)
+    flash("Invite created. Copy the link now - it is not shown again.", "success")
+    return redirect(url_for("admin.authors"))
+
+@admin_bp.route("/authors/invite/<int:invite_id>/revoke", methods=["POST"])
+@admin_required
+def author_invite_revoke(invite_id):
+    invite = _get_or_404(AuthorInvite, invite_id)
+    revoke(invite)
+    log_action("author_invite_revoke", invite.id, invite.email or "open link")
+    flash("Invite revoked.", "success")
+    return redirect(url_for("admin.authors"))
+
+@admin_bp.route("/authors/<int:user_id>/remove", methods=["POST"])
+@admin_required
+def author_remove(user_id):
+    user = _get_or_404(User, user_id)
+    user.is_author = False
+    db.session.commit()
+    log_action("author_remove", user.id, user.email)
+    flash("Authorship removed. Their published work stays up.", "success")
+    return redirect(url_for("admin.authors"))
+
+REVIEWABLE = {"track": Track, "unit": Unit, "lesson": Lesson}
+
+
+@admin_bp.route("/review/")
+@admin_required
+def review():
+    queue = []
+    for kind, model in REVIEWABLE.items():
+        rows = db.session.execute(
+            db.select(model).where(model.status == REVIEW)
+            .order_by(model.submitted_at)
+        ).scalars().all()
+        queue.extend((kind, r) for r in rows)
+    queue.sort(key=lambda pair: pair[1].submitted_at or _utcnow())
+    return render_template("admin/review.html", queue=queue)
+
+def _parent_unpublished(kind,row):
+    if kind == "lesson":
+        unit = db.session.get(Unit, row.unit_id)
+        if unit is None or unit.status != PUBLISHED:
+            return "Publish its unit first."
+        if unit.track is None or unit.track.status != PUBLISHED:
+            return "Publish its course first."
+    if kind == "unit":
+        track = db.session.get(Track, row.track_id)
+        if track is None or track.status != PUBLISHED:
+            return "Publish its course first."
+    return None
+
+@admin_bp.route("/review/<kind>/<int:row_id>/publish", methods=["POST"])
+@admin_required
+def review_publish(kind, row_id):
+    model = REVIEWABLE.get(kind)
+    if model is None:
+        abort(404)
+
+    row = _get_or_404(model, row_id)
+
+    blocked = _parent_unpublished(kind, row)
+    if blocked:
+        flash(blocked, "error")
+        return redirect(url_for("admin.review"))
+
+    row.status = PUBLISHED
+    row.published_at = _utcnow()
+    row.review_note = ""
+    db.session.commit()
+    log_action("publish_%s" % kind, row.id, row.slug)
+    flash("Published.", "success")
+    return redirect(url_for("admin.review"))
+
+@admin_bp.route("/review/<kind>/<int:row_id>/reject", methods=["POST"])
+@admin_required
+def review_reject(kind, row_id):
+    model = REVIEWABLE.get(kind)
+    if model is None:
+        abort(404)
+    row = _get_or_404(model, row_id)
+    row.status = DRAFT
+    row.submitted_at = None
+    row.review_note = (request.form.get("note") or "").strip()[:2000]
+    db.session.commit()
+    log_action("reject_%s" % kind, row.id, row.slug)
+    flash("Sent back to the author.", "success")
+    return redirect(url_for("admin.review"))
+
+@admin_bp.route("/review/<kind>/<int:row_id>/unpublish", methods=["POST"])
+@admin_required
+def review_unpublish(kind, row_id):
+    model = REVIEWABLE.get(kind)
+    if model is None:
+        abort(404)
+    row = _get_or_404(model, row_id)
+    row.status = DRAFT
+    db.session.commit()
+    log_action("unpublish_%s" % kind, row.id, row.slug)
+    flash("Taken down.", "success")
+    return redirect(url_for("admin.review"))

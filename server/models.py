@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import declared_attr
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 db = SQLAlchemy()
@@ -56,6 +57,10 @@ class User(db.Model):
     streak_freezes = db.Column(db.Integer, nullable=False, default=0,
                                server_default="0")
     freezes_granted_on = db.Column(db.Date)
+    is_author = db.Column(db.Boolean, nullable=False, default=False,
+                          server_default="false")
+    author_since = db.Column(db.DateTime(timezone=True))
+
 
     def __repr__(self):
         return f"<User {self.id} {self.email}>"
@@ -421,7 +426,28 @@ class OnboardingSession(db.Model):
     user = db.relationship("User")
 
 
-class Track(db.Model):
+# --------------------------------------------------------------------------- #
+# content ownership and the draft -> review -> published workflow
+# --------------------------------------------------------------------------- #
+
+DRAFT, REVIEW, PUBLISHED = "draft", "review", "published"
+CONTENT_STATUSES = (DRAFT, REVIEW, PUBLISHED)
+
+class Authored:
+    status = db.Column(db.String(16), nullable = False, default = DRAFT, server_default = DRAFT, index = True)
+    review_note = db.Column(db.Text, nullable=False, default="", server_default="")
+    submitted_at = db.Column(db.DateTime(timezone=True))
+    published_at = db.Column(db.DateTime(timezone=True))
+
+    @declared_attr
+    def created_by_id(cls):
+        return db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    @declared_attr
+    def created_by(cls):
+        return db.relationship("User", foreign_keys=[cls.created_by_id])
+
+
+class Track(Authored, db.Model):
     __tablename__ = "tracks"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -434,7 +460,7 @@ class Track(db.Model):
                             cascade="all, delete-orphan", order_by="Unit.position")
 
 
-class Unit(db.Model):
+class Unit(Authored, db.Model):
     __tablename__ = "units"
     __table_args__ = (
         UniqueConstraint("track_id", "slug", name="uq_unit_track_slug"),
@@ -454,7 +480,7 @@ class Unit(db.Model):
                               cascade="all, delete-orphan", order_by="Lesson.position")
 
 
-class Lesson(db.Model):
+class Lesson(Authored, db.Model):
     __tablename__ = "lessons"
     __table_args__ = (
         UniqueConstraint("unit_id", "slug", name="uq_lesson_unit_slug"),
@@ -1285,3 +1311,40 @@ class AdminLoginCode(db.Model):
                            nullable=False)
     expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
     used_at = db.Column(db.DateTime(timezone=True))
+
+class AuthorInvite(db.Model):
+    __tablename__ = "author_invites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    email = db.Column(db.String(255))           # null = anyone with the link
+    note = db.Column(db.String(200), nullable=False, default="", server_default="")
+    invited_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                              nullable=False, index=True)
+    max_uses = db.Column(db.Integer, nullable=False, default=1)
+    uses = db.Column(db.Integer, nullable=False, default=0)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    revoked_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    invited_by = db.relationship("User", foreign_keys=[invited_by_id])
+
+    @property
+    def is_live(self):
+        return (self.revoked_at is None
+            and self.uses < self.max_uses
+            and self.expires_at > _utcnow())
+
+class AuthorInviteUse(db.Model):
+    __tablename__ = "author_invite_uses"
+    __table_args__ = (UniqueConstraint("invite_id", "user_id", name="uq_invite_use"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    invite_id = db.Column(db.Integer, db.ForeignKey("author_invites.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    used_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    invite = db.relationship("AuthorInvite")
+    user = db.relationship("User")

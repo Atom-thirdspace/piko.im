@@ -26,6 +26,9 @@
           <a href="{{ url_for('blog.index') }}">Blog</a>
           <a href="{{ url_for('profile.me') }}">Profile</a>
           <a href="{{ url_for('profile.settings') }}">Settings</a>
+          {% if viewer.is_author %}
+            <a href="{{ url_for('authors.index') }}">Author</a>
+          {% endif %}
           {% if is_admin(viewer) %}
             <a class="admin-link" href="{{ url_for('admin.overview') }}">Admin</a>
           {% endif %}

@@ -1,0 +1,45 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Author invitation</h1>
+  </header>
+
+  {% if already %}
+    <p class="learn-lede">You are already an author.</p>
+    <p><a class="btn btn-primary" href="{{ url_for('authors.index') }}">Go to your dashboard</a></p>
+
+  {% elif problem %}
+    <p class="learn-lede">{{ problem }}</p>
+    <p><a href="{{ url_for('dashboard.index') }}">Back to your dashboard</a></p>
+
+  {% else %}
+    <p class="learn-lede">
+      You have been invited to write courses and lessons for Piko. Accepting
+      lets you draft content and send it for review - an editor publishes it,
+      so nothing you write goes live on its own.
+    </p>
+
+    {% if invite.note %}
+      <blockquote class="prose"><p>{{ invite.note }}</p></blockquote>
+    {% endif %}
+
+    <p class="track-meta">
+      Invited by {{ invite.invited_by.username or invite.invited_by.email }}
+      &middot; expires {{ invite.expires_at.strftime('%d %b %Y') }}
+    </p>
+
+    {# A GET must never grant the role: link previews and mail scanners
+       follow URLs, and that would burn the invite before it was read. #}
+    <form method="post" action="{{ url_for('authors.join_accept', token=token) }}">
+      {{ csrf_field() }}
+      <button type="submit" class="btn btn-primary">Accept invitation</button>
+    </form>
+  {% endif %}
+</main>
+{% endblock content %}
