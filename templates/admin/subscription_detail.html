@@ -1,0 +1,108 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <p class="admin-sub"><a href="{{ url_for('admin.subscriptions') }}">&larr; Subscriptions</a></p>
+  <h1>Subscription #{{ sub.id }}</h1>
+
+  <table class="admin-table">
+    <tr><th>User</th><td>
+      {% if sub.user %}
+        <a href="{{ url_for('admin.user_detail', user_id=sub.user.id) }}">
+          {{ sub.user.username or sub.user.email }}</a>
+        ({{ sub.user.email }})
+      {% else %}&mdash;{% endif %}
+    </td></tr>
+    <tr><th>Status</th><td>
+      {{ sub.status }}
+      {% if sub.cancel_at_period_end %}
+        <span class="admin-badge warn">ends at period</span>
+      {% endif %}
+    </td></tr>
+    <tr><th>Plan</th><td>{{ sub.plan or '—' }}</td></tr>
+    <tr><th>Amount</th><td>
+      {% if sub.amount %}
+        {{ '%.2f'|format(sub.amount / 100) }} {{ sub.currency|upper }}
+        every {{ sub.recurring_interval_count }} {{ sub.recurring_interval }}
+        &middot; {{ '%.2f'|format(monthly) }}/month normalised
+      {% else %}
+        nothing
+      {% endif %}
+    </td></tr>
+    <tr><th>Source</th><td>
+      {{ sub.source }}
+      {% if sub.granted_by %}&middot; granted by {{ sub.granted_by.email }}{% endif %}
+    </td></tr>
+    {% if sub.note %}<tr><th>Note</th><td>{{ sub.note }}</td></tr>{% endif %}
+    <tr><th>Started</th><td>{{ sub.started_at or '—' }}</td></tr>
+    <tr><th>Period</th><td>
+      {{ sub.current_period_start or '—' }} &rarr; {{ sub.current_period_end or '—' }}
+    </td></tr>
+    <tr><th>Canceled</th><td>{{ sub.canceled_at or '—' }}</td></tr>
+    <tr><th>Ends</th><td>{{ sub.ends_at or '—' }}</td></tr>
+    <tr><th>Provider id</th><td><code>{{ sub.polar_subscription_id }}</code></td></tr>
+    <tr><th>Last event</th><td>{{ sub.event_at or '—' }}</td></tr>
+  </table>
+
+  {% if sub.is_manual %}
+    <div class="admin-danger">
+      <h2>Complimentary grant</h2>
+      <p class="admin-hint">
+        This has no counterpart at the payment provider, so it cannot be
+        cancelled or refunded there.
+      </p>
+      <form class="admin-inline" method="post"
+            action="{{ url_for('admin.subscription_ungrant', sub_id=sub.id) }}">
+        {{ csrf_field() }}
+        <button class="admin-btn" type="submit">Withdraw Pro</button>
+      </form>
+    </div>
+  {% else %}
+    <h2>At the provider</h2>
+    {% if remote_error %}
+      <p class="admin-warn">Could not read it: {{ remote_error }}</p>
+    {% elif remote %}
+      <p class="admin-hint">
+        Provider says <b>{{ remote.status }}</b>, cancel_at_period_end
+        <b>{{ remote.cancel_at_period_end }}</b>.
+        {% if remote.status != sub.status %}
+          That disagrees with our row &mdash; sync it.
+        {% endif %}
+      </p>
+    {% endif %}
+
+    <form class="admin-inline" method="post"
+          action="{{ url_for('admin.subscription_sync', sub_id=sub.id) }}">
+      {{ csrf_field() }}
+      <button class="admin-btn" type="submit">Sync from provider</button>
+    </form>
+
+    {% if sub.status in ('active', 'trialing') %}
+      {% if sub.cancel_at_period_end %}
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.subscription_uncancel', sub_id=sub.id) }}">
+          {{ csrf_field() }}
+          <button class="admin-btn" type="submit">Resume (stop the cancellation)</button>
+        </form>
+      {% else %}
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.subscription_cancel', sub_id=sub.id) }}">
+          {{ csrf_field() }}
+          <button class="admin-btn" type="submit">Cancel at period end</button>
+        </form>
+      {% endif %}
+
+      <div class="admin-danger">
+        <h2>Revoke now</h2>
+        <p class="admin-hint">
+          Ends it immediately and takes Pro away today, with no refund. Prefer
+          cancelling at period end for anything that is not abuse.
+        </p>
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.subscription_revoke', sub_id=sub.id) }}">
+          {{ csrf_field() }}
+          <button class="admin-btn" type="submit">Revoke immediately</button>
+        </form>
+      </div>
+    {% endif %}
+  {% endif %}
+{% endblock admin_content %}

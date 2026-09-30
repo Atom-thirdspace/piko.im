@@ -32,8 +32,47 @@ def _post(path, payload):
         raise BillingError("Could not reach the payment provider.") from exc
 
     if resp.status_code >= 400:
+        # Polar's validation messages name our own product ids; they belong in
+        # the log, never in front of the buyer.
         raise BillingError("The payment provider rejected that request. "
                            "(%s: %s)" % (resp.status_code, resp.text[:300]))
+    return resp.json()
+
+
+def _get(path, params=None):
+    try:
+        resp = requests.get(
+            base_url() + path,
+            headers={"Authorization": "Bearer " + _token()},
+            params=params or {}, timeout=TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        raise BillingError("Could not reach the payment provider.") from exc
+
+    if resp.status_code >= 400:
+        raise BillingError("The payment provider refused that read. "
+                           "(%s: %s)" % (resp.status_code, resp.text[:300]))
+    return resp.json()
+
+
+def _patch(path, payload):
+    try:
+        resp = requests.patch(
+            base_url() + path,
+            headers={"Authorization": "Bearer " + _token(),
+                     "Content-Type": "application/json"},
+            json=payload, timeout=TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        raise BillingError("Could not reach the payment provider.") from exc
+
+    if resp.status_code >= 400:
+        # Polar rejects writes to subscriptions that are already canceled,
+        # inactive or locked.
+        raise BillingError("The payment provider refused that change. "
+                           "(%s: %s)" % (resp.status_code, resp.text[:300]))
+    return resp.json()
+
 
 def create_checkout(product_id, user, success_url, metadata=None):
     body = {
@@ -61,3 +100,23 @@ def create_portal_session(user, return_url= None):
     if not url:
         raise BillingError("The payment provider did not return a portal URL.")
     return url
+
+
+# --------------------------------------------------------------------------- #
+# admin-side. These need subscriptions:read and subscriptions:write on the
+# organization access token, which the checkout scopes alone do not cover.
+# --------------------------------------------------------------------------- #
+
+def get_subscription(polar_id):
+    return _get("/subscriptions/" + polar_id)
+
+
+def cancel_subscription(polar_id, at_period_end=True):
+    """at_period_end=False un-cancels one already set to end."""
+    return _patch("/subscriptions/" + polar_id,
+                  {"cancel_at_period_end": bool(at_period_end)})
+
+
+def revoke_subscription(polar_id):
+    """Ends it now and strips access today."""
+    return _patch("/subscriptions/" + polar_id, {"revoke": True})

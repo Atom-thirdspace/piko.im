@@ -1,6 +1,7 @@
 """Turning Polar events into rows. The only writer of paid access."""
 
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
@@ -89,6 +90,13 @@ def apply_subscription(data, event_type, event_at=None):
     row.polar_product_id = str(data.get("product_id") or "")[:64]
     row.plan = plan_for_product(row.polar_product_id)[:32]
 
+    # Money comes from what Polar actually charged, never from our own price
+    # table - otherwise a price change silently rewrites revenue history.
+    row.amount = int(data.get("amount") or 0)
+    row.currency = str(data.get("currency") or "usd")[:8]
+    row.recurring_interval = str(data.get("recurring_interval") or "month")[:16]
+    row.recurring_interval_count = int(data.get("recurring_interval_count") or 1)
+
     # revoked is terminal, and Polar may still report status=active on it.
     row.status = "canceled" if event_type == "subscription.revoked" \
         else str(data.get("status") or row.status)[:32]
@@ -136,3 +144,45 @@ def subscription_state(user):
         "renews_at": sub.current_period_end if sub else None,
         "ending": bool(sub and sub.cancel_at_period_end),
     }
+
+
+# --------------------------------------------------------------------------- #
+# complimentary access
+# --------------------------------------------------------------------------- #
+
+def grant_manual(user, admin, months=12, note=""):
+    """Comp someone Pro without involving the payment provider.
+
+    The synthetic id keeps the unique constraint satisfied and guarantees no
+    webhook can ever collide with this row: Polar ids are bare UUIDs and are
+    never prefixed like this.
+    """
+    ends = _utcnow() + timedelta(days=30 * max(1, int(months)))
+    row = Subscription(
+        user_id=user.id,
+        polar_subscription_id="manual:" + uuid.uuid4().hex,
+        source="manual",
+        status="active",
+        plan="complimentary",
+        amount=0,
+        note=(note or "")[:2000],
+        granted_by_id=admin.id,
+        started_at=_utcnow(),
+        current_period_start=_utcnow(),
+        current_period_end=ends,
+        event_at=_utcnow(),
+    )
+    db.session.add(row)
+    db.session.commit()
+    return row
+
+
+def end_manual(row):
+    """Withdraw a comp. A paid row has to go through the provider instead."""
+    if not row.is_manual:
+        return False
+    row.status = "canceled"
+    row.ends_at = _utcnow()
+    row.canceled_at = _utcnow()
+    db.session.commit()
+    return True

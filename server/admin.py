@@ -29,9 +29,13 @@ from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
 from .webauthn_keys import KeyError_ as WebAuthnError
 from .webauthn_keys import begin_authentication, finish_authentication
 from .authors.invites import MAX_TTL_DAYS, create_invite, revoke
+from .billing import service as billing_service
+from .billing import stats as billing_stats
+from .billing.client import (BillingError, cancel_subscription,
+                             get_subscription, revoke_subscription)
 from .mailer import send_author_invite_email
-from .models import (DRAFT, PUBLISHED, REVIEW, AuthorInvite, AuthorInviteUse,
-                     _utcnow)
+from .models import (DRAFT, PUBLISHED, REVIEW, SUB_GRANTING, AuthorInvite,
+                     AuthorInviteUse, Subscription, _utcnow)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 PAGE_SIZE = 25
@@ -47,7 +51,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.reports","Reports"),
        ("admin.similarity", "Similarity"),
        ("admin.generated", "Generated"),
-       ("admin.authors", "Authors"), ("admin.review", "Review")
+       ("admin.authors", "Authors"), ("admin.review", "Review"),
+       ("admin.subscriptions", "Subscriptions")
        ]
 
 
@@ -1244,3 +1249,163 @@ def review_unpublish(kind, row_id):
     log_action("unpublish_%s" % kind, row.id, row.slug)
     flash("Taken down.", "success")
     return redirect(url_for("admin.review"))
+# --------------------------------------------------------------------------- #
+# subscriptions
+# --------------------------------------------------------------------------- #
+
+SUB_FILTERS = ("live", "active", "trialing", "past_due", "canceled",
+               "ending", "manual")
+
+
+@admin_bp.route("/subscriptions/")
+@admin_required
+def subscriptions():
+    which = request.args.get("status") or "live"
+    query = (request.args.get("q") or "").strip()
+
+    stmt = db.select(Subscription).join(User, User.id == Subscription.user_id)
+
+    if which == "live":
+        stmt = stmt.where(Subscription.status.in_(SUB_GRANTING))
+    elif which == "ending":
+        stmt = stmt.where(Subscription.status.in_(SUB_GRANTING),
+                          Subscription.cancel_at_period_end.is_(True))
+    elif which == "manual":
+        stmt = stmt.where(Subscription.source == "manual")
+    elif which in SUB_FILTERS:
+        stmt = stmt.where(Subscription.status == which)
+
+    if query:
+        like = "%" + query + "%"
+        stmt = stmt.where(or_(User.email.ilike(like), User.username.ilike(like)))
+
+    stmt = stmt.order_by(Subscription.created_at.desc())
+    rows, pager_ = _paginate(stmt, _page())
+
+    return render_template("admin/subscriptions.html", rows=rows, p=pager_,
+                           stats=billing_stats.overview(),
+                           series=billing_stats.monthly_series(),
+                           status=which, q=query, filters=SUB_FILTERS)
+
+
+@admin_bp.route("/subscriptions/<int:sub_id>/")
+@admin_required
+def subscription_detail(sub_id):
+    row = _get_or_404(Subscription, sub_id)
+    remote, remote_error = None, None
+    if not row.is_manual:
+        try:
+            remote = get_subscription(row.polar_subscription_id)
+        except BillingError as exc:
+            # A provider outage must not take this page down with it.
+            remote_error = str(exc)
+    return render_template("admin/subscription_detail.html", sub=row,
+                           remote=remote, remote_error=remote_error,
+                           monthly=billing_stats.monthly_cents(row) / 100.0)
+
+
+def _sub_action(sub_id, fn, verb):
+    """Shared body for cancel / uncancel / revoke."""
+    row = _get_or_404(Subscription, sub_id)
+    if row.is_manual:
+        flash("That is a complimentary grant - withdraw it instead.", "error")
+        return redirect(url_for("admin.subscription_detail", sub_id=sub_id))
+
+    try:
+        data = fn(row.polar_subscription_id)
+    except BillingError as exc:
+        current_app.logger.warning("polar %s failed for sub %s: %s",
+                                   verb, sub_id, exc)
+        flash("The payment provider refused that. Nothing changed.", "error")
+        return redirect(url_for("admin.subscription_detail", sub_id=sub_id))
+
+    # Write the response back through the same path a webhook uses, so the row
+    # is right immediately rather than whenever the webhook turns up.
+    billing_service.apply_subscription(data, "subscription." + verb,
+                                       event_at=_utcnow())
+    log_action("subscription_" + verb, row.id, row.polar_subscription_id)
+    flash("Done.", "success")
+    return redirect(url_for("admin.subscription_detail", sub_id=sub_id))
+
+
+@admin_bp.route("/subscriptions/<int:sub_id>/cancel", methods=["POST"])
+@admin_required
+def subscription_cancel(sub_id):
+    return _sub_action(sub_id, lambda pid: cancel_subscription(pid, True),
+                       "canceled")
+
+
+@admin_bp.route("/subscriptions/<int:sub_id>/uncancel", methods=["POST"])
+@admin_required
+def subscription_uncancel(sub_id):
+    return _sub_action(sub_id, lambda pid: cancel_subscription(pid, False),
+                       "uncanceled")
+
+
+@admin_bp.route("/subscriptions/<int:sub_id>/revoke", methods=["POST"])
+@admin_required
+def subscription_revoke(sub_id):
+    return _sub_action(sub_id, revoke_subscription, "revoked")
+
+
+@admin_bp.route("/subscriptions/<int:sub_id>/sync", methods=["POST"])
+@admin_required
+def subscription_sync(sub_id):
+    """Re-pull from Polar. The fix when a webhook was missed or mishandled."""
+    row = _get_or_404(Subscription, sub_id)
+    if row.is_manual:
+        abort(404)
+    try:
+        data = get_subscription(row.polar_subscription_id)
+    except BillingError:
+        flash("Could not read that subscription from the provider.", "error")
+        return redirect(url_for("admin.subscription_detail", sub_id=sub_id))
+
+    billing_service.apply_subscription(data, "subscription.updated",
+                                       event_at=_utcnow())
+    log_action("subscription_sync", row.id, row.polar_subscription_id)
+    flash("Synced from the provider.", "success")
+    return redirect(url_for("admin.subscription_detail", sub_id=sub_id))
+
+
+@admin_bp.route("/subscriptions/grant", methods=["POST"])
+@admin_required
+def subscription_grant():
+    form = request.form
+    who = (form.get("user") or "").strip()
+    user = db.session.execute(
+        db.select(User).where(or_(User.email == who.lower(),
+                                  User.username == who))
+    ).scalar_one_or_none()
+
+    if user is None:
+        flash("No user with that email or username.", "error")
+        return redirect(url_for("admin.subscriptions"))
+    if billing_service.is_pro(user):
+        flash("They already have Pro.", "error")
+        return redirect(url_for("admin.subscriptions"))
+
+    try:
+        months = max(1, min(int(form.get("months") or 12), 120))
+    except (TypeError, ValueError):
+        months = 12
+
+    row = billing_service.grant_manual(user, current_user(), months=months,
+                                       note=form.get("note") or "")
+    log_action("subscription_grant", row.id,
+               "%s / %d months" % (user.email, months))
+    flash("Granted Pro to %s for %d months." % (user.email, months), "success")
+    return redirect(url_for("admin.subscriptions", status="manual"))
+
+
+@admin_bp.route("/subscriptions/<int:sub_id>/ungrant", methods=["POST"])
+@admin_required
+def subscription_ungrant(sub_id):
+    row = _get_or_404(Subscription, sub_id)
+    if not billing_service.end_manual(row):
+        flash("That is a paid subscription - cancel it at the provider.", "error")
+    else:
+        log_action("subscription_ungrant", row.id,
+                   row.user.email if row.user else "")
+        flash("Complimentary Pro withdrawn.", "success")
+    return redirect(url_for("admin.subscriptions", status="manual"))

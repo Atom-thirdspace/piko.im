@@ -1,0 +1,119 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+  <h1>Subscriptions</h1>
+
+  <div class="admin-tiles">
+    <div class="admin-tile"><b>{{ stats.paid }}</b><span>paying</span></div>
+    <div class="admin-tile"><b>{{ stats.comped }}</b><span>comped</span></div>
+    {% for cur, amount in stats.mrr.items() %}
+      <div class="admin-tile">
+        <b>{{ '%.0f'|format(amount) }}</b><span>MRR ({{ cur|upper }})</span>
+      </div>
+      <div class="admin-tile">
+        <b>{{ '%.0f'|format(stats.arr[cur]) }}</b><span>ARR ({{ cur|upper }})</span>
+      </div>
+    {% endfor %}
+    <div class="admin-tile">
+      <b>{{ '%.1f'|format(stats.arpu) }}</b><span>ARPU</span>
+    </div>
+    <div class="admin-tile">
+      <b>{{ '%.1f'|format(stats.conversion) }}%</b>
+      <span>of {{ stats.users_total }} users</span>
+    </div>
+    <div class="admin-tile"><b>{{ stats.new_30d }}</b><span>new (30d)</span></div>
+    <div class="admin-tile"><b>{{ stats.churned_30d }}</b><span>churned (30d)</span></div>
+    <div class="admin-tile"><b>{{ stats.ending }}</b><span>ending at period</span></div>
+    <div class="admin-tile"><b>{{ stats.past_due }}</b><span>past due</span></div>
+  </div>
+
+  <div class="admin-cols">
+    <section>
+      <h2>Month by month</h2>
+      <table class="admin-table">
+        <tr><th>Month</th><th>New</th><th>Churned</th><th>Net</th></tr>
+        {% for m in series %}
+          <tr>
+            <td>{{ m.label }}</td>
+            <td>{{ m.new }}</td>
+            <td>{{ m.churned }}</td>
+            <td>{{ '+' if m.new - m.churned > 0 }}{{ m.new - m.churned }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </section>
+
+    <section>
+      <h2>Plan mix</h2>
+      <table class="admin-table">
+        {% for name, n in stats.plans %}
+          <tr><td>{{ name or 'unknown' }}</td><td>{{ n }}</td></tr>
+        {% else %}
+          <tr><td class="admin-empty">Nobody subscribed yet.</td></tr>
+        {% endfor %}
+      </table>
+    </section>
+
+    <section>
+      <h2>Give someone Pro</h2>
+      <p class="admin-hint">
+        A complimentary grant. It never touches the payment provider, so it
+        takes no money and cannot be managed from the billing portal.
+      </p>
+      <form method="post" action="{{ url_for('admin.subscription_grant') }}">
+        {{ csrf_field() }}
+        <p><input name="user" size="26" placeholder="email or username"></p>
+        <p>
+          <input name="months" type="number" value="12" min="1" max="120" size="4">
+          months
+        </p>
+        <p><input name="note" size="30" placeholder="why (kept in the audit log)"></p>
+        <button class="admin-btn" type="submit">Grant Pro</button>
+      </form>
+    </section>
+  </div>
+
+  <h2>All subscriptions</h2>
+  <form class="admin-filters" method="get">
+    <input name="q" value="{{ q }}" placeholder="email or username">
+    <select name="status">
+      {% for f in filters %}
+        <option value="{{ f }}" {{ 'selected' if status == f }}>{{ f }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <table class="admin-table">
+    <tr><th>#</th><th>User</th><th>Plan</th><th>Status</th><th>Amount</th>
+        <th>Renews</th><th>Source</th></tr>
+    {% for s in rows %}
+      <tr>
+        <td><a href="{{ url_for('admin.subscription_detail', sub_id=s.id) }}">{{ s.id }}</a></td>
+        <td>
+          {% if s.user %}
+            <a href="{{ url_for('admin.user_detail', user_id=s.user.id) }}">
+              {{ s.user.username or s.user.email }}</a>
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td>{{ s.plan or '—' }}</td>
+        <td>
+          {{ s.status }}
+          {% if s.cancel_at_period_end %}<span class="admin-badge warn">ending</span>{% endif %}
+        </td>
+        <td>
+          {% if s.amount %}
+            {{ '%.2f'|format(s.amount / 100) }} {{ s.currency|upper }}
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td>{{ s.current_period_end.strftime('%d %b %Y') if s.current_period_end else '—' }}</td>
+        <td>{{ s.source }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="admin-empty">Nothing matches that filter.</td></tr>
+    {% endfor %}
+  </table>
+
+  {{ pager(p, 'admin.subscriptions', status=status, q=q) }}
+{% endblock admin_content %}

@@ -1417,11 +1417,23 @@ class WebhookEvent(db.Model):
                             nullable=False)
 
 def active_subscription(user):
+    """The row granting paid access right now, if any.
+
+    The period end is checked as well as the status. Polar pushes
+    current_period_end forward on every subscription.cycled, so a live
+    subscription always sits in the future - but a complimentary grant has no
+    provider behind it to renew, and without this it would never expire.
+    A webhook we never receive therefore costs access at period end rather
+    than granting it for ever, which is the right way round.
+    """
     if user is None:
         return None
+    now = _utcnow()
     return db.session.execute(
         db.select(Subscription)
         .where(Subscription.user_id == user.id,
-               Subscription.status.in_(SUB_GRANTING))
+               Subscription.status.in_(SUB_GRANTING),
+               db.or_(Subscription.current_period_end.is_(None),
+                      Subscription.current_period_end > now))
         .order_by(Subscription.created_at.desc()).limit(1)
     ).scalar_one_or_none()
