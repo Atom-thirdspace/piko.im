@@ -1,0 +1,152 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='developers.css') }}">
+{% endblock head %}
+
+{% macro endpoint(method, path, note) %}
+  <div class="api-endpoint">
+    <p class="api-sig"><span class="api-verb">{{ method }}</span> <code>{{ path }}</code></p>
+    <p class="api-note">{{ note }}</p>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<main class="learn developers">
+  <header class="learn-head">
+    <h1>Piko for developers</h1>
+    <p class="learn-lede">
+      A read-only HTTP API over the problem set, the courses, and your own
+      activity. Built for people who want to poke at it &mdash; scrape the
+      catalog, chart your streak, wire it into an editor.
+    </p>
+    <p class="track-meta">Version {{ version }} &middot; base URL <code>/api/v1</code></p>
+  </header>
+
+  <section>
+    <h2>Getting a key</h2>
+    <p>
+      The catalog works with no key at all. A key raises your rate limit and
+      unlocks the <code>/me</code> endpoints.
+      {% if current_user() %}
+        <a href="{{ url_for('profile.settings') }}#api">Create one in settings</a>.
+      {% else %}
+        <a href="{{ url_for('auth.login_page') }}">Sign in</a> to create one.
+      {% endif %}
+    </p>
+    <pre class="api-code">curl -H "Authorization: Bearer piko_sk_..." \
+  {{ request.host_url }}api/v1/me</pre>
+    <p class="api-warn">
+      A key is shown once, when you create it. We store only a hash, so if you
+      lose it there is nothing to recover &mdash; revoke it and make another.
+      Treat it like a password: not in a public repo, not in front-end
+      JavaScript, where anyone viewing the page can read it.
+    </p>
+  </section>
+
+  <section>
+    <h2>Scopes</h2>
+    <p>You pick these when creating the key. A key only carries what you ticked.</p>
+    <table class="api-table">
+      {% for scope, label in scopes.items() %}
+        <tr><td><code>{{ scope }}</code></td><td>{{ label }}</td></tr>
+      {% endfor %}
+    </table>
+    <p class="api-note">
+      <code>submissions:read</code> returns your own source code. A leaked key
+      with that scope exposes your solutions.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rate limits</h2>
+    <table class="api-table">
+      <tr><th>Caller</th><th>Requests / {{ window }}s</th><th></th></tr>
+      {% for label, limit, note in tiers %}
+        <tr><td>{{ label }}</td><td><b>{{ limit }}</b></td><td>{{ note }}</td></tr>
+      {% endfor %}
+    </table>
+    <p class="api-note">
+      Every response carries <code>X-RateLimit-Limit</code>. Over the limit you
+      get <code>429</code> with a <code>Retry-After</code> header.
+    </p>
+  </section>
+
+  <section>
+    <h2>The catalog</h2>
+    <p class="api-note">No key required. Only published content is served.</p>
+
+    {{ endpoint('GET', '/api/v1/', 'This index, machine-readable.') }}
+    {{ endpoint('GET', '/api/v1/topics', 'Topic keys and their titles.') }}
+    {{ endpoint('GET', '/api/v1/tracks', 'Every published course.') }}
+    {{ endpoint('GET', '/api/v1/tracks/<track>', 'One course with its units and lessons.') }}
+    {{ endpoint('GET', '/api/v1/tracks/<track>/<unit>/<lesson>',
+                'One lesson, Markdown and rendered HTML. Quiz answers are stripped.') }}
+    {{ endpoint('GET', '/api/v1/problems?topic=&difficulty=&q=&page=&per_page=',
+                'Search and filter problems.') }}
+    {{ endpoint('GET', '/api/v1/problems/<slug>',
+                'One problem with its samples. Hidden tests are never served - you get the count only.') }}
+    {{ endpoint('GET', '/api/v1/health', 'Liveness, including the database.') }}
+  </section>
+
+  <section>
+    <h2>Your data</h2>
+    <p class="api-note">Key required, and never cached.</p>
+    {{ endpoint('GET', '/api/v1/me', 'Profile, XP, streak, Pro status. Needs me:read.') }}
+    {{ endpoint('GET', '/api/v1/me/submissions?verdict=&page=&per_page=',
+                'Your submissions, newest first. Needs submissions:read.') }}
+  </section>
+
+  <section>
+    <h2>Pagination</h2>
+    <p>
+      List endpoints take <code>page</code> (from 1) and <code>per_page</code>
+      (default {{ default_per_page }}, max {{ max_per_page }}), and answer with
+      <code>items</code> alongside <code>page</code>, <code>per_page</code>,
+      <code>total</code> and <code>pages</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Errors</h2>
+    <p>Failures are <code>{"error": {"code": ..., "message": ...}}</code>.</p>
+    <table class="api-table">
+      <tr><th>Code</th><th>HTTP</th><th>Meaning</th></tr>
+      <tr><td><code>bad_token</code></td><td>401</td>
+          <td>The key is unknown, revoked, or expired.</td></tr>
+      <tr><td><code>no_token</code></td><td>401</td>
+          <td>That endpoint needs a key and none was sent.</td></tr>
+      <tr><td><code>missing_scope</code></td><td>403</td>
+          <td>Valid key, but it does not carry the scope.</td></tr>
+      <tr><td><code>rate_limited</code></td><td>429</td>
+          <td>Slow down. See <code>Retry-After</code>.</td></tr>
+      <tr><td><code>not_found</code></td><td>404</td>
+          <td>No such resource, or it is not published.</td></tr>
+      <tr><td><code>unavailable</code></td><td>503</td>
+          <td>The database is unreachable.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>Caching</h2>
+    <p>
+      Catalog responses carry an <code>ETag</code> and are cacheable for five
+      minutes. Send <code>If-None-Match</code> and a match costs you a
+      <code>304</code> instead of a payload &mdash; and does not count any less
+      against your rate limit, so cache locally too.
+      <code>/me</code> responses are <code>private, no-store</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <ul>
+      <li>Read-only. Nothing in the API changes anything.</li>
+      <li>Hidden tests, hints, quiz answer keys and unpublished drafts are never served.</li>
+      <li>One key per project, so you can revoke one without breaking the rest.</li>
+      <li>Identify yourself with a <code>User-Agent</code> if you are writing a bot.</li>
+    </ul>
+  </section>
+</main>
+{% endblock content %}

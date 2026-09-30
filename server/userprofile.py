@@ -6,6 +6,7 @@ from flask import (Blueprint, abort, current_app, flash, jsonify, redirect,
 
 from . import twofa
 from .achievements import describe
+from .apikeys import masked as mask, mint, revoke as revoke_key, user_keys
 from .admin_gate import is_admin
 from .webauthn_keys import KeyError_ as WebAuthnError
 from .webauthn_keys import begin_registration, configured as webauthn_configured
@@ -13,7 +14,8 @@ from .webauthn_keys import finish_registration
 from .activity import heatmap
 
 from .judge.languages import LANGUAGES
-from .models import (Enrollment, LessonProgress, OAuthIdentity, Submission,
+from .models import (API_SCOPES, ApiKey, Enrollment, LessonProgress,
+                     OAuthIdentity, Submission,
                      XpEvent, User, db, delete_account, find_by_username,
                      set_user_password, unlink_identity, update_preferences,
                      update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request,
@@ -180,6 +182,12 @@ def _render_settings(errors=None, form=None, status=200):
         pending_deletion = pending_deletion_request(user),
         security_keys=credentials_for(user),
         webauthn_on=webauthn_configured(),
+        api_keys=user_keys(user),
+        api_scopes=API_SCOPES,
+        mask=mask,
+        # Popped, not read: the raw key exists nowhere else and must not
+        # survive a refresh of the settings page.
+        fresh_api_key=session.pop("fresh_api_key", None),
     ), status
 
 
@@ -459,3 +467,38 @@ def leave_cancel():
         flash("Deletion request withdrawn. Your account stays as it is.", "success")
     return redirect(url_for("profile.settings"))
 
+
+# --------------------------------------------------------------------------- #
+# developer API keys
+# --------------------------------------------------------------------------- #
+
+@profile_bp.route("/settings/keys/api", methods=["POST"])
+@login_required
+def api_key_create():
+    user = current_user()
+    scopes = [s for s in request.form.getlist("scopes") if s in API_SCOPES]
+    days = (request.form.get("days") or "").strip() or None
+
+    try:
+        _row, raw = mint(user, name=request.form.get("name") or "",
+                         scopes=scopes, days=days)
+    except (ValueError, TypeError) as exc:
+        flash(str(exc) or "Could not create that key.", "error")
+        return redirect(url_for("profile.settings") + "#api")
+
+    # Straight into the session and out on the next render. The key is not in
+    # the database, so this is the only chance anyone has to read it.
+    session["fresh_api_key"] = raw
+    flash("Key created. Copy it now - it is not shown again.", "success")
+    return redirect(url_for("profile.settings") + "#api")
+
+
+@profile_bp.route("/settings/keys/api/<int:key_id>/revoke", methods=["POST"])
+@login_required
+def api_key_revoke(key_id):
+    row = db.session.get(ApiKey, key_id)
+    if row is None or row.user_id != current_user().id:
+        abort(404)
+    revoke_key(row)
+    flash("Key revoked.", "success")
+    return redirect(url_for("profile.settings") + "#api")

@@ -4,6 +4,7 @@
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='pricing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='developers.css') }}">
   <script defer src="{{ url_for('static', filename='choices.js') }}"></script>
 {% endblock head %}
 
@@ -58,6 +59,77 @@
       <p>You are on the free plan.</p>
       <p><a href="{{ url_for('billing.pricing') }}">See what Pro adds</a></p>
     {% endif %}
+  </section>
+
+  <section class="settings-card" id="api">
+    <h2>API keys</h2>
+    <p>
+      Build something with Piko's data.
+      <a href="{{ url_for('apidocs.index') }}">Read the docs</a>.
+    </p>
+
+    {% if fresh_api_key %}
+      <div class="key-fresh">
+        <p><b>Your new key.</b> This is the only time it is shown &mdash; we
+           store a hash, not the key.</p>
+        <input type="text" readonly value="{{ fresh_api_key }}"
+               onclick="this.select()" aria-label="Your new API key">
+      </div>
+    {% endif %}
+
+    {% if api_keys %}
+      <table class="key-table">
+        <tr><th>Name</th><th>Key</th><th>Scopes</th><th>Use</th><th></th></tr>
+        {% for k in api_keys %}
+          <tr class="{{ 'is-dead' if not k.is_live }}">
+            <td>{{ k.name }}</td>
+            <td><code>{{ mask(k) }}</code></td>
+            <td>{{ k.scopes|join(', ') }}</td>
+            <td>
+              {% if k.last_used_at %}
+                {{ k.last_used_at.strftime('%d %b') }} &middot; {{ k.requests }} calls
+              {% else %}
+                never used
+              {% endif %}
+            </td>
+            <td>
+              {% if k.is_live %}
+                <form method="post"
+                      action="{{ url_for('profile.api_key_revoke', key_id=k.id) }}">
+                  {{ csrf_field() }}
+                  <button type="submit">Revoke</button>
+                </form>
+              {% else %}
+                revoked
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+
+    <form class="auth-form" method="post"
+          action="{{ url_for('profile.api_key_create') }}">
+      {{ csrf_field() }}
+      <p><label>Name<br>
+        <input name="name" size="30" placeholder="my experiment"></label></p>
+
+      <fieldset class="key-scopes">
+        <legend>What may this key read?</legend>
+        {% for scope, label in api_scopes.items() %}
+          <label>
+            <input type="checkbox" name="scopes" value="{{ scope }}"
+                   {{ 'checked' if scope == 'catalog:read' }}>
+            <code>{{ scope }}</code> &mdash; {{ label }}
+          </label>
+        {% endfor %}
+      </fieldset>
+
+      <p><label>Expires after (days, blank = never)<br>
+        <input name="days" type="number" min="1" max="3650" size="6"></label></p>
+
+      <button type="submit">Create key</button>
+    </form>
   </section>
 
   <section class="settings-card">

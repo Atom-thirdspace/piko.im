@@ -26,6 +26,7 @@ from server.judge.worker import register_cli as register_judge_cli
 from server.achievements import register_cli as register_achievement_cli
 from server.similarity import register_cli as register_similarity_cli
 from server.publicapi import api_bp
+from server.apidocs import docs_bp
 from server.generation import register_cli as register_generation_cli
 from server.authors.routes import authors_bp
 from server.billing.routes import billing_bp
@@ -61,6 +62,7 @@ app.register_blueprint(blog_bp)
 app.register_blueprint(moderation_bp)
 app.register_blueprint(learn_bp)
 app.register_blueprint(api_bp)
+app.register_blueprint(docs_bp)
 app.register_blueprint(authors_bp)
 app.register_blueprint(billing_bp)
 register_cli(app)
