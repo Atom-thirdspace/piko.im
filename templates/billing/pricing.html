@@ -1,0 +1,80 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='pricing.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn pricing">
+  <header class="learn-head">
+    <h1>Piko Pro</h1>
+    <p class="learn-lede">
+      Everything in Piko stays free. Pro lifts the limits and opens the
+      solutions.
+    </p>
+  </header>
+
+  {% if state.pro %}
+    <section class="price-current">
+      <p>
+        <span class="pill pill-done">Subscribed</span>
+        {% if state.ending %}
+          Your subscription ends on
+          {{ state.renews_at.strftime('%d %b %Y') if state.renews_at }}.
+        {% elif state.renews_at %}
+          Renews {{ state.renews_at.strftime('%d %b %Y') }}.
+        {% endif %}
+      </p>
+      <form method="post" action="{{ url_for('billing.portal') }}">
+        {{ csrf_field() }}
+        <button type="submit" class="btn">Manage billing</button>
+      </form>
+    </section>
+  {% endif %}
+
+  <ul class="price-perks">
+    {% for perk in perks %}<li>{{ perk }}</li>{% endfor %}
+  </ul>
+
+  {% if not configured %}
+    <p class="learn-lede">Subscriptions are not switched on yet.</p>
+  {% else %}
+    <div class="price-grid">
+      {% for plan in plans %}
+        <section class="price-card {{ 'is-pick' if plan.highlight }}">
+          {% if plan.highlight %}<p class="price-flag">Best value</p>{% endif %}
+          <h2>{{ plan.name }}</h2>
+          <p class="price-amount">
+            <b>{{ plan.price }}</b> <span>{{ plan.cadence }}</span>
+          </p>
+          <p class="price-blurb">{{ plan.blurb }}</p>
+
+          {% if state.pro %}
+            <p class="price-note">You are already on Pro.</p>
+          {% elif not current_user() %}
+            <a class="btn btn-primary"
+               href="{{ url_for('auth.login_page', next=url_for('billing.pricing')) }}">
+              Sign in to subscribe
+            </a>
+          {% else %}
+            <form method="post"
+                  action="{{ url_for('billing.checkout', plan=plan.key) }}">
+              {{ csrf_field() }}
+              <button type="submit" class="btn btn-primary">
+                Subscribe {{ plan.cadence }}
+              </button>
+            </form>
+          {% endif %}
+        </section>
+      {% endfor %}
+    </div>
+
+    <p class="price-fine">
+      Payments are handled by Polar, who act as the merchant of record and
+      charge any sales tax or VAT due. Cancel any time from the billing
+      portal - you keep Pro until the period you have paid for runs out.
+    </p>
+  {% endif %}
+</main>
+{% endblock content %}
