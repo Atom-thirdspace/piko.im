@@ -6,6 +6,7 @@ from flask import render_template
 WELCOME_SUBJECT = "Welcome to Piko: your first problem is waiting"
 VERIFY_SUBJECT = "Confirm your email for Piko"
 LOGIN_ALERT_SUBJECT = "New sign-in to your Piko account"
+AUTHOR_INVITE_SUBJECT = "You have been invited to write for Piko"
 
 
 def _client_ready():
@@ -67,3 +68,19 @@ def send_login_alert_email(to_email, name, when, ip, user_agent, settings_url):
         settings_url=settings_url,
     )
     return _send(to_email, LOGIN_ALERT_SUBJECT, html)
+
+
+def send_author_invite_email(to_email, invite_url, expires, inviter=None,
+                             note=None, name=None):
+    """The invite link, mailed. Returns False when Resend is not configured,
+    which is why the admin page always shows the link as well."""
+    html = render_template(
+        "emails/author-invite.html",
+        invite_url=invite_url,
+        expires=expires.strftime("%d %b %Y"),
+        inviter=inviter,
+        note=note or None,
+        for_email=to_email,
+        name=name,
+    )
+    return _send(to_email, AUTHOR_INVITE_SUBJECT, html)

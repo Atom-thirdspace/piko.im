@@ -85,3 +85,24 @@
 
 .auth-hint { display: block; font-size: .78rem; color: #7a6455; margin-top: .2rem; }
 .auth-err { display: block; font-size: .8rem; color: #b3402f; margin-top: .2rem; }
+
+/* deleting your own draft */
+
+.auth-danger {
+    margin-top: 2.5rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid #edcfc8;
+    border-radius: .5rem;
+    background: #fdf6f4;
+}
+.auth-danger h2 { margin: 0 0 .3rem; font-size: 1rem; color: #8a3423; }
+.auth-danger form { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .6rem; }
+.auth-danger code {
+    background: #f6efe8;
+    padding: .05rem .3rem;
+    border-radius: .25rem;
+    font-size: .85em;
+}
+
+.auth-btn--danger { border-color: #b3402f; color: #b3402f; }
+.auth-btn--danger:hover { background: #fdf0ed; }

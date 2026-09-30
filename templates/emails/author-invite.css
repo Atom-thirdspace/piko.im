@@ -1,0 +1,13 @@
+/* Author invitation email. */
+{% include "emails/_shell.css" %}
+
+.email-author-invite .eyebrow { color: #77431d; }
+.invite-note {
+    margin: 0 0 18px;
+    padding: 12px 14px;
+    background: #f6efe8;
+    border-left: 3px solid #77431d;
+    border-radius: 0 6px 6px 0;
+    font-style: italic;
+    color: #5d4a3c;
+}

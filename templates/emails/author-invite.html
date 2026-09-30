@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>You have been invited to write for Piko</title>
+  <style>
+    {% include "emails/author-invite.css" %}
+  </style>
+</head>
+<body class="email email-author-invite">
+  <div class="email-wrapper">
+    <table class="email-shell" role="presentation">
+      <tr>
+        <td class="email-header">
+          <a class="brand" href="https://piko.im">Piko</a>
+        </td>
+      </tr>
+      <tr>
+        <td class="email-content">
+          <p class="eyebrow">Invitation</p>
+          <h1 class="email-title">Come write for Piko</h1>
+          <p class="greeting">Hey{% if name %} {{ name }}{% endif %},</p>
+
+          <div class="message">
+            <p>
+              {% if inviter %}{{ inviter }} has invited you{% else %}You have been invited{% endif %}
+              to write courses and lessons for Piko.
+            </p>
+          </div>
+
+          {% if note %}
+            <p class="invite-note">{{ note }}</p>
+          {% endif %}
+
+          <div class="message">
+            <p>
+              Accepting gives you an author dashboard where you can draft
+              courses, units and lessons. Nothing you write goes live on its
+              own - you send a draft for review and an editor publishes it.
+            </p>
+          </div>
+
+          <div class="email-action">
+            <a class="button" href="{{ invite_url }}">Accept the invitation</a>
+          </div>
+
+          <p class="fine-print">If the button does not work, paste this into your browser:</p>
+          <p class="raw-link">{{ invite_url }}</p>
+
+          <table class="details" role="presentation">
+            <tr>
+              <th scope="row">Expires</th>
+              <td>{{ expires }}</td>
+            </tr>
+            {% if for_email %}
+              <tr>
+                <th scope="row">Issued to</th>
+                <td>{{ for_email }}</td>
+              </tr>
+            {% endif %}
+          </table>
+
+          <p class="fine-print">
+            You need to be signed in to Piko with
+            {% if for_email %}{{ for_email }}{% else %}your account{% endif %}
+            and have confirmed your email address before the link will work.
+            If you were not expecting this, you can ignore it - the invitation
+            does nothing until someone accepts it.
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td class="email-footer">
+          <p>Piko</p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

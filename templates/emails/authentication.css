@@ -1,0 +1,5 @@
+/* Welcome / verification email. Shared shell first, then anything specific. */
+{% include "emails/_shell.css" %}
+
+.message-welcome p { margin-bottom: 12px; }
+.message-verification { color: #2a1a10; }

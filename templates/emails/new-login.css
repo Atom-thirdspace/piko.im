@@ -1,2 +1,4 @@
 /* New-login email styles. Keep selectors scoped to this email. */
-/* Add new-login-specific selectors below. */
+{% include "emails/_shell.css" %}
+
+.email-new-login .eyebrow { color: #b3402f; }

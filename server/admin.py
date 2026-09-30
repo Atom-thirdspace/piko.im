@@ -29,6 +29,7 @@ from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
 from .webauthn_keys import KeyError_ as WebAuthnError
 from .webauthn_keys import begin_authentication, finish_authentication
 from .authors.invites import MAX_TTL_DAYS, create_invite, revoke
+from .mailer import send_author_invite_email
 from .models import (DRAFT, PUBLISHED, REVIEW, AuthorInvite, AuthorInviteUse,
                      _utcnow)
 
@@ -1118,13 +1119,32 @@ def author_invite():
     except (TypeError, ValueError):
         uses, ttl = 1, 14
 
-    row, raw = create_invite(current_user(), email=form.get("email"),
+    admin = current_user()
+    row, raw = create_invite(admin, email=form.get("email"),
                              note=form.get("note") or "", max_uses=uses,
                              ttl_days=ttl)
     log_action("author_invite", row.id, row.email or "open link")
 
-    session["fresh_invite"] = url_for("authors.join", token=raw, _external=True)
-    flash("Invite created. Copy the link now - it is not shown again.", "success")
+    link = url_for("authors.join", token=raw, _external=True)
+
+    # Mail it when it is addressed to someone. The link is still shown either
+    # way: Resend may not be configured, and _send swallows its own failures.
+    mailed = False
+    if row.email:
+        mailed = send_author_invite_email(
+            row.email, link, row.expires_at,
+            inviter=(admin.username or admin.name or None),
+            note=row.note)
+
+    session["fresh_invite"] = link
+    if mailed:
+        flash("Invite created and emailed to %s. The link is shown once - "
+              "copy it if you want to send it yourself." % row.email, "success")
+    elif row.email:
+        flash("Invite created, but the email could not be sent. Send them "
+              "this link yourself - it is shown only once.", "error")
+    else:
+        flash("Invite created. Copy the link now - it is not shown again.", "success")
     return redirect(url_for("admin.authors"))
 
 @admin_bp.route("/authors/invite/<int:invite_id>/revoke", methods=["POST"])

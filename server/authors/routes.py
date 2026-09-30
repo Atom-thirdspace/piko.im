@@ -283,3 +283,49 @@ def withdraw(kind, row_id):
         db.session.commit()
         flash("Pulled back to draft.", "success")
     return redirect(url_for("authors.index"))
+def _edit_url(kind, row_id):
+    if kind == "track":
+        return url_for("authors.track_form", track_id=row_id)
+    if kind == "unit":
+        return url_for("authors.unit_form", unit_id=row_id)
+    return url_for("authors.lesson_form", lesson_id=row_id)
+
+
+def _children_blocking(kind, row):
+    """Why this row must not be deleted yet, or None.
+
+    Track -> Unit -> Lesson cascade on delete, and the children may not be
+    this author's work, so we refuse rather than quietly taking them with it.
+    """
+    if kind == "track" and row.units:
+        return ("This course still holds %d unit%s. Empty it first."
+                % (len(row.units), "" if len(row.units) == 1 else "s"))
+    if kind == "unit" and row.lessons:
+        return ("This unit still holds %d lesson%s. Empty it first."
+                % (len(row.lessons), "" if len(row.lessons) == 1 else "s"))
+    return None
+
+
+@authors_bp.route("/<kind>/<int:row_id>/delete", methods=["POST"])
+@author_required
+def delete(kind, row_id):
+    model = MODELS.get(kind)
+    if model is None:
+        abort(404)
+    # _mine_or_404 already refuses someone else's row, and anything published.
+    row = _mine_or_404(model, row_id)
+
+    if (request.form.get("confirm") or "").strip().lower() != row.slug:
+        flash("Type the slug exactly to delete it.", "error")
+        return redirect(_edit_url(kind, row_id))
+
+    blocked = _children_blocking(kind, row)
+    if blocked:
+        flash(blocked, "error")
+        return redirect(_edit_url(kind, row_id))
+
+    slug = row.slug
+    db.session.delete(row)
+    db.session.commit()
+    flash("Deleted %s." % slug, "success")
+    return redirect(url_for("authors.index"))

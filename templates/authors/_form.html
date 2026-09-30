@@ -26,3 +26,23 @@
 {% macro err(errors, field) %}
   {% if errors.get(field) %}<span class="auth-err">{{ errors[field] }}</span>{% endif %}
 {% endmacro %}
+
+{#- Only ever rendered for your own unpublished work: the route refuses
+    anything else, and published content is an editor's to remove. -#}
+{% macro danger(kind, row, noun) %}
+  {% if row and row.status != 'published' %}
+    <section class="auth-danger">
+      <h2>Delete this {{ noun }}</h2>
+      <p class="auth-hint">
+        This cannot be undone. Type <code>{{ row.slug }}</code> to confirm.
+      </p>
+      <form method="post"
+            action="{{ url_for('authors.delete', kind=kind, row_id=row.id) }}">
+        {{ csrf_field() }}
+        <input type="text" name="confirm" size="30"
+               placeholder="{{ row.slug }}" autocomplete="off">
+        <button type="submit" class="auth-btn auth-btn--danger">Delete</button>
+      </form>
+    </section>
+  {% endif %}
+{% endmacro %}
