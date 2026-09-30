@@ -1,0 +1,38 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='pricing.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Thank you</h1>
+  </header>
+
+  {% if state.pro %}
+    <p class="learn-lede">Pro is active on your account. Go and use it.</p>
+    <p>
+      <a class="btn btn-primary" href="{{ url_for('learn.index') }}">Back to learning</a>
+      <a class="btn" href="{{ url_for('billing.pricing') }}">Manage billing</a>
+    </p>
+  {% else %}
+    {#- The webhook usually lands before this page does, but not always, and
+        nothing here grants access - so never claim it is active on the
+        strength of the redirect alone. -#}
+    <p class="learn-lede">
+      Your payment went through and we are activating your account. This
+      normally takes a few seconds.
+    </p>
+    <p class="price-fine">
+      Nothing more for you to do - the confirmation comes from the payment
+      provider, not from this page. Reload in a moment.
+    </p>
+    <p>
+      <a class="btn btn-primary" href="{{ url_for('billing.success') }}">Reload</a>
+      <a class="btn" href="{{ url_for('dashboard.index') }}">Back to the dashboard</a>
+    </p>
+  {% endif %}
+</main>
+{% endblock content %}

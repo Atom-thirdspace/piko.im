@@ -1348,3 +1348,92 @@ class AuthorInviteUse(db.Model):
 
     invite = db.relationship("AuthorInvite")
     user = db.relationship("User")
+
+SUB_GRANTING = ("active","trialing")
+
+class Subscription(db.Model):
+    __tablename__ = "subscriptions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    polar_subscription_id = db.Column(db.String(64), unique=True, nullable=False)
+    polar_customer_id = db.Column(db.String(64), nullable=False, default="",
+                                  server_default="")
+    polar_product_id = db.Column(db.String(64), nullable=False, default="",
+                                 server_default="")
+    plan = db.Column(db.String(32), nullable=False, default="", server_default="")
+    status = db.Column(db.String(32), nullable=False, default="incomplete",
+                       server_default="incomplete", index=True)
+    cancel_at_period_end = db.Column(db.Boolean, nullable=False, default=False,
+                                     server_default="false")
+    current_period_start = db.Column(db.DateTime(timezone=True))
+    current_period_end = db.Column(db.DateTime(timezone=True))
+    started_at = db.Column(db.DateTime(timezone=True))
+    ends_at = db.Column(db.DateTime(timezone=True))
+    canceled_at = db.Column(db.DateTime(timezone=True))
+    event_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           onupdate=_utcnow, nullable=False)
+    amount = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    currency = db.Column(db.String(8), nullable=False, default="usd",
+                         server_default="usd")
+    recurring_interval = db.Column(db.String(16), nullable=False, default="month",
+                                   server_default="month")
+    recurring_interval_count = db.Column(db.Integer, nullable=False, default=1,
+                                         server_default="1")
+    source = db.Column(db.String(16), nullable=False, default="polar",
+                       server_default="polar", index=True)
+    note = db.Column(db.Text, nullable=False, default="", server_default="")
+    granted_by_id = db.Column(db.Integer,
+                              db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    granted_by = db.relationship("User", foreign_keys=[granted_by_id])
+
+    @property
+    def is_manual(self):
+        return self.source == "manual"
+
+    user = db.relationship("User", foreign_keys=[user_id])
+
+    @property
+    def grants_access(self):
+        return self.status in SUB_GRANTING
+
+
+class WebhookEvent(db.Model):
+    __tablename__ = "webhook_events"
+    __table_args__ = (UniqueConstraint("source", "event_id",
+                                       name="webhook_events_source_event_id_key"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    source = db.Column(db.String(32), nullable=False, default="polar",
+                       server_default="polar")
+    event_id = db.Column(db.String(128), nullable=False)
+    event_type = db.Column(db.String(64), nullable=False, default="",
+                           server_default="")
+    received_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                            nullable=False)
+
+def active_subscription(user):
+    """The row granting paid access right now, if any.
+
+    The period end is checked as well as the status. Polar pushes
+    current_period_end forward on every subscription.cycled, so a live
+    subscription always sits in the future - but a complimentary grant has no
+    provider behind it to renew, and without this it would never expire.
+    A webhook we never receive therefore costs access at period end rather
+    than granting it for ever, which is the right way round.
+    """
+    if user is None:
+        return None
+    now = _utcnow()
+    return db.session.execute(
+        db.select(Subscription)
+        .where(Subscription.user_id == user.id,
+               Subscription.status.in_(SUB_GRANTING),
+               db.or_(Subscription.current_period_end.is_(None),
+                      Subscription.current_period_end > now))
+        .order_by(Subscription.created_at.desc()).limit(1)
+    ).scalar_one_or_none()

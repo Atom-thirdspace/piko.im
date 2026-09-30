@@ -61,3 +61,11 @@
 .sim-side { min-width: 0; }
 .sim-side .admin-pre { max-height: 20rem; overflow: auto; }
 @media (max-width: 800px) { .sim-pair { grid-template-columns: 1fr; } }
+
+/* cards used by the review queue, invites and subscription pages */
+.admin-card { border: 1px solid #e3e6ea; border-radius: 10px;
+              padding: 1rem 1.15rem; margin: 0 0 1rem; }
+.admin-card h2 { margin-top: 0; }
+
+.admin-note { background: #f6f7f9; border: 1px solid #e3e6ea;
+              border-radius: 10px; padding: .9rem 1.1rem; margin: 0 0 1.25rem; }
