@@ -1437,3 +1437,39 @@ def active_subscription(user):
                       Subscription.current_period_end > now))
         .order_by(Subscription.created_at.desc()).limit(1)
     ).scalar_one_or_none()
+
+
+API_SCOPES = {
+    "catalog:read":     "Read problems, courses and lessons",
+    "me:read":          "Read your profile, XP and streak",
+    "submissions:read": "Read your own submissions",
+}
+DEFAULT_SCOPES = ["catalog:read"]
+MAX_KEYS_PER_USER = 10
+
+class ApiKey(db.Model):
+    __tablename__ = "api_keys"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False, default="", server_default="")
+    prefix = db.Column(db.String(16), nullable=False, index=True)
+    key_hash = db.Column(db.String(64), unique=True, nullable=False)
+    scopes = db.Column(ARRAY(db.Text), nullable=False, default=list)
+    requests = db.Column(db.BigInteger, nullable=False, default=0)
+    last_used_at = db.Column(db.DateTime(timezone=True))
+    last_ip = db.Column(db.String(64), nullable=False, default="", server_default="")
+    expires_at = db.Column(db.DateTime(timezone=True))
+    revoked_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+
+    @property
+    def is_live(self):
+        return (self.revoked_at is None
+                and (self.expires_at is None or self.expires_at > _utcnow()))
+
+    def allows(self, scope):
+        return self.is_live and scope in (self.scopes or [])

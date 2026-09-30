@@ -1,0 +1,112 @@
+/* Developer API docs, and the key table in settings. Sits on learn.css. */
+
+.developers section { margin-top: 2.25rem; }
+.developers h2 { border-bottom: 1px solid #e6d9cd; padding-bottom: .35rem; }
+.developers code {
+    background: #f6efe8;
+    padding: .08rem .3rem;
+    border-radius: .25rem;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .88em;
+}
+
+.api-code {
+    background: #fffdfb;
+    border: 1px solid #d8c8ba;
+    border-radius: .5rem;
+    padding: .75rem .9rem;
+    overflow-x: auto;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .85rem;
+    line-height: 1.5;
+    color: #2a1a10;
+}
+
+.api-endpoint {
+    border-left: 3px solid #e6d9cd;
+    padding: .1rem 0 .1rem .8rem;
+    margin: .8rem 0;
+}
+.api-sig { margin: 0; }
+.api-verb {
+    display: inline-block;
+    background: #77431d;
+    color: #fff;
+    border-radius: .25rem;
+    padding: .05rem .4rem;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    vertical-align: middle;
+    margin-right: .35rem;
+}
+.api-note { margin: .2rem 0 0; font-size: .85rem; color: #5d4a3c; }
+
+.api-warn {
+    margin-top: .8rem;
+    padding: .7rem .9rem;
+    background: #fdf6f4;
+    border: 1px solid #edcfc8;
+    border-radius: .5rem;
+    font-size: .88rem;
+    color: #5d4a3c;
+}
+
+.api-table { width: 100%; border-collapse: collapse; margin: .6rem 0; }
+.api-table th {
+    text-align: left;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #7a6455;
+    padding: .35rem .6rem .35rem 0;
+    border-bottom: 1px solid #e6d9cd;
+}
+.api-table td {
+    padding: .4rem .6rem .4rem 0;
+    border-bottom: 1px solid #f0e6dc;
+    font-size: .9rem;
+    vertical-align: top;
+}
+
+/* --- the key card on the settings page --- */
+
+.key-fresh {
+    margin: .75rem 0;
+    padding: .8rem .95rem;
+    background: #f1f8f3;
+    border: 1px solid #2f7d4f;
+    border-radius: .5rem;
+}
+.key-fresh p { margin: 0 0 .4rem; font-size: .9rem; }
+.key-fresh input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .45rem .6rem;
+    border: 1px solid #d8c8ba;
+    border-radius: .35rem;
+    background: #fff;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .82rem;
+}
+
+.key-table { width: 100%; border-collapse: collapse; margin: .8rem 0; }
+.key-table th {
+    text-align: left;
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #7a6455;
+    padding: .3rem .5rem .3rem 0;
+    border-bottom: 1px solid #e6d9cd;
+}
+.key-table td {
+    padding: .45rem .5rem .45rem 0;
+    border-bottom: 1px solid #f0e6dc;
+    font-size: .86rem;
+}
+.key-table tr.is-dead td { opacity: .5; text-decoration: line-through; }
+.key-table form { margin: 0; }
+
+.key-scopes { border: 0; padding: 0; margin: .6rem 0; }
+.key-scopes legend { font-size: .82rem; color: #7a6455; padding: 0; }
+.key-scopes label { display: block; font-size: .88rem; margin: .25rem 0; }
