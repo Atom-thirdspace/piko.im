@@ -20,10 +20,10 @@
     <section class="price-current">
       <p>
         <span class="pill pill-done">Subscribed</span>
-        {% if state.owns_classroom %}
-          Included with the classroom you run.
-        {% elif state.via == 'classroom' %}
-          Through {{ state.classroom.name or 'your classroom' }}.
+        {% if state.owns_group %}
+          Included with the {{ state.group_kind }} you run.
+        {% elif state.group %}
+          Through {{ state.group.name or 'your ' ~ state.group_kind }}.
         {% elif state.ending %}
           Your subscription ends on
           {{ state.renews_at.strftime('%d %b %Y') if state.renews_at }}.
@@ -63,6 +63,39 @@
               Sign in to subscribe
             </a>
 
+          {% elif plan.group == 'team' %}
+            {#- A licence attaches to a team that already exists, so there is
+                nothing to buy until they run one. -#}
+            {% if not my_teams %}
+              <p class="price-note">
+                <a href="{{ url_for('community.team_new') }}">Create a team</a>
+                first, then license it here.
+              </p>
+            {% else %}
+              <form method="post"
+                    action="{{ url_for('billing.checkout', plan=plan.key) }}">
+                {{ csrf_field() }}
+                <p class="price-seats">
+                  <label>Team<br>
+                    <select name="team_id">
+                      {% for t in my_teams %}
+                        <option value="{{ t.id }}">
+                          {{ t.name }} ({{ t.members|length }} members)
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                </p>
+                <p class="price-seats">
+                  <label>Seats
+                    <input type="number" name="seats" value="{{ plan.min_seats }}"
+                           min="{{ plan.min_seats }}" max="{{ plan.max_seats }}">
+                  </label>
+                </p>
+                <button type="submit" class="btn btn-primary">Buy seats</button>
+              </form>
+            {% endif %}
+
           {% elif plan.seats %}
             {#- A teacher may already be Pro personally and still need seats,
                 so the classroom card is never blocked by state.pro. -#}
@@ -81,6 +114,14 @@
               Teaching somewhere that cannot pay?
               <a href="{{ url_for('classroom.index') }}">Free academic licences</a>
               exist.
+            </p>
+
+          {% elif plan.requires == 'student' and not student %}
+            <a class="btn" href="{{ url_for('students.index') }}">
+              Verify your student status
+            </a>
+            <p class="price-note">
+              Confirm an academic email and this price opens up.
             </p>
 
           {% elif state.pro %}

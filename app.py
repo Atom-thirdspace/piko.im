@@ -33,6 +33,7 @@ from server.billing.routes import billing_bp
 from server.billing.service import is_pro as _is_pro
 from server.billing.service import subscription_state as _sub_state
 from server.classrooms import classroom_bp
+from server.students import students_bp
 
 load_dotenv()
 
@@ -68,6 +69,7 @@ app.register_blueprint(docs_bp)
 app.register_blueprint(authors_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(classroom_bp)
+app.register_blueprint(students_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)

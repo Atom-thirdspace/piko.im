@@ -7,6 +7,7 @@ WELCOME_SUBJECT = "Welcome to Piko: your first problem is waiting"
 VERIFY_SUBJECT = "Confirm your email for Piko"
 LOGIN_ALERT_SUBJECT = "New sign-in to your Piko account"
 AUTHOR_INVITE_SUBJECT = "You have been invited to write for Piko"
+STUDENT_CODE_SUBJECT = "Your Piko student verification code"
 
 
 def _client_ready():
@@ -84,3 +85,10 @@ def send_author_invite_email(to_email, invite_url, expires, inviter=None,
         name=name,
     )
     return _send(to_email, AUTHOR_INVITE_SUBJECT, html)
+
+
+def send_student_code_email(to_email, code, name=None, ttl_minutes=20):
+    """The one-time code proving an academic address belongs to them."""
+    html = render_template("emails/student-code.html", code=code, name=name,
+                           ttl_minutes=ttl_minutes)
+    return _send(to_email, STUDENT_CODE_SUBJECT, html)

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Your Piko student verification code</title>
+  <style>
+    {% include "emails/student-code.css" %}
+  </style>
+</head>
+<body class="email email-student-code">
+  <div class="email-wrapper">
+    <table class="email-shell" role="presentation">
+      <tr>
+        <td class="email-header"><a class="brand" href="https://piko.im">Piko</a></td>
+      </tr>
+      <tr>
+        <td class="email-content">
+          <p class="eyebrow">Student verification</p>
+          <h1 class="email-title">Your code</h1>
+          <p class="greeting">Hey{% if name %} {{ name }}{% endif %},</p>
+          <div class="message">
+            <p>Enter this on Piko to confirm this is your academic address.</p>
+          </div>
+
+          <p class="code-box">{{ code }}</p>
+
+          <p class="fine-print">
+            It is good for {{ ttl_minutes or 20 }} minutes. If you did not ask
+            for this, ignore it &mdash; nothing happens until the code is
+            entered, and whoever typed your address cannot see it.
+          </p>
+        </td>
+      </tr>
+      <tr><td class="email-footer"><p>Piko</p></td></tr>
+    </table>
+  </div>
+</body>
+</html>

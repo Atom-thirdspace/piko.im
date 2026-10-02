@@ -1,0 +1,110 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Student verification</h1>
+    <p class="learn-lede">
+      Studying somewhere? Confirm an academic email address and the student
+      price opens up &mdash; half the normal yearly plan.
+    </p>
+  </header>
+
+  {#- One page, four states. The flow is small enough that splitting it
+      across routes would cost more than it saves. -#}
+
+  {% if row and row.is_valid %}
+    <section class="room-card room-card--member">
+      <h2>Verified</h2>
+      <p>
+        <code>{{ row.academic_email }}</code> is confirmed
+        {% if row.verified_at %}since {{ row.verified_at.strftime('%d %b %Y') }}{% endif %}.
+      </p>
+      <p class="room-hint">
+        Good until {{ row.expires_at.strftime('%d %b %Y') if row.expires_at }}.
+        We ask again once a year, because students graduate.
+      </p>
+      <p><a class="btn btn-primary" href="{{ url_for('billing.pricing') }}">
+        See the student price</a></p>
+    </section>
+
+  {% elif row and row.status == 'sent' %}
+    <section class="room-card">
+      <h2>Check your inbox</h2>
+      <p>
+        We sent a six-digit code to <code>{{ row.academic_email }}</code>.
+        It lasts {{ ttl_minutes }} minutes.
+      </p>
+      <form class="room-join" method="post" action="{{ url_for('students.verify_confirm') }}">
+        {{ csrf_field() }}
+        <input name="code" inputmode="numeric" maxlength="6" autofocus
+               autocomplete="one-time-code" placeholder="123456"
+               aria-label="Verification code">
+        <button type="submit" class="btn btn-primary">Confirm</button>
+      </form>
+      {% if row.attempts %}
+        <p class="room-hint">{{ row.attempts }} attempt{{ '' if row.attempts == 1 else 's' }} used.</p>
+      {% endif %}
+    </section>
+
+    <section class="room-card">
+      <h2>Wrong address?</h2>
+      <form class="room-form" method="post" action="{{ url_for('students.verify_start') }}">
+        {{ csrf_field() }}
+        <p><input name="academic_email" type="email" size="32"
+                  value="{{ row.academic_email }}" aria-label="Academic email"></p>
+        <button type="submit" class="room-btn">Send a new code</button>
+      </form>
+    </section>
+
+  {% elif row and row.status == 'pending' %}
+    <section class="room-card">
+      <h2>Being checked by hand</h2>
+      <p>
+        We did not recognise <code>{{ row.domain }}</code> as an institution
+        automatically, so someone is looking at it. We will email you.
+      </p>
+      <p class="room-hint">
+        Plenty of real universities use ordinary domains, so this is normal
+        and not a rejection.
+      </p>
+    </section>
+
+  {% else %}
+    {% if row and row.status == 'rejected' %}
+      <p class="room-warn">
+        Your last request was turned down.
+        {% if row.review_note %}<br>{{ row.review_note }}{% endif %}
+      </p>
+    {% endif %}
+
+    <section class="room-card">
+      <h2>Verify an academic email</h2>
+      <p class="room-hint">
+        This can be different from the address you sign in with &mdash; most
+        people sign up personally and verify with their university address.
+      </p>
+      <form class="room-form" method="post" action="{{ url_for('students.verify_start') }}">
+        {{ csrf_field() }}
+        <p><label>Academic email<br>
+          <input name="academic_email" type="email" size="32" required
+                 placeholder="you@university.ac.in"></label></p>
+        <p><label>Anything that helps, if your institution is unusual<br>
+          <input name="evidence" size="40"
+                 placeholder="e.g. course and year"></label></p>
+        <button type="submit" class="btn btn-primary">Send me a code</button>
+      </form>
+    </section>
+  {% endif %}
+
+  <p class="room-hint">
+    One address per account. Verification lasts {{ months }} months, then we
+    ask again.
+  </p>
+</main>
+{% endblock content %}

@@ -4,7 +4,8 @@ from functools import wraps
 from flask import (Blueprint, abort, current_app, flash, redirect,
                    render_template, request, url_for)
 from ..csrf import exempt
-from ..models import _utcnow
+from ..models import (Team, _utcnow, db, is_verified_student,
+                      owned_teams)
 from ..session import current_user, login_required
 from . import service
 from .client import BillingError, create_checkout, create_portal_session
@@ -31,7 +32,9 @@ def pricing():
     state = service.subscription_state(user) if user else {"pro": False}
     return render_template("billing/pricing.html", plans=available(),
                            perks=PERKS, state=state,
-                           configured=is_configured())
+                           configured=is_configured(),
+                           my_teams=owned_teams(user) if user else [],
+                           student=is_verified_student(user) if user else False)
 
 
 @billing_bp.route("/billing/checkout/<plan>", methods=["POST"])
@@ -43,6 +46,15 @@ def checkout(plan):
 
     user = current_user()
     spec = PLANS.get(plan) or {}
+    meta = {"plan": plan}
+
+    # Checked here and not only in the template: this form posts to a URL
+    # anyone can type, so the discount has to be enforced server-side.
+    if spec.get("requires") == "student" and not is_verified_student(user):
+        flash("Verify your academic email before taking the student price.",
+              "error")
+        return redirect(url_for("students.index"))
+
     seats = None
     if spec.get("seats"):
         try:
@@ -51,13 +63,25 @@ def checkout(plan):
             seats = spec["min_seats"]
         seats = max(spec["min_seats"], min(seats, spec["max_seats"]))
 
+        if spec.get("group") == "team":
+            # A licence attaches to a roster that already exists, and only
+            # ever to one the buyer owns.
+            try:
+                team = db.session.get(Team, int(request.form.get("team_id") or 0))
+            except (TypeError, ValueError):
+                team = None
+            if team is None or team.owner_id != user.id:
+                flash("Pick a team you own.", "error")
+                return redirect(url_for("billing.pricing"))
+            meta["team_id"] = str(team.id)
+
     elif service.is_pro(user):
         flash("You are already subscribed", "error")
         return redirect(url_for("billing.pricing"))
 
     success = url_for("billing.success", _external=True) + "?checkout_id={CHECKOUT_ID}"
     try:
-        url = create_checkout(pid, user, success, metadata={"plan": plan}, seats=seats)
+        url = create_checkout(pid, user, success, metadata=meta, seats=seats)
     except BillingError as exc:
         current_app.logger.warning("checkout failed for user %s: %s", user.id, exc)
         flash("Could not start the checkout. Try again in a moment.", "error")

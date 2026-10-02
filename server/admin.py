@@ -35,8 +35,9 @@ from .billing import stats as billing_stats
 from .billing.client import (BillingError, cancel_subscription,
                              get_subscription, revoke_subscription)
 from .mailer import send_author_invite_email
-from .models import (DRAFT, PUBLISHED, REVIEW, SUB_GRANTING, AuthorInvite,
-                     AuthorInviteUse, Classroom, Subscription, _utcnow,
+from .models import (DRAFT, PUBLISHED, REVIEW, SUB_GRANTING, VERIFY_MONTHS,
+                     AuthorInvite, AuthorInviteUse, Classroom,
+                     StudentVerification, Subscription, Team, _utcnow,
                      new_join_code)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -55,7 +56,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.generated", "Generated"),
        ("admin.authors", "Authors"), ("admin.review", "Review"),
        ("admin.subscriptions", "Subscriptions"),
-       ("admin.classrooms", "Classrooms")
+       ("admin.classrooms", "Classrooms"),
+       ("admin.students", "Students")
        ]
 
 
@@ -1464,3 +1466,101 @@ def classroom_archive(class_id):
     log_action("classroom_archive", cls.id, cls.name)
     flash("Classroom archived. Its members lose Pro.", "success")
     return redirect(url_for("admin.classrooms"))
+
+
+# --------------------------------------------------------------------------- #
+# team licences
+# --------------------------------------------------------------------------- #
+
+@admin_bp.route("/teams/licence", methods=["POST"])
+@admin_required
+def team_licence_grant():
+    """A free licence on an existing team. No provider, no money."""
+    form = request.form
+    slug = (form.get("slug") or "").strip().lower()
+    team = db.session.execute(
+        db.select(Team).filter_by(slug=slug)).scalar_one_or_none()
+    if team is None:
+        flash("No team with that slug.", "error")
+        return redirect(url_for("admin.classrooms"))
+
+    try:
+        seats = max(1, min(int(form.get("seats") or 10), 500))
+        months = max(1, min(int(form.get("months") or 12), 60))
+    except (TypeError, ValueError):
+        seats, months = 10, 12
+
+    team.seats = seats
+    team.licence_source = "granted"
+    team.licence_expires_at = _utcnow() + timedelta(days=30 * months)
+    team.licence_note = (form.get("note") or "")[:2000]
+    team.granted_by_id = current_user().id
+    db.session.commit()
+
+    log_action("team_licence_grant", team.id,
+               "%s / %d seats / %d months" % (team.slug, seats, months))
+    flash("Licensed %s with %d seats." % (team.slug, seats), "success")
+    return redirect(url_for("admin.classrooms"))
+
+
+@admin_bp.route("/teams/<int:team_id>/licence/revoke", methods=["POST"])
+@admin_required
+def team_licence_revoke(team_id):
+    team = _get_or_404(Team, team_id)
+    team.licence_source = "none"
+    team.seats = 0
+    db.session.commit()
+    log_action("team_licence_revoke", team.id, team.slug)
+    flash("Licence removed. The team itself is untouched.", "success")
+    return redirect(url_for("admin.classrooms"))
+
+
+# --------------------------------------------------------------------------- #
+# student verification
+# --------------------------------------------------------------------------- #
+
+@admin_bp.route("/students/")
+@admin_required
+def students():
+    pending = db.session.execute(
+        db.select(StudentVerification)
+        .where(StudentVerification.status == "pending")
+        .order_by(StudentVerification.created_at)
+    ).scalars().all()
+    recent = db.session.execute(
+        db.select(StudentVerification)
+        .where(StudentVerification.status != "pending")
+        .order_by(StudentVerification.created_at.desc()).limit(40)
+    ).scalars().all()
+    return render_template("admin/students.html", pending=pending,
+                           recent=recent, months=VERIFY_MONTHS)
+
+
+@admin_bp.route("/students/<int:row_id>/approve", methods=["POST"])
+@admin_required
+def student_approve(row_id):
+    row = _get_or_404(StudentVerification, row_id)
+    row.status = "verified"
+    row.verified_at = _utcnow()
+    row.expires_at = _utcnow() + timedelta(days=30 * VERIFY_MONTHS)
+    row.reviewed_by_id = current_user().id
+    row.review_note = (request.form.get("note") or "")[:2000]
+    row.code_hash = ""
+    db.session.commit()
+    log_action("student_approve", row.id, row.academic_email)
+    flash("Approved.", "success")
+    return redirect(url_for("admin.students"))
+
+
+@admin_bp.route("/students/<int:row_id>/reject", methods=["POST"])
+@admin_required
+def student_reject(row_id):
+    row = _get_or_404(StudentVerification, row_id)
+    row.status = "rejected"
+    row.reviewed_by_id = current_user().id
+    row.review_note = (request.form.get("note") or "")[:2000]
+    row.code_hash = ""
+    db.session.commit()
+    log_action("student_reject", row.id, row.academic_email)
+    flash("Rejected.", "success")
+    return redirect(url_for("admin.students"))

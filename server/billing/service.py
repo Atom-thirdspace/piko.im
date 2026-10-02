@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 
 from ..models import (Subscription, User, WebhookEvent, _utcnow, active_seat,
-                      active_subscription, db, owned_live_classroom)
+                      active_subscription, db, licensed_team,
+                      owned_licensed_team, owned_live_classroom)
 from .plans import plan_for_product
 
 # Events that carry a subscription object we should store.
@@ -100,6 +101,7 @@ def apply_subscription(data, event_type, event_at=None):
     row.event_at = event_at or _utcnow()
     db.session.commit()
     sync_classroom(row, data)
+    sync_team(row, data)
     return row
 
 
@@ -168,12 +170,22 @@ def pro_source(user):
     sub = active_subscription(user)
     if sub is not None:
         return ("subscription", sub)
-    owned = owned_live_classroom(user)
-    if owned is not None:
-        return ("classroom_owner", owned)
+    owned_room = owned_live_classroom(user)
+    if owned_room is not None:
+        return ("classroom_owner", owned_room)
+
+    owned_team = owned_licensed_team(user)
+    if owned_team is not None:
+        return ("team_owner", owned_team)
+
     seat = active_seat(user)
     if seat is not None:
         return ("classroom", seat)
+
+    team = licensed_team(user)
+    if team is not None:
+        return ("team", team)
+
     return None
 
 def subscription_state(user):
@@ -183,17 +195,28 @@ def subscription_state(user):
     seat = kind_row[1] if kind == "classroom" else None
     room = (kind_row[1] if kind == "classroom_owner"
             else (seat.classroom if seat else None))
+    team = kind_row[1] if kind in ("team", "team_owner") else None
+
+    owns = kind in ("classroom_owner", "team_owner")
+    group = room or team
     return {
         "pro": kind is not None,
         "via": kind,
         "subscription": sub,
         "classroom": room,
-        # True when the room is theirs, so the UI can offer the roster
-        # instead of telling them to ask their school.
+        "team": team,
+        # Whichever group is paying, so a template can branch on one value.
+        "group": group,
+        "group_kind": "team" if team else ("classroom" if room else None),
+        # True when the group is theirs, so the UI offers the roster rather
+        # than telling them to ask whoever runs it.
         "owns_classroom": kind == "classroom_owner",
-        "plan": sub.plan if sub else ("classroom" if room else ""),
+        "owns_group": owns,
+        "plan": sub.plan if sub else (
+            "team" if team else ("classroom" if room else "")),
         "renews_at": sub.current_period_end if sub else (
-            room.expires_at if room else None),
+            room.expires_at if room else (
+                team.licence_expires_at if team else None)),
         "ending": bool(sub and sub.cancel_at_period_end),
         "manageable": kind == "subscription" and not sub.is_manual,
     }
@@ -221,3 +244,39 @@ def sync_classroom(row, data):
     cls.archived_at = None if row.grants_access else _utcnow()
     db.session.commit()
     return cls
+
+
+TEAM_PLAN = "team"
+
+
+def sync_team(row, data):
+    """Keep a team's licence in step with the subscription behind it.
+
+    A licence attaches to a roster that already exists rather than creating
+    one, so checkout puts the team id in metadata and we look it up here.
+    """
+    from ..models import Team
+
+    if row.plan != TEAM_PLAN:
+        return None
+
+    team = db.session.execute(
+        db.select(Team).filter_by(polar_subscription_id=row.polar_subscription_id)
+    ).scalar_one_or_none()
+
+    if team is None:
+        meta = data.get("metadata") or {}
+        try:
+            team = db.session.get(Team, int(meta.get("team_id")))
+        except (TypeError, ValueError):
+            team = None
+        # Only the owner's own team, or a crafted metadata value could
+        # license somebody else's roster.
+        if team is None or team.owner_id != row.user_id:
+            return None
+        team.polar_subscription_id = row.polar_subscription_id
+
+    team.seats = int(data.get("seats") or 0)
+    team.licence_source = "polar" if row.grants_access else "none"
+    db.session.commit()
+    return team

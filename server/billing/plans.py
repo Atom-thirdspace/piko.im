@@ -29,6 +29,30 @@ PLANS = {
         "seats": True,
         "min_seats": 5,
         "max_seats": 500,
+        "group": "classroom",
+    },
+    "student": {
+        "key": "student",
+        "name": "Piko Pro, student",
+        "cadence": "per year",
+        "price": "$24",
+        "env": "POLAR_PRODUCT_STUDENT",
+        "blurb": "Half price with a verified academic email. Re-verified "
+                 "once a year.",
+        "requires": "student",
+    },
+    "team": {
+        "key": "team",
+        "name": "Teams",
+        "cadence": "per seat / year",
+        "price": "$40",
+        "env": "POLAR_PRODUCT_TEAM",
+        "blurb": "For companies and bootcamps. Buy seats for a team you "
+                 "already run; everyone on it gets Pro.",
+        "seats": True,
+        "min_seats": 2,
+        "max_seats": 50,
+        "group": "team",
     },
 }
 

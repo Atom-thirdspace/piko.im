@@ -27,6 +27,25 @@
     </section>
 
     <section>
+      <h2>License a team</h2>
+      <p class="admin-hint">
+        Puts free seats on an existing team. The roster is the team's own -
+        this only decides how many of its members get Pro.
+      </p>
+      <form method="post" action="{{ url_for('admin.team_licence_grant') }}">
+        {{ csrf_field() }}
+        <p><input name="slug" size="24" placeholder="team slug"></p>
+        <p>
+          <input name="seats" type="number" value="10" min="1" max="500" size="5"> seats
+          &middot;
+          <input name="months" type="number" value="12" min="1" max="60" size="4"> months
+        </p>
+        <p><input name="note" size="30" placeholder="why (audit log)"></p>
+        <button class="admin-btn" type="submit">Grant team licence</button>
+      </form>
+    </section>
+
+    <section>
       <h2>At a glance</h2>
       <table class="admin-table">
         <tr><td>Classrooms</td><td>{{ rows|length }}</td></tr>

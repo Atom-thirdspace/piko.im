@@ -1,0 +1,73 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>Student verification</h1>
+
+  <h2>Waiting for a human ({{ pending|length }})</h2>
+  <p class="admin-hint">
+    These are addresses the automatic check did not recognise as academic.
+    Approving grants the student price for {{ months }} months.
+  </p>
+
+  {% if not pending %}
+    <p class="admin-hint">Nothing waiting.</p>
+  {% else %}
+    {% for row in pending %}
+      <div class="admin-card">
+        <h2>{{ row.academic_email }}</h2>
+        <p class="admin-hint">
+          domain <code>{{ row.domain }}</code>
+          {% if row.user %}
+            &middot; account
+            <a href="{{ url_for('admin.user_detail', user_id=row.user.id) }}">
+              {{ row.user.username or row.user.email }}</a>
+            ({{ row.user.email }})
+          {% endif %}
+          &middot; asked {{ row.created_at.strftime('%d %b %Y') }}
+        </p>
+        {% if row.evidence %}
+          <p>They said: <i>{{ row.evidence }}</i></p>
+        {% endif %}
+
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.student_approve', row_id=row.id) }}">
+          {{ csrf_field() }}
+          <input type="text" name="note" size="30" placeholder="note (optional)">
+          <button class="admin-btn" type="submit">Approve</button>
+        </form>
+        <form class="admin-inline" method="post"
+              action="{{ url_for('admin.student_reject', row_id=row.id) }}">
+          {{ csrf_field() }}
+          <input type="text" name="note" size="30" placeholder="why (shown to them)">
+          <button class="admin-btn" type="submit">Reject</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <h2>Recently decided</h2>
+  <table class="admin-table">
+    <tr><th>Address</th><th>Account</th><th>Status</th><th>Expires</th><th>Note</th></tr>
+    {% for row in recent %}
+      <tr>
+        <td>{{ row.academic_email }}</td>
+        <td>
+          {% if row.user %}
+            <a href="{{ url_for('admin.user_detail', user_id=row.user.id) }}">
+              {{ row.user.username or row.user.email }}</a>
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td>
+          {{ row.status }}
+          {% if row.status == 'verified' and not row.is_valid %}
+            <span class="admin-badge warn">lapsed</span>
+          {% endif %}
+        </td>
+        <td>{{ row.expires_at.strftime('%d %b %Y') if row.expires_at else '—' }}</td>
+        <td>{{ row.review_note or '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="admin-empty">Nothing yet.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock admin_content %}

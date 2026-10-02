@@ -608,9 +608,53 @@ class Team(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
 
-    owner = db.relationship("User")
+    # A paid licence sitting on top of the free social team. 'none' is a team
+    # that has never been paid for, which is most of them.
+    seats = db.Column(db.Integer, nullable=False, default=0)
+    licence_source = db.Column(db.String(16), nullable=False, default="none",
+                               server_default="none", index=True)
+    polar_subscription_id = db.Column(db.String(64), unique=True)
+    licence_expires_at = db.Column(db.DateTime(timezone=True))
+    licence_note = db.Column(db.Text, nullable=False, default="", server_default="")
+    granted_by_id = db.Column(db.Integer,
+                              db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    # Two foreign keys to users now, so both relationships must say which.
+    owner = db.relationship("User", foreign_keys=[owner_id])
+    granted_by = db.relationship("User", foreign_keys=[granted_by_id])
     members = db.relationship("TeamMember", back_populates="team",
                               cascade="all, delete-orphan")
+
+    @property
+    def licensed(self):
+        return (self.licence_source != "none"
+                and self.seats > 0
+                and (self.licence_expires_at is None
+                     or self.licence_expires_at > _utcnow()))
+
+    @property
+    def seats_used(self):
+        return len(self.members)
+
+    @property
+    def seats_free(self):
+        return max(0, self.seats - self.seats_used)
+
+    @property
+    def over_capacity(self):
+        return max(0, self.seats_used - self.seats)
+
+    def covered_user_ids(self):
+        """Who the licence actually pays for, earliest joiners first.
+
+        A team can hold more members than seats - the roster is a free social
+        feature and the licence sits on top of it - so the seat count has to
+        pick. Join order is the only ordering the members can predict.
+        """
+        if not self.licensed:
+            return set()
+        ordered = sorted(self.members, key=lambda m: (m.joined_at, m.id))
+        return {m.user_id for m in ordered[:self.seats]}
 
 class TeamMember(db.Model):
     __tablename__ = "team_members"
@@ -1591,3 +1635,129 @@ def owned_classrooms(user):
         db.select(Classroom).filter_by(owner_id=user.id)
         .order_by(Classroom.created_at.desc())
     ).scalars().all()
+
+
+# --------------------------------------------------------------------------- #
+# team licences
+# --------------------------------------------------------------------------- #
+
+def licensed_team(user):
+    """A team this user belongs to whose licence covers their seat."""
+    if user is None:
+        return None
+    now = _utcnow()
+    rows = db.session.execute(
+        db.select(Team)
+        .join(TeamMember, TeamMember.team_id == Team.id)
+        .where(TeamMember.user_id == user.id,
+               Team.licence_source != "none",
+               Team.seats > 0,
+               db.or_(Team.licence_expires_at.is_(None),
+                      Team.licence_expires_at > now))
+        .order_by(Team.created_at)
+    ).scalars().all()
+
+    for team in rows:
+        if user.id in team.covered_user_ids():
+            return team
+    return None
+
+
+def owned_licensed_team(user):
+    """Whoever pays for the team is never the one locked out of it."""
+    if user is None:
+        return None
+    now = _utcnow()
+    return db.session.execute(
+        db.select(Team)
+        .where(Team.owner_id == user.id,
+               Team.licence_source != "none",
+               Team.seats > 0,
+               db.or_(Team.licence_expires_at.is_(None),
+                      Team.licence_expires_at > now))
+        .order_by(Team.created_at.desc()).limit(1)
+    ).scalar_one_or_none()
+
+
+def owned_teams(user):
+    if user is None:
+        return []
+    return db.session.execute(
+        db.select(Team).filter_by(owner_id=user.id).order_by(Team.name)
+    ).scalars().all()
+
+
+# --------------------------------------------------------------------------- #
+# student verification
+# --------------------------------------------------------------------------- #
+
+STUDENT_STATUSES = ("pending", "sent", "verified", "rejected")
+VERIFY_MONTHS = 12
+MAX_VERIFY_ATTEMPTS = 5
+
+# Second-level labels that mean "academic" nearly everywhere.
+ACADEMIC_LABELS = {"ac", "edu"}
+ACADEMIC_SUFFIXES = (".edu", ".ac.uk", ".ac.in", ".edu.in", ".edu.au",
+                     ".ac.nz", ".ac.jp", ".edu.sg", ".ac.za", ".edu.br",
+                     ".ac.kr", ".edu.pk", ".ac.bd", ".edu.my", ".ac.th",
+                     ".edu.hk", ".ac.il", ".edu.tr", ".edu.mx")
+
+
+def looks_academic(email):
+    """A cheap heuristic, not proof.
+
+    Catches .edu and the ac.xx / edu.xx pattern most of the world uses.
+    Whatever it misses goes to a human rather than being refused outright -
+    plenty of real institutions sit on ordinary domains.
+    """
+    domain = (email or "").strip().lower().rpartition("@")[2]
+    if not domain or "." not in domain:
+        return False
+    if domain.endswith(ACADEMIC_SUFFIXES):
+        return True
+    parts = domain.split(".")
+    return len(parts) >= 3 and parts[-2] in ACADEMIC_LABELS
+
+
+class StudentVerification(db.Model):
+    __tablename__ = "student_verifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    academic_email = db.Column(db.String(255), nullable=False)
+    domain = db.Column(db.String(255), nullable=False, default="", server_default="")
+    status = db.Column(db.String(16), nullable=False, default="pending",
+                       server_default="pending", index=True)
+    code_hash = db.Column(db.Text, nullable=False, default="", server_default="")
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    evidence = db.Column(db.Text, nullable=False, default="", server_default="")
+    reviewed_by_id = db.Column(db.Integer,
+                               db.ForeignKey("users.id", ondelete="SET NULL"))
+    review_note = db.Column(db.Text, nullable=False, default="", server_default="")
+    sent_at = db.Column(db.DateTime(timezone=True))
+    verified_at = db.Column(db.DateTime(timezone=True))
+    expires_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User", foreign_keys=[user_id])
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
+
+    @property
+    def is_valid(self):
+        return (self.status == "verified"
+                and (self.expires_at is None or self.expires_at > _utcnow()))
+
+
+def student_status(user):
+    if user is None:
+        return None
+    return db.session.execute(
+        db.select(StudentVerification).filter_by(user_id=user.id)
+        .order_by(StudentVerification.created_at.desc()).limit(1)
+    ).scalar_one_or_none()
+
+
+def is_verified_student(user):
+    row = student_status(user)
+    return row is not None and row.is_valid

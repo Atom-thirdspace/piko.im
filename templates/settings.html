@@ -47,15 +47,20 @@
   <section class="settings-card" id="billing">
     <h2>Subscription</h2>
     {% set state = billing_state() %}
-    {% if state.owns_classroom %}
+    {% if state.owns_group %}
       <p class="billing-row">
         <span class="pill pill-done">Pro</span>
-        <span>Included with the classroom you run.</span>
+        <span>Included with the {{ state.group_kind }} you run.</span>
       </p>
-      <p><a href="{{ url_for('classroom.detail', class_id=state.classroom.id) }}">
-        Manage {{ state.classroom.name or 'your classroom' }}</a></p>
+      {% if state.group_kind == 'classroom' %}
+        <p><a href="{{ url_for('classroom.detail', class_id=state.group.id) }}">
+          Manage {{ state.group.name or 'your classroom' }}</a></p>
+      {% else %}
+        <p><a href="{{ url_for('community.team_detail', slug=state.group.slug) }}">
+          Manage {{ state.group.name or 'your team' }}</a></p>
+      {% endif %}
 
-    {% elif state.via == 'classroom' %}
+    {% elif state.group %}
       <p class="billing-row">
         <span class="pill pill-done">Pro</span>
         <span>
