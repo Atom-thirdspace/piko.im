@@ -65,7 +65,9 @@
 
       <p>
         <label>XP <input type="number" name="xp" size="4"
-               value="{{ lesson.xp if lesson else 10 }}"></label>
+               min="0" placeholder="{{ lesson.xp if lesson else 5 }}"
+               value="{{ lesson.xp_override if lesson and lesson.xp_override is not none else '' }}">
+        <small>Leave blank for the standard award for this kind of lesson.</small></label>
         <label>Position <input type="number" name="position" size="4"
                value="{{ lesson.position if lesson else 0 }}"></label>
       </p>

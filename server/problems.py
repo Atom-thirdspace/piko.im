@@ -6,14 +6,23 @@ from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
 from .models import (JudgeJob, Lesson, Problem, ProblemHint, ScratchRun,
-                     StreakFreezeUse, Submission, User, award_after_hints, db,
-                     hint_penalty, reveal_hint, revealed_hint_ids,
-                     solve_percentile)
+                     StreakFreezeUse, Submission, User, attempts_on, db,
+                     reveal_hint, revealed_hint_ids, solve_percentile,
+                     used_hints)
 from .progress import streak_state, user_today
+from .xp_rules import solve_award, summarise, total
 from .ratelimit import run_block_reason, submit_block_reason
 from .session import current_user, login_required
 
 problems_bp = Blueprint("problems", __name__)
+
+
+def _projected(user, problem):
+    """What the *next* submission would pay, so the panel tells the truth
+    after a failed attempt as well as before the first one."""
+    parts = solve_award(problem, used_hints(user.id, problem.id),
+                        attempts_on(user.id, problem.id) + 1)
+    return {"total": total(parts), "summary": summarise(parts)}
 
 MAX_SOURCE_BYTES = 64 * 1024
 MAX_STDIN_BYTES = 16 * 1024
@@ -41,7 +50,6 @@ def page(slug):
     ).scalar_one_or_none() is not None
 
     revealed = revealed_hint_ids(user, problem)
-    penalty = hint_penalty(user.id, problem.id)
 
     recent = db.session.execute(
         db.select(Submission)
@@ -71,7 +79,7 @@ def page(slug):
         revealed_hints=revealed,
         hint_bodies={h.id: render_md(h.body_md) for h in problem.hints
                      if h.id in revealed},
-        award_now=award_after_hints(problem, penalty),
+        award=_projected(user, problem),
     )
 
 
@@ -339,8 +347,6 @@ def reveal(slug, hint_id):
         abort(404)
 
     reveal_hint(user, hint)
-    penalty = hint_penalty(user.id, problem.id)
+    award = _projected(user, problem)
     return jsonify(body=str(render_md(hint.body_md)),
-                   cost=hint.cost_xp,
-                   penalty=penalty,
-                   award_now=award_after_hints(problem, penalty))
+                   award_now=award["total"], award_note=award["summary"])

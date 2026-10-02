@@ -41,6 +41,18 @@ from .models import (DRAFT, PUBLISHED, REVIEW, SUB_GRANTING, VERIFY_MONTHS,
                      new_join_code)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+def _xp_override(raw):
+    """Blank means "use the rule table". That is the normal case now."""
+    raw = (raw or "").strip() if isinstance(raw, str) else raw
+    if raw is None or raw == "":
+        return None
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return None
+
 PAGE_SIZE = 25
 
 NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
@@ -311,7 +323,7 @@ def problem_form(problem_id=None):
     problem.statement_md = form.get("statement_md") or ""
     problem.difficulty = form.get("difficulty") or "easy"
     problem.topic = (form.get("topic") or "").strip() or None
-    problem.xp = int(form.get("xp") or 10)
+    problem.xp_override = _xp_override(form.get("xp"))
     problem.time_limit_sec = float(form.get("time_limit_sec") or 2.0)
     problem.memory_mb = int(form.get("memory_mb") or 256)
     db.session.commit()
@@ -842,7 +854,7 @@ def lesson_form(lesson_id=None):
     lesson.slug = slug
     lesson.title = title
     lesson.kind = kind
-    lesson.xp = int(form.get("xp") or 10)
+    lesson.xp_override = _xp_override(form.get("xp"))
     lesson.body_md = form.get("body_md") or ""
     lesson.position = int(form.get("position") or 0)
     lesson.problem_id = int(problem_id) if problem_id else None
@@ -875,7 +887,8 @@ def lesson_delete(lesson_id):
 
 def _problem_blob(p):
     return {"slug": p.slug, "title": p.title, "statement_md": p.statement_md,
-            "difficulty": p.difficulty, "topic": p.topic, "xp": p.xp,
+            "difficulty": p.difficulty, "topic": p.topic,
+            "xp": p.xp_override,
             "time_limit_sec": p.time_limit_sec, "memory_mb": p.memory_mb,
             "tests": [{"stdin": t.stdin, "expected_stdout": t.expected_stdout,
                        "is_sample": t.is_sample} for t in p.tests]}
@@ -951,7 +964,7 @@ def problems_import():
         problem.difficulty = item.get("difficulty") or "easy"
         problem.topic = item.get("topic") or None
         try:
-            problem.xp = int(item.get("xp") or 10)
+            problem.xp_override = _xp_override(item.get("xp"))
             problem.time_limit_sec = float(item.get("time_limit_sec") or 2.0)
             problem.memory_mb = int(item.get("memory_mb") or 256)
         except (TypeError, ValueError):

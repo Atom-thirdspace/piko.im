@@ -276,10 +276,17 @@ class Problem(db.Model):
     statement_md = db.Column(db.Text, nullable=False)
     difficulty = db.Column(db.String(16), nullable=False, default="easy")
     topic = db.Column(db.String(64), index=True)      # pairs with User.interest
-    xp = db.Column(db.Integer, nullable=False, default=10)
+    # The DB column is still called "xp"; NULL means "use the rule table".
+    xp_override = db.Column("xp", db.Integer)
     time_limit_sec = db.Column(db.Float, nullable=False, default=2.0)
     memory_mb = db.Column(db.Integer, nullable=False, default=256)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    @property
+    def xp(self):
+        """The effective award, so every reader gets the rule for free."""
+        from .xp_rules import problem_base
+        return problem_base(self)
     hints = db.relationship("ProblemHint", back_populates="problem",
                             cascade="all, delete-orphan",
                             order_by="ProblemHint.position")
@@ -492,7 +499,8 @@ class Lesson(Authored, db.Model):
     slug = db.Column(db.String(64), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     kind = db.Column(db.String(16), nullable=False, default="reading")   # reading | quiz | code
-    xp = db.Column(db.Integer, nullable=False, default=10)
+    # The DB column is still called "xp"; NULL means "use the rule table".
+    xp_override = db.Column("xp", db.Integer)
     body_md = db.Column(db.Text, nullable=False, default="")
     position = db.Column(db.Integer, nullable=False, default=0)
     # SET NULL, not CASCADE: deleting a problem must not delete the lesson around it.
@@ -500,6 +508,12 @@ class Lesson(Authored, db.Model):
 
     unit = db.relationship("Unit", back_populates="lessons")
     problem = db.relationship("Problem")
+
+    @property
+    def xp(self):
+        """The effective award, so every reader gets the rule for free."""
+        from .xp_rules import lesson_base
+        return lesson_base(self)
 
 
 class Enrollment(db.Model):
@@ -1051,9 +1065,6 @@ class HintReveal(db.Model):
                             nullable=False)
     hint = db.relationship("ProblemHint")
 
-MIN_PROBLEM_XP_FRACTION = 4          # a solve never pays less than xp // 4
-
-
 def revealed_hint_ids(user, problem):
     return set(db.session.execute(
         db.select(HintReveal.hint_id)
@@ -1063,19 +1074,24 @@ def revealed_hint_ids(user, problem):
     ).scalars())
 
 
-def hint_penalty(user_id, problem_id):
+def used_hints(user_id, problem_id):
+    """Any reveal at all, regardless of its cost_xp. Under the flat bonus a
+    free hint is still a hint."""
     return db.session.execute(
-        db.select(db.func.coalesce(db.func.sum(ProblemHint.cost_xp), 0))
-        .select_from(HintReveal)
+        db.select(db.func.count()).select_from(HintReveal)
         .join(ProblemHint, ProblemHint.id == HintReveal.hint_id)
         .where(HintReveal.user_id == user_id,
                ProblemHint.problem_id == problem_id)
+    ).scalar() > 0
+
+
+def attempts_on(user_id, problem_id):
+    """Every submission on this problem, compile errors included."""
+    return db.session.execute(
+        db.select(db.func.count()).select_from(Submission)
+        .where(Submission.user_id == user_id,
+               Submission.problem_id == problem_id)
     ).scalar() or 0
-
-
-def award_after_hints(problem, penalty):
-    floor = max(1, problem.xp // MIN_PROBLEM_XP_FRACTION)
-    return max(problem.xp - penalty, floor)
 
 
 def reveal_hint(user, hint):
@@ -1275,7 +1291,7 @@ def publish_generated(draft, reviewer):
 
     problem = Problem(
         slug=draft.slug, title=draft.title, statement_md=draft.statement_md,
-        difficulty=draft.difficulty, topic=draft.topic, xp=draft.xp,
+        difficulty=draft.difficulty, topic=draft.topic, xp_override=None,
         time_limit_sec=draft.payload.get("time_limit_sec", 2.0),
         memory_mb=draft.payload.get("memory_mb", 256))
     db.session.add(problem)

@@ -3,8 +3,9 @@ from flask import (Blueprint, abort, flash, redirect, render_template, request,
 
 from ..models import (Enrollment, Lesson, LessonProgress, Problem, Submission,
                       Track, Unit, db, PUBLISHED)
-from ..progress import award_xp
+from ..progress import award_xp, level_progress
 from ..session import current_user, login_required
+from ..xp_rules import UNIT_COMPLETE, lesson_base
 from .catalog import quiz_for
 from .markdown import render as render_md
 from ..admin_gate import is_admin
@@ -162,6 +163,22 @@ def _gate(lesson, user, solved_ids):
     return True, ""
 
 
+def _award_unit(user, lesson, done_ids):
+    """+100 the moment the last published lesson in a unit is ticked off.
+
+    Adding a lesson to a finished unit later does not claw the award back,
+    and completing that new lesson will not pay it twice - the ledger row
+    already exists.
+    """
+    unit = lesson.unit
+    if unit is None:
+        return 0
+    wanted = {l.id for l in unit.lessons if l.status == PUBLISHED}
+    if not wanted or not wanted <= done_ids:
+        return 0
+    return award_xp(user, UNIT_COMPLETE, "unit", str(unit.id))["awarded"]
+
+
 def _complete(user, track, lesson):
     """Record completion and award XP. Both are idempotent: the unique
     constraints on lesson_progress and xp_events absorb a double submit."""
@@ -173,7 +190,15 @@ def _complete(user, track, lesson):
     db.session.flush()
     done_ids.add(lesson.id)
 
-    result = award_xp(user, lesson.xp, "lesson", str(lesson.id))
+    base = lesson_base(lesson)
+    # A code lesson is worth nothing on its own - the problem behind it pays.
+    # Skip the award rather than litter the ledger with zeroes.
+    result = (award_xp(user, base, "lesson", str(lesson.id)) if base else
+              {"awarded": 0, "leveled_up": False,
+               **level_progress(user.xp_total or 0)})
+    result["unit_bonus"] = _award_unit(user, lesson, done_ids)
+    result["awarded"] += result["unit_bonus"]
+
     _enroll(user, track, lesson)
     _advance(user, track, done_ids)
     db.session.commit()
@@ -333,8 +358,10 @@ def complete(track_slug, unit_slug, lesson_slug):
     if result is None:
         flash("Already done - no XP twice.", "success")
     else:
-        flash("+%d XP%s" % (result["awarded"],
-                            " - level %d!" % result["level"] if result["leveled_up"] else ""),
+        bonus = (" (including +%d for finishing the topic)" % result["unit_bonus"]
+                 if result["unit_bonus"] else "")
+        flash("+%d XP%s%s" % (result["awarded"], bonus,
+                              " - level %d!" % result["level"] if result["leveled_up"] else ""),
               "success")
 
     nxt = _next_lesson(track, _completed_ids(user))
@@ -373,7 +400,10 @@ def complete_lessons_for_problem(user, problem_id):
         db.session.add(LessonProgress(user_id=user.id, lesson_id=lesson.id))
         db.session.flush()
         done_ids.add(lesson.id)
-        awarded += award_xp(user, lesson.xp, "lesson", str(lesson.id))["awarded"]
+        base = lesson_base(lesson)
+        if base:
+            awarded += award_xp(user, base, "lesson", str(lesson.id))["awarded"]
+        awarded += _award_unit(user, lesson, done_ids)
         _advance(user, track, done_ids)
 
     return awarded

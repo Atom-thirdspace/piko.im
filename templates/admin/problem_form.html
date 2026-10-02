@@ -26,7 +26,10 @@
     <input id="topic" name="topic" value="{{ p.topic if p else '' }}">
 
     <label for="xp">XP</label>
-    <input id="xp" name="xp" type="number" value="{{ p.xp if p else 10 }}">
+    <input id="xp" name="xp" type="number" min="0"
+           value="{{ p.xp_override if p and p.xp_override is not none else '' }}"
+           placeholder="{{ p.xp if p else 30 }}">
+    <small>Leave blank for the standard award for this difficulty.</small>
 
     <label for="time_limit_sec">Time limit (s)</label>
     <input id="time_limit_sec" name="time_limit_sec" type="number" step="0.5"

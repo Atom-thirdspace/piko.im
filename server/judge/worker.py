@@ -98,14 +98,18 @@ def run_job(job):
     if result.verdict == V.AC and is_first_solve:
         from ..achievements import evaluate
         from ..learning.routes import complete_lessons_for_problem
-        from ..models import award_after_hints, hint_penalty, record_solve
+        from ..models import attempts_on, record_solve, used_hints
+        from ..xp_rules import solve_award
         user = sub.user
         if user is not None:
             # Counting reveals *now* is exactly "reveals before the solve":
             # the award happens once, here, at the moment of first accept.
-            penalty = hint_penalty(user.id, problem.id)
-            award_xp(user, award_after_hints(problem, penalty),
-                     "problem", str(problem.id))
+            # attempts_on includes this submission, so 1 means first try.
+            parts = solve_award(problem,
+                                used_hints(user.id, problem.id),
+                                attempts_on(user.id, problem.id))
+            for reason, amount in parts:
+                award_xp(user, amount, reason, str(problem.id))
             complete_lessons_for_problem(user, problem.id)
             db.session.commit()
             record_solve(sub)

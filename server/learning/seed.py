@@ -48,7 +48,8 @@ def seed_catalog():
                     counts["lessons"] += 1
                 lesson.title = lesson_def.title
                 lesson.kind = lesson_def.kind
-                lesson.xp = lesson_def.xp
+                # Seeded content follows the rule table, not its own number.
+                lesson.xp_override = None
                 lesson.body_md = (lesson_def.body or "").strip()
                 lesson.position = l_pos
                 if lesson_def.problem_slug:

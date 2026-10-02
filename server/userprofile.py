@@ -21,6 +21,7 @@ from .models import (API_SCOPES, ApiKey, Enrollment, LessonProgress,
                      update_profile, DeletionRequest, cancel_deletion_request, create_deletion_request, pending_deletion_request,
                      Problem, Team, TeamMember, earned_rows,
                      WebAuthnCredential, credentials_for)
+from .xp_rules import LABELS as XP_LABELS
 from .progress import level_progress
 from .session import current_user, login_required
 from .validators import (COMMON_TIMEZONES, DAILY_GOAL_CHOICES, INTERESTS, DELETION_REASONS,
@@ -83,9 +84,8 @@ def _activity(user, limit=8):
         .order_by(XpEvent.created_at.desc()).limit(limit)
     ).scalars().all()
 
-    labels = {"lesson": "Lesson", "problem": "Problem", "streak": "Streak bonus"}
     return [{"amount": event.amount,
-             "label": labels.get(event.reason, event.reason),
+             "label": XP_LABELS.get(event.reason, event.reason),
              "ref": event.ref,
              "at": event.created_at} for event in events]
 

@@ -11,6 +11,18 @@ from .invites import accept, find_invite, refusal
 
 authors_bp = Blueprint("authors", __name__, url_prefix="/authors")
 
+
+def _xp_override(raw):
+    """Blank means "use the rule table". That is the normal case now."""
+    raw = (raw or "").strip() if isinstance(raw, str) else raw
+    if raw is None or raw == "":
+        return None
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return None
+
+
 LESSON_KINDS = ("reading", "quiz", "code")
 LEVELS = ("beginner", "intermediate", "advanced")
 
@@ -240,7 +252,7 @@ def lesson_form(lesson_id=None):
     lesson.slug = slug
     lesson.title = title
     lesson.kind = kind
-    lesson.xp = int(form.get("xp") or 10)
+    lesson.xp_override = _xp_override(form.get("xp"))
     lesson.body_md = form.get("body_md") or ""
     lesson.position = int(form.get("position") or 0)
     lesson.problem_id = int(problem_id) if problem_id else None

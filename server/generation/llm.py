@@ -78,10 +78,8 @@ def draft_problem(topic, difficulty, skill, seed=0, xp=20):
                 cost = 3
             hints.append((str(h["body"])[:500], max(cost, 0)))
 
-    # Hints that cost more than the problem pays are free in practice,
-    # because award_after_hints floors the payout. Trim rather than reject.
-    while hints and sum(c for _, c in hints) >= xp:
-        hints.pop()
+    # Hint costs no longer subtract from the payout - opening any hint simply
+    # gives up the flat no-hints bonus - so there is nothing left to trim.
 
     slug = re.sub(r"[^a-z0-9]+", "-",
                   str(data["title"]).lower()).strip("-")[:60] or "generated"
