@@ -46,15 +46,41 @@
 
   <section class="settings-card" id="billing">
     <h2>Subscription</h2>
-    {% if is_pro() %}
+    {% set state = billing_state() %}
+    {% if state.owns_classroom %}
+      <p class="billing-row">
+        <span class="pill pill-done">Pro</span>
+        <span>Included with the classroom you run.</span>
+      </p>
+      <p><a href="{{ url_for('classroom.detail', class_id=state.classroom.id) }}">
+        Manage {{ state.classroom.name or 'your classroom' }}</a></p>
+
+    {% elif state.via == 'classroom' %}
+      <p class="billing-row">
+        <span class="pill pill-done">Pro</span>
+        <span>
+          Through <b>{{ state.classroom.name or 'your classroom' }}</b>{% if state.classroom.institution %}
+          at {{ state.classroom.institution }}{% endif %}.
+        </span>
+      </p>
+      <p>Your school provides this. There is nothing to pay and nothing to cancel.</p>
+      <p><a href="{{ url_for('classroom.index') }}">Your classrooms</a></p>
+
+    {% elif state.pro %}
       <p class="billing-row">
         <span class="pill pill-done">Pro</span>
         <span>Payment, invoices and cancellation are handled by Polar.</span>
       </p>
-      <form method="post" action="{{ url_for('billing.portal') }}">
-        {{ csrf_field() }}
-        <button type="submit">Manage billing</button>
-      </form>
+      {% if state.manageable %}
+        <form method="post" action="{{ url_for('billing.portal') }}">
+          {{ csrf_field() }}
+          <button type="submit">Manage billing</button>
+        </form>
+      {% else %}
+        <p class="auth-hint">This was granted directly, so there is no billing
+           portal for it.</p>
+      {% endif %}
+
     {% else %}
       <p>You are on the free plan.</p>
       <p><a href="{{ url_for('billing.pricing') }}">See what Pro adds</a></p>

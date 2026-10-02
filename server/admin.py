@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import timedelta
 from functools import wraps
 from uuid import uuid4
 from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
@@ -35,7 +36,8 @@ from .billing.client import (BillingError, cancel_subscription,
                              get_subscription, revoke_subscription)
 from .mailer import send_author_invite_email
 from .models import (DRAFT, PUBLISHED, REVIEW, SUB_GRANTING, AuthorInvite,
-                     AuthorInviteUse, Subscription, _utcnow)
+                     AuthorInviteUse, Classroom, Subscription, _utcnow,
+                     new_join_code)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 PAGE_SIZE = 25
@@ -52,7 +54,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.similarity", "Similarity"),
        ("admin.generated", "Generated"),
        ("admin.authors", "Authors"), ("admin.review", "Review"),
-       ("admin.subscriptions", "Subscriptions")
+       ("admin.subscriptions", "Subscriptions"),
+       ("admin.classrooms", "Classrooms")
        ]
 
 
@@ -1409,3 +1412,55 @@ def subscription_ungrant(sub_id):
                    row.user.email if row.user else "")
         flash("Complimentary Pro withdrawn.", "success")
     return redirect(url_for("admin.subscriptions", status="manual"))
+
+@admin_bp.route("/classrooms/")
+@admin_required
+def classrooms():
+    rows = db.session.execute(
+        db.select(Classroom).order_by(Classroom.created_at.desc())).scalars().all()
+    return render_template("admin/classrooms.html", rows=rows)
+
+@admin_bp.route("/classrooms/grant", methods=["POST"])
+@admin_required
+def classroom_grant():
+    form = request.form
+    who = (form.get("owner") or "").strip()
+    owner = db.session.execute(
+        db.select(User).where(or_(User.email == who.lower(),
+                                  User.username == who))).scalar_one_or_none()
+    if owner is None:
+        flash("No user with that email or username.", "error")
+        return redirect(url_for("admin.classrooms"))
+
+    try:
+        seats = max(1, min(int(form.get("seats") or 30), 1000))
+        months = max(1, min(int(form.get("months") or 12), 60))
+    except (TypeError, ValueError):
+        seats, months = 30, 12
+
+    cls = Classroom(
+        owner_id=owner.id, source="academic", seats=seats,
+        join_code=new_join_code(),
+        name=(form.get("name") or "Classroom")[:120],
+        institution=(form.get("institution") or "")[:160],
+        note=(form.get("note") or "")[:2000],
+        granted_by_id=current_user().id,
+        expires_at=_utcnow() + timedelta(days=30 * months),
+    )
+    db.session.add(cls)
+    db.session.commit()
+    log_action("classroom_grant", cls.id,
+               "%s / %d seats / %d months" % (owner.email, seats, months))
+    flash("Academic licence granted: %d seats, code %s."
+          % (seats, cls.join_code), "success")
+    return redirect(url_for("admin.classrooms"))
+
+@admin_bp.route("/classrooms/<int:class_id>/archive", methods=["POST"])
+@admin_required
+def classroom_archive(class_id):
+    cls = _get_or_404(Classroom, class_id)
+    cls.archived_at = _utcnow()
+    db.session.commit()
+    log_action("classroom_archive", cls.id, cls.name)
+    flash("Classroom archived. Its members lose Pro.", "success")
+    return redirect(url_for("admin.classrooms"))

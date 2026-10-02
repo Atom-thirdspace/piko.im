@@ -1,0 +1,88 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Classrooms</h1>
+    <p class="learn-lede">
+      A classroom gives every student Pro for as long as they are on the
+      roster. One person pays; everyone else joins with a code.
+    </p>
+  </header>
+
+  {% if seat %}
+    <section class="room-card room-card--member">
+      <h2>You are in {{ seat.classroom.name or 'a classroom' }}</h2>
+      <p class="track-meta">
+        {% if seat.classroom.institution %}{{ seat.classroom.institution }} &middot; {% endif %}
+        joined {{ seat.joined_at.strftime('%d %b %Y') }}
+        {% if seat.classroom.expires_at %}
+          &middot; access until {{ seat.classroom.expires_at.strftime('%d %b %Y') }}
+        {% endif %}
+      </p>
+      <p>Pro is on. There is nothing to pay and nothing to cancel.</p>
+      <form method="post"
+            action="{{ url_for('classroom.leave', class_id=seat.classroom.id) }}">
+        {{ csrf_field() }}
+        <button type="submit" class="room-btn">Leave this class</button>
+      </form>
+    </section>
+  {% endif %}
+
+  {% if owned %}
+    <section>
+      <h2>Classrooms you run</h2>
+      <ul class="room-list">
+        {% for cls in owned %}
+          <li class="room-row">
+            <a class="room-name"
+               href="{{ url_for('classroom.detail', class_id=cls.id) }}">
+              {{ cls.name or 'Untitled classroom' }}
+            </a>
+            <span class="pill {{ 'pill-done' if cls.is_live else 'pill-fail' }}">
+              {{ 'active' if cls.is_live else 'ended' }}
+            </span>
+            <span class="room-seats">
+              {{ cls.seats_used }} / {{ cls.seats }} seats
+              {% if cls.over_capacity %}
+                &middot; <b>{{ cls.over_capacity }} over</b>
+              {% endif %}
+            </span>
+            <code class="room-code">{{ cls.join_code }}</code>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if not seat %}
+    <section>
+      <h2>Join a class</h2>
+      <p class="learn-lede">Your teacher will have given you a code.</p>
+      <form class="room-join" method="post" action="{{ url_for('classroom.join') }}">
+        {{ csrf_field() }}
+        <input name="code" maxlength="16" autocapitalize="characters"
+               autocomplete="off" spellcheck="false" placeholder="ABCD2345"
+               aria-label="Join code">
+        <button type="submit" class="btn btn-primary">Join</button>
+      </form>
+    </section>
+  {% endif %}
+
+  {% if not owned %}
+    <section>
+      <h2>Teaching a group?</h2>
+      <p class="learn-lede">
+        Buy seats for your class on the <a href="{{ url_for('billing.pricing') }}">pricing
+        page</a>. If you teach somewhere that cannot pay, email us &mdash; free
+        academic licences exist and we hand them out.
+      </p>
+    </section>
+  {% endif %}
+</main>
+{% endblock content %}

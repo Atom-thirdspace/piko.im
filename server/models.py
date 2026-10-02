@@ -1473,3 +1473,121 @@ class ApiKey(db.Model):
 
     def allows(self, scope):
         return self.is_live and scope in (self.scopes or [])
+
+
+CLASSROOM_SOURCES = ("polar", "academic")
+CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXY3456789"
+CODE_LEN = 8
+
+class Classroom(db.Model):
+    __tablename__ = "classrooms"
+
+    id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                         nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False, default="", server_default="")
+    institution = db.Column(db.String(160), nullable=False, default="",
+                            server_default="")
+    join_code = db.Column(db.String(16), unique=True, nullable=False, index=True)
+    seats = db.Column(db.Integer, nullable=False, default=0)
+    source = db.Column(db.String(16), nullable=False, default="polar",
+                       server_default="polar", index=True)
+    polar_subscription_id = db.Column(db.String(64), unique=True)
+    note = db.Column(db.Text, nullable=False, default="", server_default="")
+    granted_by_id = db.Column(db.Integer,
+                              db.ForeignKey("users.id", ondelete="SET NULL"))
+    expires_at = db.Column(db.DateTime(timezone=True))
+    archived_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    owner = db.relationship("User", foreign_keys=[owner_id])
+    granted_by = db.relationship("User", foreign_keys=[granted_by_id])
+    members = db.relationship("ClassroomMember", cascade="all, delete-orphan",
+                              back_populates="classroom")
+
+    @property
+    def is_live(self):
+        return (self.archived_at is None
+                and (self.expires_at is None or self.expires_at > _utcnow()))
+
+    @property
+    def roster(self):
+        return [m for m in self.members if m.removed_at is None]
+
+    @property
+    def seats_used(self):
+        return len(self.roster)
+
+    @property
+    def seats_free(self):
+        return max(0, self.seats - self.seats_used)
+
+    @property
+    def over_capactiy(self):
+        return max(0, self.seats_used - self.seats)
+
+class ClassroomMember(db.Model):
+    __tablename__ = "classroom_members"
+    __table_args__ = (UniqueConstraint("classroom_id", "user_id",
+                                       name="classroom_members_classroom_id_user_id_key"),)
+    id = db.Column(db.Integer, primary_key=True)
+    classroom_id = db.Column(db.Integer,
+                             db.ForeignKey("classrooms.id", ondelete="CASCADE"),
+                             nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    joined_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    removed_at = db.Column(db.DateTime(timezone=True))
+
+    classroom = db.relationship("Classroom", back_populates="members")
+    user = db.relationship("User")
+
+
+def new_join_code():
+    import secrets
+    while True:
+        code = "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LEN))
+        clash = db.session.execute(
+            db.select(Classroom.id).filter_by(join_code=code)).scalar_one_or_none()
+        if clash is None:
+            return code
+
+def active_seat(user):
+    if user is None:
+        return None
+    now = _utcnow()
+    return db.session.execute(
+        db.select(ClassroomMember)
+        .join(Classroom, Classroom.id == ClassroomMember.classroom_id)
+        .where(ClassroomMember.user_id == user.id,
+               ClassroomMember.removed_at.is_(None),
+               Classroom.archived_at.is_(None),
+               db.or_(Classroom.expires_at.is_(None), Classroom.expires_at > now))
+        .order_by(ClassroomMember.joined_at.desc()).limit(1)
+    ).scalar_one_or_none()
+
+
+def owned_live_classroom(user):
+    """A live classroom this user runs.
+
+    Owning one grants Pro without taking a seat. The alternative - making the
+    teacher join their own class - either locks out the person paying or
+    silently spends one of the seats they bought for students.
+    """
+    if user is None:
+        return None
+    now = _utcnow()
+    return db.session.execute(
+        db.select(Classroom)
+        .where(Classroom.owner_id == user.id,
+               Classroom.archived_at.is_(None),
+               db.or_(Classroom.expires_at.is_(None), Classroom.expires_at > now))
+        .order_by(Classroom.created_at.desc()).limit(1)
+    ).scalar_one_or_none()
+
+
+def owned_classrooms(user):
+    return db.session.execute(
+        db.select(Classroom).filter_by(owner_id=user.id)
+        .order_by(Classroom.created_at.desc())
+    ).scalars().all()

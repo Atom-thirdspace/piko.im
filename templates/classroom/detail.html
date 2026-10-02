@@ -1,0 +1,129 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn" data-join-url="{{ url_for('classroom.join', _external=True) }}">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.index') }}">Classrooms</a>
+    </p>
+    <h1>{{ cls.name or 'Untitled classroom' }}</h1>
+    <p class="track-meta">
+      <span class="pill {{ 'pill-done' if cls.is_live else 'pill-fail' }}">
+        {{ 'active' if cls.is_live else 'ended' }}
+      </span>
+      &middot; {{ cls.seats_used }} of {{ cls.seats }} seats used
+      &middot; {{ 'academic licence' if cls.source == 'academic' else 'paid' }}
+      {% if cls.expires_at %}
+        &middot; until {{ cls.expires_at.strftime('%d %b %Y') }}
+      {% endif %}
+    </p>
+  </header>
+
+  {% if cls.over_capacity %}
+    <p class="room-warn">
+      {{ cls.over_capacity }} more student{{ '' if cls.over_capacity == 1 else 's' }}
+      than seats. Nobody has lost access, but nobody new can join until you
+      remove some or add seats.
+    </p>
+  {% endif %}
+
+  {% if not cls.is_live %}
+    <p class="room-warn">
+      This classroom has ended, so its students no longer have Pro. The roster
+      is kept &mdash; renewing restores everyone.
+    </p>
+  {% endif %}
+
+  <section class="room-card">
+    <h2>Join code</h2>
+    <p class="room-codeline">
+      <code class="room-code room-code--big" data-code>{{ cls.join_code }}</code>
+      <button type="button" class="room-btn" data-copy>Copy link</button>
+    </p>
+    <p class="room-hint">
+      Students go to <code>{{ url_for('classroom.join', _external=True) }}</code>
+      and enter this code. Anyone with it can take a seat, so share it with the
+      class and not the internet.
+    </p>
+    <form method="post" action="{{ url_for('classroom.rotate_code', class_id=cls.id) }}">
+      {{ csrf_field() }}
+      <button type="submit" class="room-btn">Generate a new code</button>
+      <span class="room-hint">The old one stops working. Students already in stay in.</span>
+    </form>
+  </section>
+
+  <section class="room-card">
+    <h2>Details</h2>
+    <form class="room-form" method="post"
+          action="{{ url_for('classroom.rename', class_id=cls.id) }}">
+      {{ csrf_field() }}
+      <p><label>Name<br>
+        <input name="name" size="36" value="{{ cls.name }}"></label></p>
+      <p><label>Institution<br>
+        <input name="institution" size="36" value="{{ cls.institution }}"></label></p>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Roster ({{ cls.seats_used }})</h2>
+    {% if not cls.roster %}
+      <p class="learn-lede">Nobody has joined yet. Give out the code above.</p>
+    {% else %}
+      <table class="room-table">
+        <tr><th>Student</th><th>Joined</th><th></th></tr>
+        {% for m in cls.roster %}
+          <tr>
+            <td>{{ m.user.username or m.user.email if m.user else '—' }}</td>
+            <td>{{ m.joined_at.strftime('%d %b %Y') }}</td>
+            <td>
+              <form method="post"
+                    action="{{ url_for('classroom.remove', class_id=cls.id, user_id=m.user_id) }}">
+                {{ csrf_field() }}
+                <button type="submit" class="room-btn">Remove</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+      <p class="room-hint">
+        Removing a student frees their seat and ends their Pro, unless they
+        pay for it themselves.
+      </p>
+    {% endif %}
+  </section>
+</main>
+{% endblock content %}
+
+{% block js %}
+<script>
+(function () {
+  var main = document.querySelector('[data-join-url]');
+  var btn = main && main.querySelector('[data-copy]');
+  if (!btn) { return; }
+
+  btn.addEventListener('click', function () {
+    var code = main.querySelector('[data-code]').textContent.trim();
+    var text = main.dataset.joinUrl + '?code=' + encodeURIComponent(code);
+    var done = function () { btn.textContent = 'Copied'; };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(done, function () {});
+    } else {
+      // Older browsers: a throwaway field is the only way to reach the
+      // clipboard, and it must be in the document to be selectable.
+      var field = document.createElement('textarea');
+      field.value = text;
+      document.body.appendChild(field);
+      field.select();
+      try { document.execCommand('copy'); done(); } catch (err) { /* ignore */ }
+      document.body.removeChild(field);
+    }
+  });
+})();
+</script>
+{% endblock js %}

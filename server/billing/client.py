@@ -74,13 +74,17 @@ def _patch(path, payload):
     return resp.json()
 
 
-def create_checkout(product_id, user, success_url, metadata=None):
+def create_checkout(product_id, user, success_url, metadata=None, seats=None):
     body = {
         "products": [product_id],
         "success_url": success_url,
         "external_customer_id": str(user.id),
         "metadata": dict(metadata or {}, user_id=str(user.id)),
     }
+    if seats:
+        body["seats"] = int(seats)
+    if user.email:
+        body["customer_email"] = user.email
     if user.email:
         body["customer_email"] = user.email
 
@@ -112,11 +116,9 @@ def get_subscription(polar_id):
 
 
 def cancel_subscription(polar_id, at_period_end=True):
-    """at_period_end=False un-cancels one already set to end."""
     return _patch("/subscriptions/" + polar_id,
                   {"cancel_at_period_end": bool(at_period_end)})
 
 
 def revoke_subscription(polar_id):
-    """Ends it now and strips access today."""
     return _patch("/subscriptions/" + polar_id, {"revoke": True})

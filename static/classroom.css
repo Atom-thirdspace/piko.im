@@ -1,0 +1,123 @@
+/* Classrooms: rosters, join codes, seat counts. Sits on learn.css. */
+
+.room-card {
+    margin: 1.5rem 0;
+    padding: 1rem 1.15rem;
+    border: 1px solid #e6d9cd;
+    border-radius: .6rem;
+    background: #fffdfb;
+}
+.room-card h2 { margin-top: 0; font-size: 1.1rem; }
+.room-card--member { background: #f1f8f3; border-color: #2f7d4f; }
+
+.room-warn {
+    margin: 1rem 0;
+    padding: .75rem .95rem;
+    background: #fdf6f4;
+    border: 1px solid #edcfc8;
+    border-radius: .5rem;
+    color: #8a3423;
+    font-size: .9rem;
+}
+
+.room-hint { font-size: .82rem; color: #7a6455; margin: .4rem 0 0; }
+
+.room-list { list-style: none; padding: 0; margin: .5rem 0 0; }
+.room-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    flex-wrap: wrap;
+    padding: .65rem 0;
+    border-bottom: 1px solid #f0e6dc;
+}
+.room-row:last-child { border-bottom: 0; }
+.room-name { font-weight: 600; color: #77431d; text-decoration: none; }
+.room-name:hover { text-decoration: underline; }
+.room-seats { color: #7a6455; font-size: .85rem; }
+
+.room-code {
+    font-family: ui-monospace, Consolas, monospace;
+    background: #f6efe8;
+    border: 1px solid #e6d9cd;
+    border-radius: .3rem;
+    padding: .1rem .4rem;
+    letter-spacing: .08em;
+}
+.room-code--big {
+    font-size: 1.5rem;
+    padding: .35rem .7rem;
+    letter-spacing: .14em;
+}
+.room-codeline {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin: .3rem 0 .5rem;
+}
+
+.room-btn {
+    border: 1px solid #d8c8ba;
+    background: #fff;
+    color: #5d4a3c;
+    border-radius: .35rem;
+    padding: .3rem .65rem;
+    font-size: .84rem;
+    cursor: pointer;
+}
+.room-btn:hover { background: #f6efe8; }
+
+.room-card form { margin: .6rem 0 0; }
+.room-form p { margin: 0 0 .7rem; }
+.room-form input {
+    margin-top: .2rem;
+    padding: .4rem .5rem;
+    border: 1px solid #d8c8ba;
+    border-radius: .35rem;
+    background: #fffdfb;
+    font-size: .9rem;
+}
+
+/* the join form - one big field, because that is the whole task */
+.room-join { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+.room-join input {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 1.2rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    padding: .55rem .7rem;
+    border: 1px solid #d8c8ba;
+    border-radius: .4rem;
+    background: #fffdfb;
+    width: 11em;
+}
+
+.room-table { width: 100%; border-collapse: collapse; margin-top: .6rem; }
+.room-table th {
+    text-align: left;
+    font-size: .76rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #7a6455;
+    padding: .3rem .6rem .3rem 0;
+    border-bottom: 1px solid #e6d9cd;
+}
+.room-table td {
+    padding: .45rem .6rem .45rem 0;
+    border-bottom: 1px solid #f0e6dc;
+    font-size: .9rem;
+}
+.room-table form { margin: 0; }
+
+/* the seat picker on the pricing card */
+.price-seats { margin: 0 0 .7rem; }
+.price-seats input {
+    width: 5rem;
+    margin-left: .35rem;
+    padding: .3rem .4rem;
+    border: 1px solid #d8c8ba;
+    border-radius: .35rem;
+    background: #fffdfb;
+    font-size: .95rem;
+}

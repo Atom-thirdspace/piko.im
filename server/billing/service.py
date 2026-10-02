@@ -1,12 +1,10 @@
-"""Turning Polar events into rows. The only writer of paid access."""
-
 import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy.exc import IntegrityError
 
-from ..models import (Subscription, User, WebhookEvent, _utcnow,
-                      active_subscription, db)
+from ..models import (Subscription, User, WebhookEvent, _utcnow, active_seat,
+                      active_subscription, db, owned_live_classroom)
 from .plans import plan_for_product
 
 # Events that carry a subscription object we should store.
@@ -28,12 +26,6 @@ def _dt(value):
 
 
 def already_seen(event_id, event_type):
-    """True if this delivery was handled before.
-
-    Polar retries until it gets a 2xx, so the same webhook-id shows up more
-    than once. The unique constraint - not a SELECT - is what actually
-    settles the race between two concurrent retries.
-    """
     db.session.add(WebhookEvent(source="polar", event_id=event_id,
                                 event_type=event_type[:64]))
     try:
@@ -45,7 +37,6 @@ def already_seen(event_id, event_type):
 
 
 def _owner(data):
-    """Find our user from the customer Polar hands back."""
     customer = data.get("customer") or {}
     external = customer.get("external_id") or data.get("external_customer_id")
     if external:
@@ -65,7 +56,6 @@ def _owner(data):
 
 
 def apply_subscription(data, event_type, event_at=None):
-    """Upsert one subscription from a webhook payload. Returns the row or None."""
     polar_id = data.get("id")
     if not polar_id:
         return None
@@ -109,11 +99,11 @@ def apply_subscription(data, event_type, event_at=None):
     row.canceled_at = _dt(data.get("canceled_at"))
     row.event_at = event_at or _utcnow()
     db.session.commit()
+    sync_classroom(row, data)
     return row
 
 
 def handle(event, event_at=None):
-    """Dispatch one verified event. Returns a short string for the log."""
     event_type = event.get("type") or ""
     data = event.get("data") or {}
 
@@ -131,19 +121,7 @@ def handle(event, event_at=None):
 # --------------------------------------------------------------------------- #
 
 def is_pro(user):
-    return active_subscription(user) is not None
-
-
-def subscription_state(user):
-    """What the settings and pricing pages need to render."""
-    sub = active_subscription(user)
-    return {
-        "pro": sub is not None,
-        "subscription": sub,
-        "plan": sub.plan if sub else "",
-        "renews_at": sub.current_period_end if sub else None,
-        "ending": bool(sub and sub.cancel_at_period_end),
-    }
+    return pro_source(user) is not None
 
 
 # --------------------------------------------------------------------------- #
@@ -151,12 +129,6 @@ def subscription_state(user):
 # --------------------------------------------------------------------------- #
 
 def grant_manual(user, admin, months=12, note=""):
-    """Comp someone Pro without involving the payment provider.
-
-    The synthetic id keeps the unique constraint satisfied and guarantees no
-    webhook can ever collide with this row: Polar ids are bare UUIDs and are
-    never prefixed like this.
-    """
     ends = _utcnow() + timedelta(days=30 * max(1, int(months)))
     row = Subscription(
         user_id=user.id,
@@ -178,7 +150,6 @@ def grant_manual(user, admin, months=12, note=""):
 
 
 def end_manual(row):
-    """Withdraw a comp. A paid row has to go through the provider instead."""
     if not row.is_manual:
         return False
     row.status = "canceled"
@@ -186,3 +157,67 @@ def end_manual(row):
     row.canceled_at = _utcnow()
     db.session.commit()
     return True
+
+def pro_source(user):
+    """Why this user has Pro: (kind, row) or None.
+
+    Order matters. Their own subscription wins, so a teacher who also sits in
+    a colleague's class still sees their own billing. Owning a classroom
+    comes next - whoever pays for the room is never the one locked out of it.
+    """
+    sub = active_subscription(user)
+    if sub is not None:
+        return ("subscription", sub)
+    owned = owned_live_classroom(user)
+    if owned is not None:
+        return ("classroom_owner", owned)
+    seat = active_seat(user)
+    if seat is not None:
+        return ("classroom", seat)
+    return None
+
+def subscription_state(user):
+    kind_row = pro_source(user)
+    kind = kind_row[0] if kind_row else None
+    sub = kind_row[1] if kind == "subscription" else None
+    seat = kind_row[1] if kind == "classroom" else None
+    room = (kind_row[1] if kind == "classroom_owner"
+            else (seat.classroom if seat else None))
+    return {
+        "pro": kind is not None,
+        "via": kind,
+        "subscription": sub,
+        "classroom": room,
+        # True when the room is theirs, so the UI can offer the roster
+        # instead of telling them to ask their school.
+        "owns_classroom": kind == "classroom_owner",
+        "plan": sub.plan if sub else ("classroom" if room else ""),
+        "renews_at": sub.current_period_end if sub else (
+            room.expires_at if room else None),
+        "ending": bool(sub and sub.cancel_at_period_end),
+        "manageable": kind == "subscription" and not sub.is_manual,
+    }
+
+CLASSROOM_PLAN = "classroom"
+def sync_classroom(row, data):
+    from ..models import Classroom, new_join_code
+
+    if row.plan != CLASSROOM_PLAN:
+        return None
+
+    seats = int(data.get("seats") or 0)
+    cls = db.session.execute(
+        db.select(Classroom).filter_by(polar_subscription_id=row.polar_subscription_id)
+    ).scalar_one_or_none()
+
+    if cls is None:
+        cls = Classroom(owner_id=row.user_id, source="polar",
+                        polar_subscription_id=row.polar_subscription_id,
+                        join_code=new_join_code(),
+                        name="My classroom")
+        db.session.add(cls)
+
+    cls.seats = seats
+    cls.archived_at = None if row.grants_access else _utcnow()
+    db.session.commit()
+    return cls

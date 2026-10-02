@@ -42,13 +42,22 @@ def checkout(plan):
         abort(404)
 
     user = current_user()
-    if service.is_pro(user):
+    spec = PLANS.get(plan) or {}
+    seats = None
+    if spec.get("seats"):
+        try:
+            seats = int(request.form.get("seats") or spec["min_seats"])
+        except (TypeError, ValueError):
+            seats = spec["min_seats"]
+        seats = max(spec["min_seats"], min(seats, spec["max_seats"]))
+
+    elif service.is_pro(user):
         flash("You are already subscribed", "error")
         return redirect(url_for("billing.pricing"))
 
     success = url_for("billing.success", _external=True) + "?checkout_id={CHECKOUT_ID}"
     try:
-        url = create_checkout(pid, user, success, metadata={"plan": plan})
+        url = create_checkout(pid, user, success, metadata={"plan": plan}, seats=seats)
     except BillingError as exc:
         current_app.logger.warning("checkout failed for user %s: %s", user.id, exc)
         flash("Could not start the checkout. Try again in a moment.", "error")
