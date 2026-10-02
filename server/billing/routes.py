@@ -8,7 +8,7 @@ from ..models import _utcnow
 from ..session import current_user, login_required
 from . import service
 from .client import BillingError, create_checkout, create_portal_session
-from .plans import PERKS, available, is_configured, product_id
+from .plans import PERKS, PLANS, available, is_configured, product_id
 from .webhooks import WebhookError, verify
 
 billing_bp = Blueprint("billing",__name__)
