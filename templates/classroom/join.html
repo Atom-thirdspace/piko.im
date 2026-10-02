@@ -1,0 +1,35 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Join a class</h1>
+    <p class="learn-lede">
+      Enter the code your teacher gave you. Joining switches Pro on for as
+      long as you are on their roster.
+    </p>
+  </header>
+
+  {% if error %}
+    <p class="room-warn">{{ error }}</p>
+  {% endif %}
+
+  <form class="room-join" method="post" action="{{ url_for('classroom.join') }}">
+    {{ csrf_field() }}
+    <input name="code" maxlength="16" value="{{ code }}" autofocus
+           autocapitalize="characters" autocomplete="off" spellcheck="false"
+           placeholder="ABCD2345" aria-label="Join code">
+    <button type="submit" class="btn btn-primary">Join</button>
+  </form>
+
+  <p class="room-hint">
+    Codes avoid characters that look alike, so there is no letter O or digit
+    1 to mistype. <a href="{{ url_for('classroom.index') }}">Back to classrooms</a>.
+  </p>
+</main>
+{% endblock content %}

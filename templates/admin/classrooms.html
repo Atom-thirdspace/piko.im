@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>Classrooms</h1>
+
+  <div class="admin-cols">
+    <section>
+      <h2>Grant an academic licence</h2>
+      <p class="admin-hint">
+        Free seats for a school or bootcamp. No payment provider is involved,
+        so there is nothing to cancel and nothing in the billing portal - it
+        simply expires on the date you set.
+      </p>
+      <form method="post" action="{{ url_for('admin.classroom_grant') }}">
+        {{ csrf_field() }}
+        <p><input name="owner" size="26" placeholder="teacher's email or username"></p>
+        <p><input name="name" size="26" placeholder="class name"></p>
+        <p><input name="institution" size="26" placeholder="school or institution"></p>
+        <p>
+          <input name="seats" type="number" value="30" min="1" max="1000" size="5"> seats
+          &middot;
+          <input name="months" type="number" value="12" min="1" max="60" size="4"> months
+        </p>
+        <p><input name="note" size="30" placeholder="why (kept in the audit log)"></p>
+        <button class="admin-btn" type="submit">Grant licence</button>
+      </form>
+    </section>
+
+    <section>
+      <h2>At a glance</h2>
+      <table class="admin-table">
+        <tr><td>Classrooms</td><td>{{ rows|length }}</td></tr>
+        <tr><td>Active</td>
+            <td>{{ rows | selectattr('is_live') | list | length }}</td></tr>
+        <tr><td>Academic licences</td>
+            <td>{{ rows | selectattr('source', 'equalto', 'academic') | list | length }}</td></tr>
+        <tr><td>Seats sold or granted</td>
+            <td>{{ rows | sum(attribute='seats') }}</td></tr>
+        <tr><td>Students seated</td>
+            <td>{{ rows | sum(attribute='seats_used') }}</td></tr>
+      </table>
+    </section>
+  </div>
+
+  <h2>All classrooms</h2>
+  <table class="admin-table">
+    <tr><th>Name</th><th>Owner</th><th>Institution</th><th>Seats</th>
+        <th>Code</th><th>Source</th><th>Expires</th><th></th></tr>
+    {% for cls in rows %}
+      <tr>
+        <td>{{ cls.name or 'Untitled' }}</td>
+        <td>
+          {% if cls.owner %}
+            <a href="{{ url_for('admin.user_detail', user_id=cls.owner.id) }}">
+              {{ cls.owner.username or cls.owner.email }}</a>
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td>{{ cls.institution or '—' }}</td>
+        <td>
+          {{ cls.seats_used }} / {{ cls.seats }}
+          {% if cls.over_capacity %}
+            <span class="admin-badge warn">{{ cls.over_capacity }} over</span>
+          {% endif %}
+        </td>
+        <td><code>{{ cls.join_code }}</code></td>
+        <td>{{ cls.source }}</td>
+        <td>
+          {% if cls.archived_at %}archived
+          {% elif cls.expires_at %}{{ cls.expires_at.strftime('%d %b %Y') }}
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td>
+          {% if cls.is_live %}
+            <form class="admin-inline" method="post"
+                  action="{{ url_for('admin.classroom_archive', class_id=cls.id) }}">
+              {{ csrf_field() }}
+              <button class="admin-btn" type="submit">Archive</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="admin-empty">No classrooms yet.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock admin_content %}

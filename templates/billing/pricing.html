@@ -3,6 +3,7 @@
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='pricing.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
 {% endblock head %}
 
 {% block content %}
@@ -19,17 +20,23 @@
     <section class="price-current">
       <p>
         <span class="pill pill-done">Subscribed</span>
-        {% if state.ending %}
+        {% if state.owns_classroom %}
+          Included with the classroom you run.
+        {% elif state.via == 'classroom' %}
+          Through {{ state.classroom.name or 'your classroom' }}.
+        {% elif state.ending %}
           Your subscription ends on
           {{ state.renews_at.strftime('%d %b %Y') if state.renews_at }}.
         {% elif state.renews_at %}
           Renews {{ state.renews_at.strftime('%d %b %Y') }}.
         {% endif %}
       </p>
-      <form method="post" action="{{ url_for('billing.portal') }}">
-        {{ csrf_field() }}
-        <button type="submit" class="btn">Manage billing</button>
-      </form>
+      {% if state.manageable %}
+        <form method="post" action="{{ url_for('billing.portal') }}">
+          {{ csrf_field() }}
+          <button type="submit" class="btn">Manage billing</button>
+        </form>
+      {% endif %}
     </section>
   {% endif %}
 
@@ -50,13 +57,35 @@
           </p>
           <p class="price-blurb">{{ plan.blurb }}</p>
 
-          {% if state.pro %}
-            <p class="price-note">You are already on Pro.</p>
-          {% elif not current_user() %}
+          {% if not current_user() %}
             <a class="btn btn-primary"
                href="{{ url_for('auth.login_page', next=url_for('billing.pricing')) }}">
               Sign in to subscribe
             </a>
+
+          {% elif plan.seats %}
+            {#- A teacher may already be Pro personally and still need seats,
+                so the classroom card is never blocked by state.pro. -#}
+            <form method="post"
+                  action="{{ url_for('billing.checkout', plan=plan.key) }}">
+              {{ csrf_field() }}
+              <p class="price-seats">
+                <label>Seats
+                  <input type="number" name="seats" value="{{ plan.min_seats }}"
+                         min="{{ plan.min_seats }}" max="{{ plan.max_seats }}">
+                </label>
+              </p>
+              <button type="submit" class="btn btn-primary">Buy seats</button>
+            </form>
+            <p class="price-note">
+              Teaching somewhere that cannot pay?
+              <a href="{{ url_for('classroom.index') }}">Free academic licences</a>
+              exist.
+            </p>
+
+          {% elif state.pro %}
+            <p class="price-note">You are already on Pro.</p>
+
           {% else %}
             <form method="post"
                   action="{{ url_for('billing.checkout', plan=plan.key) }}">

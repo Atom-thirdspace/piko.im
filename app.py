@@ -31,6 +31,8 @@ from server.generation import register_cli as register_generation_cli
 from server.authors.routes import authors_bp
 from server.billing.routes import billing_bp
 from server.billing.service import is_pro as _is_pro
+from server.billing.service import subscription_state as _sub_state
+from server.classrooms import classroom_bp
 
 load_dotenv()
 
@@ -65,6 +67,7 @@ app.register_blueprint(api_bp)
 app.register_blueprint(docs_bp)
 app.register_blueprint(authors_bp)
 app.register_blueprint(billing_bp)
+app.register_blueprint(classroom_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)
@@ -74,6 +77,7 @@ app.jinja_env.globals["current_user"] = current_user
 app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels
 app.jinja_env.globals["is_pro"] = lambda: _is_pro(current_user())
+app.jinja_env.globals["billing_state"] = lambda: _sub_state(current_user())
 
 
 if base.startswith("https://"):

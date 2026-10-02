@@ -18,6 +18,18 @@ PLANS = {
         "blurb": "Two months free against the monthly price.",
         "highlight": True,
     },
+    "classroom": {
+        "key": "classroom",
+        "name": "Classroom",
+        "cadence": "per seat / year",
+        "price": "$18",
+        "env": "POLAR_PRODUCT_CLASSROOM",
+        "blurb": "For teachers and bootcamps. One payer, a join code for "
+                 "students, and everyone gets Pro.",
+        "seats": True,
+        "min_seats": 5,
+        "max_seats": 500,
+    },
 }
 
 PERKS = [
