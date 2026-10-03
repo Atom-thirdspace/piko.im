@@ -1,5 +1,3 @@
-# A code lesson pays nothing of its own - the problem behind it is the work,
-# and PROBLEM_XP already prices that. Paying both would double-count.
 LESSON_XP = {"reading": 5, "quiz": 15, "code": 0}
 PROBLEM_XP = {"easy": 30, "medium": 60, "hard": 120}
 
@@ -17,6 +15,8 @@ LABELS = {
     "first_try": "First attempt correct",
     "unit": "Topic complete",
     "streak": "Streak bonus",
+    "daily": "Daily quest",
+    "potd": "Problem of the day",
     "admin": "Adjustment",
 }
 
@@ -36,12 +36,6 @@ def problem_base(problem):
 
 
 def solve_award(problem, used_hints, attempt_number):
-    """Itemised payout for a first accept.
-
-    attempt_number counts the accepted submission itself, so 1 means they
-    got it on the first submit. A submission that failed to compile still
-    counts - they pressed submit.
-    """
     parts = [(BASE_REASON, problem_base(problem))]
     if not used_hints:
         parts.append(("no_hints", BONUS_NO_HINTS))

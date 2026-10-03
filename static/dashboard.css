@@ -462,3 +462,41 @@ body {
 .last > * {
     flex: 1;
 }
+
+
+/* ---------- daily quests ---------- */
+.quests { list-style: none; margin: 0; padding: 0; }
+
+.quest {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .45rem 0;
+  border-bottom: 1px solid rgba(128, 128, 128, .15);
+}
+.quest:last-child { border-bottom: 0; }
+
+.quest__tick  { width: 1.1rem; text-align: center; opacity: .55; }
+.quest__title { flex: 1; }
+.quest__count { font-variant-numeric: tabular-nums; opacity: .7; }
+.quest__xp    { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.quest.is-done .quest__tick  { opacity: 1; }
+.quest.is-done .quest__title { opacity: .55; text-decoration: line-through; }
+
+/* ---------- problem of the day ---------- */
+.potd__title { font-size: 1.15rem; font-weight: 600; margin: .3rem 0 .15rem; }
+.potd__meta  { opacity: .7; font-size: .9rem; margin: 0 0 .6rem; }
+
+.potd__fastest {
+  margin: 0 0 .6rem;
+  padding-left: 1.2rem;
+  font-size: .9rem;
+}
+.potd__fastest li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .15rem 0;
+}
+.potd__fastest span { font-variant-numeric: tabular-nums; opacity: .65; }

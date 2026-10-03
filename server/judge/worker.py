@@ -96,6 +96,7 @@ def run_job(job):
     # XP moves here from the request. The unique constraint on xp_events keeps
     # the award idempotent, so a retried job cannot pay twice.
     if result.verdict == V.AC and is_first_solve:
+        from .. import potd, quests
         from ..achievements import evaluate
         from ..learning.routes import complete_lessons_for_problem
         from ..models import attempts_on, record_solve, used_hints
@@ -111,8 +112,13 @@ def run_job(job):
             for reason, amount in parts:
                 award_xp(user, amount, reason, str(problem.id))
             complete_lessons_for_problem(user, problem.id)
+            potd.award_if_today(user, problem)
             db.session.commit()
+            # record_solve writes the row the solve quests count, so it has
+            # to land before sync looks.
             record_solve(sub)
+            quests.sync(user)
+            db.session.commit()
             # Badges are evaluated off the request thread, where a handful of
             # aggregate queries costs nobody a page load.
             evaluate(user)

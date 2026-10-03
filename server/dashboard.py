@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, redirect, render_template, url_for
 
+from . import potd, quests
 from .achievements import describe
 from .models import (Enrollment, LessonProgress, Submission, XpEvent, db,
                      earned_rows, recent_freeze_uses)
@@ -90,6 +91,7 @@ def _activity(user, limit=8):
 
 def _dashboard_data(user):
     today = user_today(user)
+    quests.sync(user)
     # One grouped query replaces the old pass over every XpEvent row, and
     # serves the heatmap from the same result.
     grid = heatmap(user)
@@ -112,8 +114,19 @@ def _dashboard_data(user):
         "freeze_uses": recent_freeze_uses(user),
         "max_freezes": MAX_FREEZES,
         "achievements": describe([r.key for r in earned_rows(user, limit=6)]),
+        "quests": quests.board(user, today),
+        "potd": potd.card(user),
         "goal_choices": DAILY_GOAL_CHOICES,
     }
+
+
+def _json_potd(card):
+    if card is None:
+        return None
+    problem = card["problem"]
+    return {**card, "day": card["day"].isoformat(),
+            "problem": {"slug": problem.slug, "title": problem.title,
+                        "difficulty": problem.difficulty, "xp": problem.xp}}
 
 
 def _json_data(data):
@@ -143,6 +156,8 @@ def _json_data(data):
             for row in data["activity"]
         ],
         "streak": data["streak"],
+        "quests": {**data["quests"], "day": data["quests"]["day"].isoformat()},
+        "potd": _json_potd(data["potd"]),
     }
 
 

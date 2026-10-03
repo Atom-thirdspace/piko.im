@@ -125,3 +125,21 @@ def streak_state(user, today):
 
     return {"days": 0, "status": "broken", "freezes": freezes,
             "at_risk": False, "covered_by": 0, "lost": stored}
+
+
+def user_tz(user):
+    try:
+        return ZoneInfo(user.timezone or "UTC")
+    except (ZoneInfoNotFoundError, ValueError):
+        return ZoneInfo("UTC")
+
+
+def user_today(user):
+    return _utcnow().astimezone(user_tz(user)).date()
+
+def day_bounds(user, day):
+    from datetime import datetime, time, timedelta, timezone
+    start = datetime.combine(day, time.min, tzinfo=user_tz(user))
+    return (start.astimezone(timezone.utc),
+            (start + timedelta(days=1)).astimezone(timezone.utc))
+

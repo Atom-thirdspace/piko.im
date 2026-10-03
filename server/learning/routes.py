@@ -6,6 +6,7 @@ from ..models import (Enrollment, Lesson, LessonProgress, Problem, Submission,
 from ..progress import award_xp, level_progress
 from ..session import current_user, login_required
 from ..xp_rules import UNIT_COMPLETE, lesson_base
+from .. import quests
 from .catalog import quiz_for
 from .markdown import render as render_md
 from ..admin_gate import is_admin
@@ -201,6 +202,8 @@ def _complete(user, track, lesson):
 
     _enroll(user, track, lesson)
     _advance(user, track, done_ids)
+    result["quest_xp"] = quests.sync(user)
+    result["awarded"] += result["quest_xp"]
     db.session.commit()
     return result
 

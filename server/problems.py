@@ -37,6 +37,17 @@ def _problem_or_404(slug):
     return problem
 
 
+@problems_bp.route("/problems/today/")
+@login_required
+def today():
+    from . import potd
+    problem = potd.problem_for()
+    if problem is None:
+        flash("No problem of the day yet - the catalogue is empty.", "error")
+        return redirect(url_for("dashboard.index"))
+    return redirect(url_for("problems.page", slug=problem.slug))
+
+
 @problems_bp.route("/problems/<slug>/")
 @login_required
 def page(slug):
