@@ -15,7 +15,7 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      reject_deletion_request, TutorMessage, unlink_identity, Post,
                      _utcnow, replace_test_results, Report, REPORT_REASON_LABELS,
                      Team, open_report_count, SimilarityFlag,
-                     GeneratedProblem, publish_generated)
+                     GeneratedProblem, publish_generated, Contest, ContestEntry, ContestProblem)
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -44,7 +44,6 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
 def _xp_override(raw):
-    """Blank means "use the rule table". That is the normal case now."""
     raw = (raw or "").strip() if isinstance(raw, str) else raw
     if raw is None or raw == "":
         return None
@@ -69,7 +68,8 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.authors", "Authors"), ("admin.review", "Review"),
        ("admin.subscriptions", "Subscriptions"),
        ("admin.classrooms", "Classrooms"),
-       ("admin.students", "Students")
+       ("admin.students", "Students"),
+       ("admin.contests", "Contests"),
        ]
 
 
@@ -1571,3 +1571,92 @@ def student_reject(row_id):
     log_action("student_reject", row.id, row.academic_email)
     flash("Rejected.", "success")
     return redirect(url_for("admin.students"))
+
+
+@admin_bp.route("/contests/")
+@admin_required
+def contests():
+    rows = db.session.execute(
+        db.select(Contest).order_by(Contest.starts_at.desc())).scalars().all()
+    return render_template("admin/contests.html", contests=rows,
+                           problems=db.session.execute(
+                               db.select(Problem).where(Problem.status == PUBLISHED)
+                               .order_by(Problem.slug)).scalars().all())
+
+@admin_bp.route("/contests/")
+@admin_required
+def contests():
+    rows = db.session.execute(
+        db.select(Contest).order_by(Contest.starts_at.desc())).scalars().all()
+    return render_template("admin/contests.html", contests=rows,
+                           problems=db.session.execute(
+                               db.select(Problem).where(Problem.status == PUBLISHED)
+                               .order_by(Problem.slug)).scalars().all())
+
+
+@admin_bp.route("/contests/save", methods=["POST"])
+@admin_required
+def contest_save():
+    from datetime import datetime, timezone as _tz
+    form = request.form
+    slug = (form.get("slug") or "").strip().lower()
+    if not SLUG_RE.match(slug or ""):
+        flash("Lowercase letters, numbers and hyphens.", "error")
+        return redirect(url_for("admin.contests"))
+
+    def when(field):
+        raw = (form.get(field) or "").strip()
+        try:                               # the browser sends local wall time
+            return datetime.fromisoformat(raw).replace(tzinfo=_tz.utc)
+        except ValueError:
+            return None
+
+    starts, ends = when("starts_at"), when("ends_at")
+    if starts is None or ends is None or ends <= starts:
+        flash("Give a start and an end, with the end later.", "error")
+        return redirect(url_for("admin.contests"))
+
+    contest = db.session.execute(
+        db.select(Contest).filter_by(slug=slug)).scalar_one_or_none()
+    if contest is None:
+        contest = Contest(slug=slug, created_by_id=current_user().id)
+        db.session.add(contest)
+    contest.title = (form.get("title") or slug)[:200]
+    contest.description_md = form.get("description_md") or ""
+    contest.starts_at, contest.ends_at = starts, ends
+    contest.freeze_minutes = max(0, min(int(form.get("freeze_minutes") or 30), 240))
+    contest.published = bool(form.get("published"))
+    db.session.commit()
+    log_action("save_contest", contest.id, contest.slug)
+    flash("Contest saved.", "success")
+    return redirect(url_for("admin.contests"))
+
+
+@admin_bp.route("/contests/<int:contest_id>/problems", methods=["POST"])
+@admin_required
+def contest_add_problem(contest_id):
+    contest = _get_or_404(Contest, contest_id)
+    problem = db.session.get(Problem, int(request.form.get("problem_id") or 0))
+    if problem is None:
+        flash("No such problem.", "error")
+        return redirect(url_for("admin.contests"))
+    last = db.session.execute(
+        db.select(db.func.coalesce(db.func.max(ContestProblem.position), -1))
+        .where(ContestProblem.contest_id == contest.id)).scalar()
+    db.session.add(ContestProblem(contest_id=contest.id, problem_id=problem.id,
+                                  position=last + 1))
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("Already in this contest.", "error")
+    return redirect(url_for("admin.contests"))
+
+
+@admin_bp.route("/contests/problems/<int:row_id>/remove", methods=["POST"])
+@admin_required
+def contest_remove_problem(row_id):
+    row = _get_or_404(ContestProblem, row_id)
+    db.session.delete(row)
+    db.session.commit()
+    return redirect(url_for("admin.contests"))

@@ -1817,3 +1817,60 @@ def question_count(lesson_id):
         db.select(db.func.count()).select_from(LessonQuestion)
         .where(LessonQuestion.lesson_id == lesson_id)).scalar() or 0
 
+
+class Contest(db.Model):
+    __tablename__ = "contests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description_md = db.Column(db.Text, nullable=False, default="")
+    starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    ends_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    freeze_minutes = db.Column(db.Integer, nullable=False, default=30)
+    published = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    created_by = db.relationship("User")
+    problems = db.relationship("ContestProblem", back_populates="contest",
+                               cascade="all, delete-orphan",
+                               order_by="ContestProblem.position")
+    entries = db.relationship("ContestEntry", back_populates="contest",
+                              cascade="all, delete-orphan")
+
+
+class ContestProblem(db.Model):
+    __tablename__ = "contest_problems"
+    __table_args__ = (UniqueConstraint("contest_id", "problem_id",
+                                       name="uq_contest_problem"),)
+    
+    id = db.Column(db.Integer, primary_key=True)
+    contest_id = db.Column(db.Integer, db.ForeignKey("contests.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    problem_id = db.Column(db.Integer, db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+
+    contest = db.relationship("Contest", back_populates="problems")
+    problem = db.relationship("Problem")
+
+    @property
+    def letter(self):
+        return chr(65 + self.position) if self.position < 26 else str(self.position + 1)
+
+
+class ContestEntry(db.Model):
+    __tablename__ = "contest_entries"
+    __table_args__ = (UniqueConstraint("contest_id", "user_id",
+                                       name="uq_contest_entry"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    contest_id = db.Column(db.Integer, db.ForeignKey("contests.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    joined_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    contest = db.relationship("Contest", back_populates="entries")
+    user = db.relationship("User")

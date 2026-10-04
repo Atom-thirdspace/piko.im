@@ -14,6 +14,7 @@ from .progress import streak_state, user_today
 from .xp_rules import solve_award, summarise, total
 from .ratelimit import run_block_reason, submit_block_reason
 from .session import current_user, login_required
+from .content import may_see
 
 problems_bp = Blueprint("problems", __name__)
 
@@ -31,11 +32,17 @@ MAX_STDIN_BYTES = 16 * 1024
 
 def _problem_or_404(slug):
     problem = db.session.execute(
-        visible(db.select(Problem).filter_by(slug=slug), Problem, current_user())
-    ).scalar_one_or_none()
+        db.select(Problem).filter_by(slug=slug)).scalar_one_or_none()
     if problem is None:
         abort(404)
-    return problem
+    user = current_user()
+    if may_see(problem, user):
+        return problem
+    from .contests import unlocked_problem_ids
+    if problem.id in unlocked_problem_ids(user):
+        return problem
+    abort(404)
+
 
 
 @problems_bp.route("/problems/today/")
