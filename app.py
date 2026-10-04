@@ -34,6 +34,11 @@ from server.billing.service import is_pro as _is_pro
 from server.billing.service import subscription_state as _sub_state
 from server.classrooms import classroom_bp
 from server.students import students_bp
+from server.notification_routes import notifications_bp
+from server.search import search_bp
+from server import notify as _notify
+from server.models import unread_count as _unread
+from server.contests import contests_bp
 
 load_dotenv()
 
@@ -70,6 +75,9 @@ app.register_blueprint(authors_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(classroom_bp)
 app.register_blueprint(students_bp)
+app.register_blueprint(notifications_bp)
+app.register_blueprint(search_bp)
+app.register_blueprint(contests_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)
@@ -80,6 +88,8 @@ app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels
 app.jinja_env.globals["is_pro"] = lambda: _is_pro(current_user())
 app.jinja_env.globals["billing_state"] = lambda: _sub_state(current_user())
+app.jinja_env.globals["unread_notifications"] = lambda: _unread(current_user())
+_notify.register_cli(app)
 
 
 if base.startswith("https://"):

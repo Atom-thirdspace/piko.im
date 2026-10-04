@@ -8,6 +8,7 @@ from .progress import level_progress, user_today, MAX_FREEZES, streak_state
 from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
 from .activity import heatmap
+from . import recommend
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -114,6 +115,7 @@ def _dashboard_data(user):
         "freeze_uses": recent_freeze_uses(user),
         "max_freezes": MAX_FREEZES,
         "achievements": describe([r.key for r in earned_rows(user, limit=6)]),
+        "next_up": recommend.next_problem(user),
         "quests": quests.board(user, today),
         "potd": potd.card(user),
         "goal_choices": DAILY_GOAL_CHOICES,

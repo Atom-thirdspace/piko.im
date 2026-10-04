@@ -1,0 +1,114 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Search</h1>
+    <form class="search-form" method="get" action="{{ url_for('search.page') }}">
+      <input type="search" name="q" size="40" autofocus
+             value="{{ q }}" aria-label="Search">
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+    {% if short %}
+      <p class="learn-lede">Two letters or more, please.</p>
+    {% elif q %}
+      <p class="learn-lede">
+        {{ total }} result{{ '' if total == 1 else 's' }} for
+        &ldquo;{{ q }}&rdquo;.
+      </p>
+    {% endif %}
+  </header>
+
+  {% if q and not short and not total %}
+    <p class="learn-lede">Nothing matched. Try a shorter word.</p>
+  {% endif %}
+
+  {% if results.problems %}
+    <section class="auth-group">
+      <h2>Problems</h2>
+      <ul class="auth-list">
+        {% for p in results.problems %}
+          <li class="auth-row">
+            <a class="auth-title"
+               href="{{ url_for('problems.page', slug=p.slug) }}">{{ p.title }}</a>
+            <span class="pill pill-{{ p.difficulty }}">{{ p.difficulty }}</span>
+            {% if p.topic %}<span class="search-meta">{{ p.topic }}</span>{% endif %}
+            {% if p.status != 'published' %}
+              <span class="pill pill-reading">{{ p.status }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if results.lessons %}
+    <section class="auth-group">
+      <h2>Lessons</h2>
+      <ul class="auth-list">
+        {% for l in results.lessons %}
+          <li class="auth-row">
+            {#- A lesson with no unit or track has no public url. -#}
+            {% if l.unit and l.unit.track %}
+              <a class="auth-title"
+                 href="{{ url_for('learn.lesson', track_slug=l.unit.track.slug,
+                                  unit_slug=l.unit.slug, lesson_slug=l.slug) }}">
+                {{ l.title }}</a>
+              <span class="search-meta">
+                {{ l.unit.track.title }} / {{ l.unit.title }}
+              </span>
+            {% else %}
+              <span class="auth-title">{{ l.title }}</span>
+            {% endif %}
+            {% if l.status != 'published' %}
+              <span class="pill pill-reading">{{ l.status }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if results.tracks %}
+    <section class="auth-group">
+      <h2>Courses</h2>
+      <ul class="auth-list">
+        {% for t in results.tracks %}
+          <li class="auth-row">
+            <a class="auth-title"
+               href="{{ url_for('learn.track', track_slug=t.slug) }}">{{ t.title }}</a>
+            {% if t.status != 'published' %}
+              <span class="pill pill-reading">{{ t.status }}</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if results.people %}
+    <section class="auth-group">
+      <h2>People</h2>
+      <ul class="auth-list">
+        {% for u in results.people %}
+          <li class="auth-row">
+            {% if u.username %}
+              <a class="auth-title"
+                 href="{{ url_for('profile.public_profile', username=u.username) }}">
+                {{ u.username }}</a>
+              {% if u.name %}<span class="search-meta">{{ u.name }}</span>{% endif %}
+            {% else %}
+              <span class="auth-title">{{ u.name or 'Someone' }}</span>
+              <span class="search-meta">no public profile yet</span>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+</main>
+{% endblock content %}

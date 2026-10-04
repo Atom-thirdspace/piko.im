@@ -7,6 +7,7 @@ from flask import (Blueprint, Response, abort, current_app, flash, jsonify,
                    redirect, render_template, request, url_for, session)
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from .judge import LANGUAGES, TestCase, judge
 from .learning.seed import seed_catalog
 from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonProgress,
@@ -16,6 +17,7 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      _utcnow, replace_test_results, Report, REPORT_REASON_LABELS,
                      Team, open_report_count, SimilarityFlag,
                      GeneratedProblem, publish_generated, Contest, ContestEntry, ContestProblem)
+from . import notify
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -1189,6 +1191,18 @@ def author_remove(user_id):
     flash("Authorship removed. Their published work stays up.", "success")
     return redirect(url_for("admin.authors"))
 
+def _public_url(kind, row):
+    """Where the author should land. The admin queue 403s for them."""
+    if kind == "problem":
+        return url_for("problems.page", slug=row.slug)
+    if kind == "track":
+        return url_for("learn.track", track_slug=row.slug)
+    if kind == "lesson" and row.unit is not None and row.unit.track is not None:
+        return url_for("learn.lesson", track_slug=row.unit.track.slug,
+                       unit_slug=row.unit.slug, lesson_slug=row.slug)
+    return url_for("authors.index")
+
+
 REVIEWABLE = {"track": Track, "unit": Unit, "lesson": Lesson,
               "problem": Problem}
 
@@ -1230,6 +1244,11 @@ def review_publish(kind, row_id):
     row.published_at = _utcnow()
     row.review_note = ""
     db.session.commit()
+    if row.created_by is not None:
+        notify.send(row.created_by, "published",
+                    "%s is live" % row.title,
+                    "An editor published your %s." % kind,
+                    url=_public_url(kind, row), email=True)
     log_action("publish_%s" % kind, row.id, row.slug)
     flash("Published.", "success")
     return redirect(url_for("admin.review"))
@@ -1245,6 +1264,11 @@ def review_reject(kind, row_id):
     row.submitted_at = None
     row.review_note = (request.form.get("note") or "").strip()[:2000]
     db.session.commit()
+    if row.created_by is not None:
+        notify.send(row.created_by, "rejected",
+                    "%s was sent back" % row.title,
+                    row.review_note or "No note was left.",
+                    url=url_for("authors.index"), email=True)
     log_action("reject_%s" % kind, row.id, row.slug)
     flash("Sent back to the author.", "success")
     return redirect(url_for("admin.review"))
@@ -1572,16 +1596,6 @@ def student_reject(row_id):
     flash("Rejected.", "success")
     return redirect(url_for("admin.students"))
 
-
-@admin_bp.route("/contests/")
-@admin_required
-def contests():
-    rows = db.session.execute(
-        db.select(Contest).order_by(Contest.starts_at.desc())).scalars().all()
-    return render_template("admin/contests.html", contests=rows,
-                           problems=db.session.execute(
-                               db.select(Problem).where(Problem.status == PUBLISHED)
-                               .order_by(Problem.slug)).scalars().all())
 
 @admin_bp.route("/contests/")
 @admin_required

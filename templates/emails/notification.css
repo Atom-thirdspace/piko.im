@@ -1,0 +1,15 @@
+/* Generic notification email. */
+{% include "emails/_shell.css" %}
+
+.notice-box {
+    margin: 18px 0;
+    padding: 14px 18px;
+    background: #f6efe8;
+    border: 1px solid #e6d9cd;
+    border-radius: 8px;
+    color: #2a1a10;
+}
+
+.notice-box p {
+    margin: 0;
+}

@@ -73,8 +73,6 @@ def send_login_alert_email(to_email, name, when, ip, user_agent, settings_url):
 
 def send_author_invite_email(to_email, invite_url, expires, inviter=None,
                              note=None, name=None):
-    """The invite link, mailed. Returns False when Resend is not configured,
-    which is why the admin page always shows the link as well."""
     html = render_template(
         "emails/author-invite.html",
         invite_url=invite_url,
@@ -88,7 +86,21 @@ def send_author_invite_email(to_email, invite_url, expires, inviter=None,
 
 
 def send_student_code_email(to_email, code, name=None, ttl_minutes=20):
-    """The one-time code proving an academic address belongs to them."""
     html = render_template("emails/student-code.html", code=code, name=name,
                            ttl_minutes=ttl_minutes)
     return _send(to_email, STUDENT_CODE_SUBJECT, html)
+
+
+def _absolute(url):
+    if not url:
+        return None
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    base = (os.environ.get("OAUTH_REDIRECT_BASE") or "").rstrip("/")
+    return "%s/%s" % (base, url.lstrip("/")) if base else None
+
+
+def send_notification_email(to_email, title, body, url=None, name=None):
+    html = render_template("emails/notification.html", title=title,
+                           body=body, url=_absolute(url), name=name)
+    return _send(to_email, title, html)

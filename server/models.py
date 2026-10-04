@@ -1874,3 +1874,31 @@ class ContestEntry(db.Model):
 
     contest = db.relationship("Contest", back_populates="entries")
     user = db.relationship("User")
+
+
+class Notification(db.Model):
+    __tablename__ = "notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    kind = db.Column(db.String(32), nullable=False)
+    ref = db.Column(db.String(64), nullable=False, default="", server_default="")
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False, default="", server_default="")
+    url = db.Column(db.String(300), nullable=False, default="", server_default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False, index=True)
+    read_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+
+
+def unread_count(user):
+    if user is None:
+        return 0
+    return db.session.execute(
+        db.select(db.func.count()).select_from(Notification)
+        .where(Notification.user_id == user.id,
+               Notification.read_at.is_(None))).scalar() or 0
+

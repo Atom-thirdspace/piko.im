@@ -136,6 +136,7 @@ def index():
 def detail(slug):
     contest = _contest_or_404(slug)
     user = current_user()
+    state = phase(contest)
     joined = entered(contest, user)
     show = state != "upcoming" or (user is not None and is_admin(user))
     return render_template("contests/detail.html", contest=contest,

@@ -1,0 +1,47 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Alerts</h1>
+    <p class="learn-lede">
+      What happened while you were away. The last {{ rows|length }} are kept.
+    </p>
+    {% if rows | selectattr('read_at', 'none') | list %}
+      <form method="post" action="{{ url_for('notifications.read_all') }}">
+        {{ csrf_field() }}
+        <button type="submit" class="btn">Mark all read</button>
+      </form>
+    {% endif %}
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">Nothing yet.</p>
+  {% else %}
+    <ul class="notif-list">
+      {% for row in rows %}
+        <li class="notif {{ 'is-unread' if not row.read_at }}">
+          <div class="notif__text">
+            <b>{{ row.title }}</b>
+            {% if row.body %}<p>{{ row.body }}</p>{% endif %}
+            <span class="notif__when">
+              {{ row.created_at.strftime('%d %b %H:%M') }}
+            </span>
+          </div>
+          {% if row.url %}
+            <form method="post"
+                  action="{{ url_for('notifications.open_one', row_id=row.id) }}">
+              {{ csrf_field() }}
+              <button type="submit" class="btn">Open</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock content %}

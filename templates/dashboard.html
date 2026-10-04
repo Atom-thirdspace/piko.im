@@ -110,6 +110,26 @@
       </section>
     {% endif %}
 
+    <!-- ---------- try this next ---------- -->
+    {% if next_up and next_up.problem %}
+      <section data-aos="fade-in" data-aos-delay="550"
+               class="dash__next card cardstyle" aria-labelledby="next-h">
+        <div class="card__head">
+          <h2 class="card__title" id="next-h">Try this next</h2>
+          <span class="card__meta pill pill-{{ next_up.problem.difficulty }}">
+            {{ next_up.problem.difficulty }}
+          </span>
+        </div>
+        <p class="potd__title">
+          <a href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
+            {{ next_up.problem.title }}</a>
+        </p>
+        <p class="potd__meta">
+          {{ next_up.problem.xp }} XP &middot; because {{ next_up.reason }}.
+        </p>
+      </section>
+    {% endif %}
+
     <!-- ---------- problem of the day ---------- -->
     {% if potd %}
       <section data-aos="fade-in" data-aos-delay="600"

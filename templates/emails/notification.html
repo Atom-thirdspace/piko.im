@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+    {% include "emails/notification.css" %}
+  </style>
+</head>
+<body class="email email-notification">
+  <div class="email-wrapper">
+    <table class="email-shell" role="presentation">
+      <tr>
+        <td class="email-header"><a class="brand" href="https://piko.im">Piko</a></td>
+      </tr>
+      <tr>
+        <td class="email-content">
+          <p class="eyebrow">Piko</p>
+          <h1 class="email-title">{{ title }}</h1>
+          <p class="greeting">Hey{% if name %} {{ name }}{% endif %},</p>
+
+          {% if body %}
+            <div class="notice-box"><p>{{ body }}</p></div>
+          {% endif %}
+
+          {% if url %}
+            <p><a class="button" href="{{ url }}">Take a look</a></p>
+          {% endif %}
+
+          <p class="fine-print">
+            You can turn these off in your Piko settings.
+          </p>
+        </td>
+      </tr>
+      <tr><td class="email-footer"><p>Piko</p></td></tr>
+    </table>
+  </div>
+</body>
+</html>
