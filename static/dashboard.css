@@ -523,7 +523,16 @@ body {
 
 .point {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 1rem;
+}
+
+.point > .card {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 40rem) {
+    .point { flex-direction: column; }
 }
 
