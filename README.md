@@ -28,8 +28,16 @@
 
 
 > [!NOTE]
-> Aryan : Hey there, I worked on the frontend of the site. Currently, the landing page is not fully completed. The hero section is pretty much completed, but the header is still under construction. The login and onboarding just work, but the dashboard only has the skeleton without CSS. We're still working on this, and we'll complete this, I think, by the third week. 
-> Adhyys : Hey there! I am Adhdhyan aka Adhyys, I am working on the backend and admin code for Piko, I have written some basic tests with basic frontend to check the backend, apart from that I have implemented various features like AI helper, roadmaps, XP & Streak System. In future, I intend to extend my support for the backend of game like DSA problems. Right now, I have created the user onboarding system, login, initiated the database, and an emailing system where we email the user whenever the user logs in using recent emails. 
+> This is a very big project. We aim to make this project a very big SAAS.
+> 1) We have implemented features like google/hackclub/discord auth with 2 factor authentication which connects to 1Password/Google Authenticator/Microsoft Authenticator and many more
+> 2) We have also implemented developers API for the users as this is a app for future developers. so that they can use our API to get real time data of their profile from their coding agent or community projects
+> 3) We have a vey very big admin page which works pritty good. Its very huge and can do almost anything. From managing the User to approving Education Plans/ Universites etc
+> 4) We have implemented things like Pro Plan. The content is still free but the Plan includes features which costs us money like AI tutor
+> 5) We have a very good security with 2fa in admin panel and we email every user on suspecius logins. (suspecius logins only not all) As we aim to make this a real product
+> 6) Tho we have a Pro Plan we also provide Student Plan which is free and give acess to all pro benifits. It works just like github education. Aproval goes manually from our admin dashbord
+> 7) Emails are well equiped for OTPs, Messages, Newsletters etc
+> 8) University/School teachers can also make a classroom. We have some dedicated pages for classrooms
+> 9) The engeneering is almost done except frontend for new pages. We are still polishing and out team is small with a very huge codebase so we still need time to polish our frontend. The infrastructure is done. We have dedicated Author dashboard. Right now we have some small cources which we will delete after we find some volunteers who will be willing to become the author. We have a dedicateed Author dashboard where they will write the some cool content.
 
 ## Screenshot
 ![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
@@ -43,6 +51,9 @@
 - Neon
 - Hack Club, Google, Github and Discord OAuth
 - Resend Emails
+- Polar Payment gateway
+- openai v2 LLM compatable API
+- AWS EC2
 
 
 
@@ -58,7 +69,8 @@
 
 3) 
 ```sh
-python app.py
+pip install -r requirements.txt
+python app.py or Flask run #depends on your OS
 ```
 4) Once the server is up, go tp 127.0.0.1:5000
 
