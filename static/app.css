@@ -200,3 +200,18 @@ html body * {
     display: flex;
     flex-direction: row;
 }
+
+.dashi {
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1.5px solid var(--brand);
+
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+
+    z-index: 10;
+}

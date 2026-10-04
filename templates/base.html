@@ -42,6 +42,14 @@
             <input id="search" autocomplete="off" type="search" name="q" placeholder="Search" aria-label="Search"
                    value="{{ request.args.get('q', '') }}">
           </form>
+          {% if user.avatar_url %}
+      <img class="dashi" src="{{ user.avatar_url }}"
+           alt="" width="64" height="64">
+    {% else %}
+      <div class="dashi dashi--blank" aria-hidden="true">
+        {{ (user.name or user.username)[0] | upper }}
+      </div>
+    {% endif %}
 
         </nav>
         {% if not viewer.email_verified %}
