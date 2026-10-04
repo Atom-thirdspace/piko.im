@@ -169,7 +169,7 @@
               </span>
             </div>
             <p class="potd__title">
-              <a href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
+              <a class="tito" href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
                 {{ next_up.problem.title }}</a>
             </p>
             <p class="potd__meta">
@@ -186,7 +186,7 @@
               <span class="card__meta pill pill-{{ potd.problem.difficulty }}">{{ potd.problem.difficulty }}</span>
             </div>
             <p class="potd__title">
-              <a href="{{ url_for('problems.page', slug=potd.problem.slug) }}">{{ potd.problem.title }}</a>
+              <a class="tito" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">{{ potd.problem.title }}</a>
             </p>
             <p class="potd__meta">
               {{ potd.problem.xp }} XP{% if not potd.solved %} &middot; +{{ potd.bonus }} bonus today{% endif %}
@@ -206,7 +206,7 @@
               {% if potd.solved %}
                 Done. A new one lands at midnight UTC.
               {% else %}
-                <a class="btn btn-primary" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">Take it on</a>
+                <a class="btn btn--primary" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">Take it on</a>
               {% endif %}
             </p>
           </section>

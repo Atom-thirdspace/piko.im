@@ -190,3 +190,13 @@ html body * {
     border-color: #77431d;
     box-shadow: 0 0 0 3px rgba(165, 42, 42, 0.15);
 }
+
+.tito {
+    text-decoration: none;
+    color: black;
+}
+
+.point {
+    display: flex;
+    flex-direction: row;
+}
