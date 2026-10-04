@@ -1,0 +1,48 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% macro card(c, state) %}
+  <li class="auth-row">
+    <a class="auth-title" href="{{ url_for('contests.detail', slug=c.slug) }}">
+      {{ c.title }}</a>
+    <span class="search-meta">
+      {{ c.starts_at.strftime('%d %b %H:%M') }} UTC
+      &middot; {{ c.problems|length }} problem{{ '' if c.problems|length == 1 else 's' }}
+      &middot; {{ c.entries|length }} entered
+    </span>
+    {% if not c.published %}
+      <span class="pill pill-reading">unpublished</span>
+    {% endif %}
+  </li>
+{% endmacro %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Contests</h1>
+    <p class="learn-lede">
+      A fixed set of problems, a fixed window, and a scoreboard. Solving
+      early and getting it right first time both count.
+    </p>
+  </header>
+
+  {% for key, label in [('running', 'On now'), ('upcoming', 'Coming up'),
+                        ('over', 'Finished')] %}
+    {% if buckets[key] %}
+      <section class="auth-group">
+        <h2>{{ label }}</h2>
+        <ul class="auth-list">
+          {% for c in buckets[key] %}{{ card(c, key) }}{% endfor %}
+        </ul>
+      </section>
+    {% endif %}
+  {% endfor %}
+
+  {% if not buckets.running and not buckets.upcoming and not buckets.over %}
+    <p class="learn-lede">Nothing scheduled yet.</p>
+  {% endif %}
+</main>
+{% endblock content %}

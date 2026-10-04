@@ -1,0 +1,65 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('contests.index') }}">Contests</a> &middot;
+      <a href="{{ url_for('contests.detail', slug=contest.slug) }}">{{ contest.title }}</a>
+    </p>
+    <h1>Scoreboard</h1>
+    {% if board.frozen %}
+      <p class="auth-note">
+        Frozen for the last {{ contest.freeze_minutes }} minutes. Anything
+        solved since is not shown.
+      </p>
+    {% endif %}
+    <p class="learn-lede">
+      Ranked by problems solved, then by penalty: minutes from the start
+      plus 20 for each wrong submission before the right one.
+    </p>
+  </header>
+
+  {% if not board.rows %}
+    <p class="learn-lede">Nobody has entered yet.</p>
+  {% else %}
+    <table class="admin-table">
+      <tr>
+        <th>#</th><th>Who</th><th>Solved</th><th>Penalty</th>
+        {% for cp in contest.problems %}<th>{{ cp.letter }}</th>{% endfor %}
+      </tr>
+      {% for row in board.rows %}
+        <tr>
+          <td>{{ row.rank }}</td>
+          <td>
+            {% if row.user and row.user.username %}
+              <a href="{{ url_for('profile.public_profile', username=row.user.username) }}">
+                {{ row.user.username }}</a>
+            {% else %}
+              {{ row.user.name if row.user else 'someone' }}
+            {% endif %}
+          </td>
+          <td>{{ row.solved }}</td>
+          <td>{{ row.penalty }}</td>
+          {% for cp in contest.problems %}
+            {% set cell = row.cells.get(cp.problem_id) %}
+            <td>
+              {% if cell is none %}
+                &mdash;
+              {% elif cell.solved %}
+                <b>{{ cell.at }}</b>{% if cell.tries %} (+{{ cell.tries }}){% endif %}
+              {% else %}
+                <span class="search-meta">{{ cell.tries }} tried</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}

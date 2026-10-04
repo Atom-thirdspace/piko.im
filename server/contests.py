@@ -18,7 +18,7 @@ def phase(contest, now=None):
         return "upcoming"
     if now < contest.ends_at:
         return "running"
-    return "ended"
+    return "over"
 
 def entered(contest, user):
     if user is None:
@@ -28,20 +28,25 @@ def entered(contest, user):
                                              user_id=user.id)).scalar() is not None
 
 def unlocked_problem_ids(user):
-        if user is None:
-             return set()
-        now = _utcnow()
-        return set(db.session.execute(
-            db.select(ContestProblem.problem_id)
-            .join(Contest, Contest.id == ContestProblem.contest_id)
-            .join(ContestEntry, db.and_(ContestEntry.contest_id == Contest.id,
+    """Problems a contest the user entered is exposing right now.
+
+    This is the only way an unpublished problem becomes visible, and it
+    closes the moment the contest ends.
+    """
+    if user is None:
+        return set()
+    now = _utcnow()
+    return set(db.session.execute(
+        db.select(ContestProblem.problem_id)
+        .join(Contest, Contest.id == ContestProblem.contest_id)
+        .join(ContestEntry, db.and_(ContestEntry.contest_id == Contest.id,
                                     ContestEntry.user_id == user.id))
-            .where(Contest.published.is_(True),
-                  Contest.starts_at <= now, Contest.ends_at > now)
-        ).scalars())
+        .where(Contest.published.is_(True),
+               Contest.starts_at <= now, Contest.ends_at > now)
+    ).scalars())
 
 def _freeze_at(contest):
-         return contest.ends_at - timedelta(minutes=contest.freeze_minutes or 0)
+    return contest.ends_at - timedelta(minutes=contest.freeze_minutes or 0)
 
 
 def scoreboard(contest, viewer=None):
@@ -112,7 +117,7 @@ def _visible_contests(user):
         stmt = stmt.where(Contest.published.is_(True))
     return db.session.execute(stmt).scalars().all()
 
-def _contest_or_404(contest_id):
+def _contest_or_404(slug):
     contest = db.session.execute(
         db.select(Contest).filter_by(slug=slug)).scalar_one_or_none()
     if contest is None:

@@ -1,0 +1,93 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <h1>Contests</h1>
+  <p class="admin-hint">
+    Times are UTC. A contest can hold unpublished problems &mdash; entrants
+    see them while it runs and nobody else ever does.
+  </p>
+
+  <div class="admin-card">
+    <h2>Create or update</h2>
+    <p class="admin-hint">An existing slug is updated in place.</p>
+    <form method="post" action="{{ url_for('admin.contest_save') }}">
+      {{ csrf_field() }}
+      <label for="slug">Slug</label>
+      <input id="slug" name="slug" size="30" required>
+
+      <label for="title">Title</label>
+      <input id="title" name="title" size="50">
+
+      <label for="description_md">Description (Markdown)</label>
+      <textarea id="description_md" name="description_md" rows="5"></textarea>
+
+      <label for="starts_at">Starts (UTC)</label>
+      <input id="starts_at" name="starts_at" type="datetime-local" required>
+
+      <label for="ends_at">Ends (UTC)</label>
+      <input id="ends_at" name="ends_at" type="datetime-local" required>
+
+      <label for="freeze_minutes">Freeze the scoreboard for the last N minutes</label>
+      <input id="freeze_minutes" name="freeze_minutes" type="number" value="30"
+             min="0" max="240">
+
+      <label><input type="checkbox" name="published" value="1"> Published</label>
+      <button class="admin-btn" type="submit">Save</button>
+    </form>
+  </div>
+
+  {% for c in contests %}
+    <div class="admin-card">
+      <h2>{{ c.title }}</h2>
+      <p class="admin-hint">
+        <code>{{ c.slug }}</code>
+        &middot; {{ c.starts_at.strftime('%d %b %Y %H:%M') }}
+        to {{ c.ends_at.strftime('%d %b %Y %H:%M') }} UTC
+        &middot; freeze {{ c.freeze_minutes }}m
+        &middot; {{ c.entries|length }} entered
+        &middot; {{ 'published' if c.published else 'draft' }}
+      </p>
+
+      {% if c.problems %}
+        <table class="admin-table">
+          <tr><th></th><th>Problem</th><th>Difficulty</th><th>Status</th><th></th></tr>
+          {% for cp in c.problems %}
+            <tr>
+              <td>{{ cp.letter }}</td>
+              <td><code>{{ cp.problem.slug }}</code> {{ cp.problem.title }}</td>
+              <td>{{ cp.problem.difficulty }}</td>
+              <td>{{ cp.problem.status }}</td>
+              <td>
+                <form class="admin-inline" method="post"
+                      action="{{ url_for('admin.contest_remove_problem', row_id=cp.id) }}">
+                  {{ csrf_field() }}
+                  <button class="admin-btn" type="submit">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p class="admin-hint">No problems in this contest yet.</p>
+      {% endif %}
+
+      <form class="admin-inline" method="post"
+            action="{{ url_for('admin.contest_add_problem', contest_id=c.id) }}">
+        {{ csrf_field() }}
+        <select name="problem_id">
+          {% for p in problems %}
+            <option value="{{ p.id }}">{{ p.slug }} ({{ p.difficulty }})</option>
+          {% endfor %}
+        </select>
+        <button class="admin-btn" type="submit">Add problem</button>
+      </form>
+
+      <p class="admin-hint">
+        <a href="{{ url_for('contests.detail', slug=c.slug) }}">Public page</a> &middot;
+        <a href="{{ url_for('contests.board', slug=c.slug) }}">Scoreboard</a>
+      </p>
+    </div>
+  {% else %}
+    <p class="admin-hint">No contests yet.</p>
+  {% endfor %}
+{% endblock admin_content %}

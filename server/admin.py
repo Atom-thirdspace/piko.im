@@ -72,6 +72,7 @@ NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
        ("admin.classrooms", "Classrooms"),
        ("admin.students", "Students"),
        ("admin.contests", "Contests"),
+       ("admin.contests", "Contests"),
        ]
 
 

@@ -36,9 +36,9 @@ from server.classrooms import classroom_bp
 from server.students import students_bp
 from server.notification_routes import notifications_bp
 from server.search import search_bp
+from server.contests import contests_bp
 from server import notify as _notify
 from server.models import unread_count as _unread
-from server.contests import contests_bp
 
 load_dotenv()
 

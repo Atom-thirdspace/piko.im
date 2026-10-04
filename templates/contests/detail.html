@@ -1,0 +1,84 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('contests.index') }}">Contests</a>
+    </p>
+    <h1>{{ contest.title }}</h1>
+    <p class="track-meta">
+      {% if phase == 'running' %}
+        <span class="pill pill-done">on now</span>
+        ends {{ contest.ends_at.strftime('%d %b %H:%M') }} UTC
+      {% elif phase == 'upcoming' %}
+        <span class="pill pill-quiz">starts {{ contest.starts_at.strftime('%d %b %H:%M') }} UTC</span>
+      {% else %}
+        <span class="pill pill-reading">finished</span>
+        {{ contest.ends_at.strftime('%d %b %Y') }}
+      {% endif %}
+      &middot; {{ entries }} entered
+      {% if contest.freeze_minutes %}
+        &middot; scoreboard freezes for the last {{ contest.freeze_minutes }} minutes
+      {% endif %}
+    </p>
+    {% if not contest.published %}
+      <p class="auth-note">Not published &mdash; only editors can see this.</p>
+    {% endif %}
+  </header>
+
+  {% if body %}<div class="lesson-body">{{ body }}</div>{% endif %}
+
+  <p class="auth-new">
+    {% if current_user() and not joined and phase != 'over' %}
+      <form method="post" action="{{ url_for('contests.join', slug=contest.slug) }}">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-primary">Enter</button>
+      </form>
+    {% elif joined %}
+      <span class="auth-live">You are entered.</span>
+    {% elif not current_user() %}
+      <a class="btn btn-primary"
+         href="{{ url_for('auth.login_page', next=url_for('contests.detail', slug=contest.slug)) }}">
+        Sign in to enter</a>
+    {% endif %}
+    <a class="btn" href="{{ url_for('contests.board', slug=contest.slug) }}">Scoreboard</a>
+  </p>
+
+  <section class="auth-group">
+    <h2>Problems</h2>
+    {% if not show_problems %}
+      <p class="learn-lede">
+        The problem set opens when the contest starts.
+      </p>
+    {% elif not contest.problems %}
+      <p class="learn-lede">No problems have been added yet.</p>
+    {% else %}
+      {#- Entering is what unlocks an unpublished problem, so say so plainly. -#}
+      {% if phase == 'running' and not joined %}
+        <p class="auth-note">Enter the contest to open these.</p>
+      {% endif %}
+      <ul class="auth-list">
+        {% for cp in contest.problems %}
+          <li class="auth-row">
+            <b>{{ cp.letter }}</b>
+            {% if joined or phase == 'over' or cp.problem.status == 'published' %}
+              <a class="auth-title"
+                 href="{{ url_for('problems.page', slug=cp.problem.slug) }}">
+                {{ cp.problem.title }}</a>
+            {% else %}
+              <span class="auth-title">{{ cp.problem.title }}</span>
+            {% endif %}
+            <span class="pill pill-{{ cp.problem.difficulty }}">
+              {{ cp.problem.difficulty }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+</main>
+{% endblock content %}
