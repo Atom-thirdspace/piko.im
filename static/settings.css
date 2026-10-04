@@ -1,0 +1,15 @@
+input {
+    border-radius: 12px;
+    border: 2px solid #e9dccf;
+}
+
+input:not([type="checkbox"]):focus {
+    outline: none;
+    border-color: #77431d;
+    box-shadow: 0 0 0 3px rgba(165, 42, 42, 0.15);
+}
+
+input[type="checkbox"] {
+    accent-color: #77431d;
+}
+

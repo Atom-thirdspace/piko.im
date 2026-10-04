@@ -5,6 +5,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='pricing.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='developers.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='settings.css') }}">
   <script defer src="{{ url_for('static', filename='choices.js') }}"></script>
 {% endblock head %}
 
@@ -17,7 +18,7 @@
     </a>
   </p>
 
-  <section class="settings-card">
+  <section class="card settings-card">
     <h2>Profile</h2>
     <form class="auth-form" method="post" action="{{ url_for('profile.save_profile') }}">
       {{ csrf_field() }}
@@ -40,11 +41,11 @@
              value="{{ form.get('avatar_url', user.avatar_url or '') }}">
       {% if errors.avatar_url %}<p class="field-error">{{ errors.avatar_url }}</p>{% endif %}
 
-      <button type="submit">Save profile</button>
+      <button class="btn btn--primary" type="submit">Save profile</button>
     </form>
   </section>
 
-  <section class="settings-card" id="billing">
+  <section class="card settings-card" id="billing">
     <h2>Subscription</h2>
     {% set state = billing_state() %}
     {% if state.owns_group %}
@@ -92,7 +93,7 @@
     {% endif %}
   </section>
 
-  <section class="settings-card" id="api">
+  <section class="card settings-card" id="api">
     <h2>API keys</h2>
     <p>
       Build something with Piko's data.
@@ -163,7 +164,7 @@
     </form>
   </section>
 
-  <section class="settings-card">
+  <section class="card settings-card">
     <h2>Learning</h2>
     <form class="auth-form" method="post" action="{{ url_for('profile.save_learning') }}">
       {{ csrf_field() }}
@@ -203,7 +204,7 @@
     </form>
   </section>
 
-  <section class="settings-card">
+  <section class="card settings-card">
     <h2>{{ 'Change password' if user.password_hash else 'Set a password' }}</h2>
     <form class="auth-form" method="post" action="{{ url_for('profile.save_password') }}">
       {{ csrf_field() }}
@@ -236,7 +237,7 @@
     </form>
   </section>
 
-  <section class="settings-card">
+  <section class="card settings-card">
     <h2>Connected accounts</h2>
     {% if identities %}
       <ul class="settings-list">
@@ -278,7 +279,7 @@
     {% endif %}
     
   </section>
-    <section class="settings-card" id="privacy">
+    <section class="card settings-card" id="privacy">
     <h2>Privacy</h2>
     <form method="post" action="{{ url_for('profile.save_privacy') }}">
       {{ csrf_field() }}
@@ -313,7 +314,7 @@
   </section>
 
 
-  <section class="settings-card" id="twofa">
+  <section class="=card settings-card" id="twofa">
     <h2>Two-factor authentication</h2>
     {% if user.two_factor_on %}
       <p class="settings-hint">
@@ -339,7 +340,7 @@
     {% endif %}
   </section>
 
-  <section class="settings-card" id="keys">
+  <section class="card settings-card" id="keys">
     <h2>Security keys</h2>
     {% if not webauthn_on %}
       <p class="settings-hint">
@@ -386,7 +387,7 @@
     {% endif %}
   </section>
 
-  <section class="settings-card settings-danger">
+  <section class="card settings-card settings-danger">
     <h2>Delete account</h2>
     {% if pending_deletion %}
       <p>
