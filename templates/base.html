@@ -25,8 +25,6 @@
           <a href="{{ url_for('community.feed') }}">Feed</a>
           <a href="{{ url_for('blog.index') }}">Blog</a>
           <a href="{{ url_for('notifications.index') }}">Alerts{% set unread = unread_notifications() %}{% if unread %} <span class="nav-badge">{{ unread }}</span>{% endif %}</a>
-          <a href="{{ url_for('profile.me') }}">Profile</a>
-          <a href="{{ url_for('profile.settings') }}">Settings</a>
           <a href="{{ url_for('billing.pricing') }}">Pro</a>
           {% if viewer.is_author %}
             <a href="{{ url_for('authors.index') }}">Author</a>
@@ -34,22 +32,30 @@
           {% if is_admin(viewer) %}
             <a class="admin-link" href="{{ url_for('admin.overview') }}">Admin</a>
           {% endif %}
-          <form method="post" action="{{ url_for('auth.logout') }}">
-      {{ csrf_field() }}
-            <button type="submit" class="settings-link">Log out</button>
-          </form>
           <form class="topnav__search" method="get" action="{{ url_for('search.page') }}">
             <input id="search" autocomplete="off" type="search" name="q" placeholder="Search" aria-label="Search"
                    value="{{ request.args.get('q', '') }}">
           </form>
-          {% if viewer.avatar_url %}
-      <img class="dashi" src="{{ viewer.avatar_url }}"
-           alt="" width="64" height="64">
-    {% else %}
-      <div class="dashi dashi--blank" aria-hidden="true">
-        {{ (viewer.name or viewer.username)[0] | upper }}
-      </div>
-    {% endif %}
+          <details class="topnav__account">
+            <summary class="topnav__account-trigger" aria-label="Open account menu">
+              {% if viewer.avatar_url %}
+                <img class="dashi" src="{{ viewer.avatar_url }}"
+                     alt="" width="64" height="64">
+              {% else %}
+                <span class="dashi dashi--blank" aria-hidden="true">
+                  {{ (viewer.name or viewer.username)[0] | upper }}
+                </span>
+              {% endif %}
+            </summary>
+            <div class="topnav__account-menu">
+              <a href="{{ url_for('profile.me') }}">Profile</a>
+              <a href="{{ url_for('profile.settings') }}">Settings</a>
+              <form method="post" action="{{ url_for('auth.logout') }}">
+                {{ csrf_field() }}
+                <button type="submit" class="settings-link">Log out</button>
+              </form>
+            </div>
+          </details>
 
         </nav>
         {% if not viewer.email_verified %}

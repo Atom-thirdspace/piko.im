@@ -215,10 +215,73 @@ html body * {
     border-radius: 50%;
     border: 1.5px solid #77431d;
 
+    display: block;
+}
+
+.dashi--blank {
+    display: grid;
+    place-items: center;
+    background: #77431d;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.topnav__account {
     position: absolute;
     right: 2rem;
     top: 50%;
     transform: translateY(-50%);
+    z-index: 110;
+}
 
-    z-index: 10;
+.topnav__account-trigger {
+    display: block;
+    list-style: none;
+    cursor: pointer;
+}
+
+.topnav__account-trigger::-webkit-details-marker { display: none; }
+.topnav__account-trigger::marker { content: ""; }
+.topnav__account-trigger:focus-visible {
+    outline: 3px solid #a06a2c;
+    outline-offset: 3px;
+    border-radius: 50%;
+}
+
+.topnav__account-menu {
+    position: absolute;
+    top: calc(100% + .75rem);
+    right: 0;
+    min-width: 10rem;
+    padding: .4rem;
+    background: #fffaf6;
+    border: 1px solid #e9dccf;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(42, 26, 16, .16);
+}
+
+.topnav .topnav__account-menu a,
+.topnav .topnav__account-menu .settings-link {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: .65rem .75rem;
+    border-radius: 8px;
+    color: #2a1a10;
+    text-align: left;
+    text-decoration: none;
+    font-size: .9rem;
+}
+
+.topnav .topnav__account-menu a::after { display: none; }
+
+.topnav .topnav__account-menu a:hover,
+.topnav .topnav__account-menu .settings-link:hover {
+    background: #f3ece5;
+}
+
+.topnav__account-menu form { margin: 0; }
+
+@media (max-width: 60rem) {
+    .topnav__account { right: 1rem; }
 }
