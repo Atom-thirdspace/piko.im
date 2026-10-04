@@ -43,6 +43,7 @@ html body * {
     background: rgba(251, 246, 244, .92);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid #e9dccf;
+    padding-right: 6rem;
 }
 
 .topnav a,
@@ -182,6 +183,8 @@ html body * {
 #search {
     border-radius: 12px;
     padding-left: 1rem;
+    padding-right: 1rem;
+    width: 8rem;
     border: 0.1rem solid black;
     background-color: white;
 
