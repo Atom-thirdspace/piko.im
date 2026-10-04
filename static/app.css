@@ -176,3 +176,17 @@ html body * {
 .ach__item--consistency { border-color: #d9a441; }
 .ach__item--level { border-color: #77431d; }
 .ach__item--range { border-color: #6aa3c8; }
+#search {
+    border-radius: 12px;
+    padding-left: 1rem;
+    border: 0.1rem solid black;
+    background-color: white;
+
+
+}
+
+#search:focus {
+    outline: none;
+    border-color: #77431d;
+    box-shadow: 0 0 0 3px rgba(165, 42, 42, 0.15);
+}

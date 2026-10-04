@@ -110,61 +110,62 @@
       </section>
     {% endif %}
 
-    <!-- ---------- try this next ---------- -->
-    {% if next_up and next_up.problem %}
-      <section data-aos="fade-in" data-aos-delay="550"
-               class="dash__next card cardstyle" aria-labelledby="next-h">
-        <div class="card__head">
-          <h2 class="card__title" id="next-h">Try this next</h2>
-          <span class="card__meta pill pill-{{ next_up.problem.difficulty }}">
-            {{ next_up.problem.difficulty }}
-          </span>
-        </div>
-        <p class="potd__title">
-          <a href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
-            {{ next_up.problem.title }}</a>
-        </p>
-        <p class="potd__meta">
-          {{ next_up.problem.xp }} XP &middot; because {{ next_up.reason }}.
-        </p>
-      </section>
-    {% endif %}
-
-    <!-- ---------- problem of the day ---------- -->
-    {% if potd %}
-      <section data-aos="fade-in" data-aos-delay="600"
-               class="dash__potd card cardstyle" aria-labelledby="potd-h">
-        <div class="card__head">
-          <h2 class="card__title" id="potd-h">Problem of the day</h2>
-          <span class="card__meta pill pill-{{ potd.problem.difficulty }}">{{ potd.problem.difficulty }}</span>
-        </div>
-        <p class="potd__title">
-          <a href="{{ url_for('problems.page', slug=potd.problem.slug) }}">{{ potd.problem.title }}</a>
-        </p>
-        <p class="potd__meta">
-          {{ potd.problem.xp }} XP{% if not potd.solved %} &middot; +{{ potd.bonus }} bonus today{% endif %}
-          &middot; {{ potd.solvers }} solved it today
-        </p>
-        {% if potd.fastest %}
-          <ol class="potd__fastest">
-            {% for s in potd.fastest %}
-              <li>
-                <a href="{{ url_for('profile.public_profile', username=s.username) }}">{{ s.username }}</a>
-                <span>{{ s.seconds // 60 }}m {{ s.seconds % 60 }}s</span>
-              </li>
-            {% endfor %}
-          </ol>
-        {% endif %}
-        <p class="card__foot">
-          {% if potd.solved %}
-            Done. A new one lands at midnight UTC.
-          {% else %}
-            <a class="btn btn-primary" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">Take it on</a>
+    <div class="point">
+      <!-- ---------- try this next ---------- -->
+      {% if next_up and next_up.problem %}
+        <section data-aos="fade-in" data-aos-delay="550"
+                 class="dash__next card cardstyle" aria-labelledby="next-h">
+          <div class="card__head">
+            <h2 class="card__title" id="next-h">Try this next</h2>
+            <span class="card__meta pill pill-{{ next_up.problem.difficulty }}">
+              {{ next_up.problem.difficulty }}
+            </span>
+          </div>
+          <p class="potd__title">
+            <a href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
+              {{ next_up.problem.title }}</a>
+          </p>
+          <p class="potd__meta">
+            {{ next_up.problem.xp }} XP &middot; because {{ next_up.reason }}.
+          </p>
+        </section>
+      {% endif %}
+      <!-- ---------- problem of the day ---------- -->
+      {% if potd %}
+        <section data-aos="fade-in" data-aos-delay="600"
+                 class="dash__potd card cardstyle" aria-labelledby="potd-h">
+          <div class="card__head">
+            <h2 class="card__title" id="potd-h">Problem of the day</h2>
+            <span class="card__meta pill pill-{{ potd.problem.difficulty }}">{{ potd.problem.difficulty }}</span>
+          </div>
+          <p class="potd__title">
+            <a href="{{ url_for('problems.page', slug=potd.problem.slug) }}">{{ potd.problem.title }}</a>
+          </p>
+          <p class="potd__meta">
+            {{ potd.problem.xp }} XP{% if not potd.solved %} &middot; +{{ potd.bonus }} bonus today{% endif %}
+            &middot; {{ potd.solvers }} solved it today
+          </p>
+          {% if potd.fastest %}
+            <ol class="potd__fastest">
+              {% for s in potd.fastest %}
+                <li>
+                  <a href="{{ url_for('profile.public_profile', username=s.username) }}">{{ s.username }}</a>
+                  <span>{{ s.seconds // 60 }}m {{ s.seconds % 60 }}s</span>
+                </li>
+              {% endfor %}
+            </ol>
           {% endif %}
-        </p>
-      </section>
-    {% endif %}
-  </div>
+          <p class="card__foot">
+            {% if potd.solved %}
+              Done. A new one lands at midnight UTC.
+            {% else %}
+              <a class="btn btn-primary" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">Take it on</a>
+            {% endif %}
+          </p>
+        </section>
+      {% endif %}
+        </div>
+    </div>
 
   <!-- ---------- continue ---------- -->
   <section data-aos="fade-in" data-aos-delay="300" class="dash__continue card" aria-labelledby="continue-h">

@@ -49,6 +49,7 @@ body {
 
 .dash__intro    { grid-column: span 12; }
 .dash__continue { grid-column: span 11; }
+.point       { grid-column: span 11; }
 .dash__level    { grid-column: span 5; }
 .dash__goal     { grid-column: span 5; }
 .dash__stats    { grid-column: span 7; }
@@ -500,3 +501,9 @@ body {
   padding: .15rem 0;
 }
 .potd__fastest span { font-variant-numeric: tabular-nums; opacity: .65; }
+
+.point {
+    display: flex;
+    gap :1rem
+}
+

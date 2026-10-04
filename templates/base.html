@@ -24,10 +24,6 @@
           <a href="{{ url_for('community.index') }}">Community</a>
           <a href="{{ url_for('community.feed') }}">Feed</a>
           <a href="{{ url_for('blog.index') }}">Blog</a>
-          <form class="topnav__search" method="get" action="{{ url_for('search.page') }}">
-            <input type="search" name="q" placeholder="Search" aria-label="Search"
-                   value="{{ request.args.get('q', '') }}">
-          </form>
           <a href="{{ url_for('notifications.index') }}">Alerts{% set unread = unread_notifications() %}{% if unread %} <span class="nav-badge">{{ unread }}</span>{% endif %}</a>
           <a href="{{ url_for('profile.me') }}">Profile</a>
           <a href="{{ url_for('profile.settings') }}">Settings</a>
@@ -41,6 +37,10 @@
           <form method="post" action="{{ url_for('auth.logout') }}">
       {{ csrf_field() }}
             <button type="submit" class="settings-link">Log out</button>
+          </form>
+          <form class="topnav__search" method="get" action="{{ url_for('search.page') }}">
+            <input id="search" autocomplete="off" type="search" name="q" placeholder="Search" aria-label="Search"
+                   value="{{ request.args.get('q', '') }}">
           </form>
 
         </nav>
