@@ -12,4 +12,3 @@ input:not([type="checkbox"]):focus {
 input[type="checkbox"] {
     accent-color: #77431d;
 }
-

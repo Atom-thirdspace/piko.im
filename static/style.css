@@ -531,7 +531,7 @@ img {
 .settings-check--stacked { flex-direction: column; align-items: stretch;
     gap: .3rem; margin-top: .8rem; }
 .settings-check--stacked textarea { width: 100%; font: inherit; padding: .5rem;
-    border: 1px solid #d9cec4; border-radius: 8px; resize: vertical; }
+    border: 1px solid #d9cec4; border-radius: 8px; resize: none; height: 1.3rem; }
 
 /* Security keys */
 .key-list { list-style: none; margin: .6rem 0; padding: 0; }
