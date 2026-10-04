@@ -36,8 +36,8 @@
       <strong>Level {{ progress.level }}</strong>
       <span>{{ progress.into_level }} / {{ progress.level_span }} XP</span>
     </div>
-    <div class="profile-bar">
-      <span class="profile-bar-fill"
+    <div class="meter">
+      <span class="meter__fill"
             style="width: {{ (100 * progress.into_level / progress.level_span)|round|int }}%"></span>
     </div>
   </section>
