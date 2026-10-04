@@ -2,7 +2,7 @@
 </p>
 <h1 align="center">piko.im</h1>
 
-<p align="center"> We’re building a game-like way to learn DSA. You solve problems, earn XP, level up, and unlock new topics as you go.
+<p align="center"> We’re building a game-like way to learn DSA. You solve problems, earn XP, level up, particiapte in contests, join teams, meet with Piko community and unlock new topics as you go.
 
 </p>
 
