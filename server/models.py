@@ -962,13 +962,6 @@ class JudgeJob(db.Model):
 
 
 class ScratchRun(db.Model):
-    """A Run-button execution: the learner's code against their own input.
-
-    Kept apart from Submission on purpose - a run is not an attempt. It earns
-    no XP, sets no verdict on the problem, never touches the streak, and is
-    not what the similarity checker or the leaderboard look at. Rows are
-    disposable; prune_scratch_runs clears them out.
-    """
     __tablename__ = "scratch_runs"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -1777,3 +1770,41 @@ def student_status(user):
 def is_verified_student(user):
     row = student_status(user)
     return row is not None and row.is_valid
+
+
+class LessonQuestion(db.Model):
+    __tablename__ = "lesson_questions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    lesson_id = db.Column(db.Integer, db.ForeignKey("lessons.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    prompt = db.Column(db.Text, nullable=False)
+    explanation = db.Column(db.Text, nullable=False, default="", server_default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    lesson = db.relationship("Lesson")
+    choices = db.relationship("LessonChoice", back_populates="question",
+                              cascade="all, delete-orphan",
+                              order_by="LessonChoice.position")
+
+
+class LessonChoice(db.Model):
+    __tablename__ = "lesson_choices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer,
+                            db.ForeignKey("lesson_questions.id", ondelete="CASCADE"),
+                            nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    text = db.Column(db.String(500), nullable=False)
+    is_correct = db.Column(db.Boolean, nullable=False, default=False)
+
+    question = db.relationship("LessonQuestion", back_populates="choices")
+
+
+def question_count(lesson_id):
+    return db.session.execute(
+        db.select(db.func.count()).select_from(LessonQuestion)
+        .where(LessonQuestion.lesson_id == lesson_id)).scalar() or 0
+

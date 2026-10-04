@@ -7,25 +7,35 @@ from ..progress import award_xp, level_progress
 from ..session import current_user, login_required
 from ..xp_rules import UNIT_COMPLETE, lesson_base
 from .. import quests
-from .catalog import quiz_for
 from .markdown import render as render_md
 from ..admin_gate import is_admin
+from .quiz import questions_for
 
 learn_bp = Blueprint("learn", __name__, url_prefix="/learn")
 
 
 # ---------------------------------------------------------------- lookups
 
-def _may_preview():
-    """Authors and admins see their own unpublished work in place."""
+def _may_preview(row=None):
+    """Authors see their own unpublished work in place. Admins see all."""
     user = current_user()
-    return user is not None and (is_admin(user) or user.is_author)
+    if user is None:
+        return False
+    if is_admin(user):
+        return True
+    return user.is_author and (row is None or row.created_by_id == user.id)
 
 
 def _visible(stmt, model):
     """Learners only ever reach published rows."""
-    if _may_preview():
+    user = current_user()
+    if user is None:
+        return stmt.where(model.status == PUBLISHED)
+    if is_admin(user):
         return stmt
+    if user.is_author:
+        return stmt.where(db.or_(model.status == PUBLISHED,
+                                 model.created_by_id == user.id))
     return stmt.where(model.status == PUBLISHED)
 
 
@@ -54,11 +64,11 @@ def _lesson_or_404(track, unit_slug, lesson_slug):
 
 def _visible_units(track):
     """track.units is an unfiltered relationship - drafts would show through."""
-    return [u for u in track.units if u.status == PUBLISHED or _may_preview()]
+    return [u for u in track.units if u.status == PUBLISHED or _may_preview(u)]
 
 
 def _visible_lessons(unit):
-    return [l for l in unit.lessons if l.status == PUBLISHED or _may_preview()]
+    return [l for l in unit.lessons if l.status == PUBLISHED or _may_preview(l)]
 
 
 def _ordered_lessons(track):
@@ -304,7 +314,7 @@ def lesson(track_slug, unit_slug, lesson_slug):
         "learn/lesson.html",
         track=track, unit=unit, lesson=lesson,
         body=render_md(lesson.body_md),
-        quiz=[q.public() for q in quiz_for(track.slug, unit.slug, lesson.slug)],
+        quiz=[q.public() for q in questions_for(lesson, track, unit)],
         done=lesson.id in done_ids,
         can_complete=can_complete,
         gate_message=gate_message,
@@ -331,7 +341,7 @@ def complete(track_slug, unit_slug, lesson_slug):
         return redirect(url_for("learn.lesson", track_slug=track.slug,
                                 unit_slug=unit.slug, lesson_slug=lesson.slug))
 
-    questions = quiz_for(track.slug, unit.slug, lesson.slug)
+    questions = questions_for(lesson, track, unit)
     if questions:
         # Grade server-side; the correct answers never leave the catalog.
         results = {q.id: request.form.get(q.id) == q.answer for q in questions}

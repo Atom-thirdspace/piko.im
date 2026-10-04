@@ -1,19 +1,23 @@
 from functools import wraps
-from flask import (Blueprint, abort, flash, redirect, render_template, request,
-                   url_for)
+
+from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
+                   request, url_for)
 
 from ..admin_gate import is_admin
-from ..models import (DRAFT, PUBLISHED, REVIEW, Lesson, Problem, Track, Unit,
-                      _utcnow, db)
+from ..learning import quiz
+from ..learning.markdown import render as render_md
+from ..models import (DRAFT, PUBLISHED, REVIEW, Lesson, LessonChoice,
+                      LessonQuestion, Problem, Track, Unit, _utcnow, db)
 from ..session import current_user, login_required
 from ..validators import SLUG_RE, slugify
+from . import blockers
 from .invites import accept, find_invite, refusal
 
 authors_bp = Blueprint("authors", __name__, url_prefix="/authors")
 
+MAX_CHOICES = 6
 
 def _xp_override(raw):
-    """Blank means "use the rule table". That is the normal case now."""
     raw = (raw or "").strip() if isinstance(raw, str) else raw
     if raw is None or raw == "":
         return None
@@ -90,8 +94,17 @@ def index():
     tracks, units, lessons = rows(Track), rows(Unit), rows(Lesson)
     counts = {s: sum(1 for r in tracks + units + lessons if r.status == s)
               for s in (DRAFT, REVIEW, PUBLISHED)}
+
+    notes = {}
+    for kind, items in (("track", tracks), ("unit", units), ("lesson", lessons)):
+        for row in items:
+            if row.status != PUBLISHED:
+                notes[(kind, row.id)] = {
+                    "problems": blockers.problems(kind, row),
+                    "waiting": blockers.waiting_on(kind, row),
+                }
     return render_template("authors/index.html", tracks=tracks, units=units,
-                           lessons=lessons, counts=counts)
+                           lessons=lessons, counts=counts, notes=notes)
 
 def _owned_units():
     user = current_user()
@@ -272,6 +285,11 @@ def submit(kind, row_id):
         abort(404)
     row = _mine_or_404(model, row_id)
 
+    stop = blockers.problems(kind, row)
+    if stop:
+        flash(" ".join(stop), "error")
+        return redirect(_edit_url(kind, row_id))
+
     if row.status == DRAFT:
         row.status = REVIEW
         row.submitted_at = _utcnow()
@@ -304,11 +322,6 @@ def _edit_url(kind, row_id):
 
 
 def _children_blocking(kind, row):
-    """Why this row must not be deleted yet, or None.
-
-    Track -> Unit -> Lesson cascade on delete, and the children may not be
-    this author's work, so we refuse rather than quietly taking them with it.
-    """
     if kind == "track" and row.units:
         return ("This course still holds %d unit%s. Empty it first."
                 % (len(row.units), "" if len(row.units) == 1 else "s"))
@@ -341,3 +354,99 @@ def delete(kind, row_id):
     db.session.commit()
     flash("Deleted %s." % slug, "success")
     return redirect(url_for("authors.index"))
+
+def _lesson_for_quiz(lesson_id):
+    lesson = _mine_or_404(Lesson, lesson_id)
+    if lesson.status == PUBLISHED and not is_admin(current_user()):
+        abort(403)
+    return lesson
+
+def _read_choices(form):
+    out = []
+    marked = form.get("correct") or ""
+    for i in range(MAX_CHOICES):
+        text = (form.get("choice_%d" % i) or "").strip()
+        if text:
+            out.append((text[:500], marked == str(i)))
+    return out
+
+@authors_bp.route("/lessons/<int:lesson_id>/quiz")
+@author_required
+def quiz_edit(lesson_id):
+    lesson = _lesson_for_quiz(lesson_id)
+    return render_template("authors/quiz.html", lesson=lesson,
+                           questions=quiz.rows_for(lesson.id),
+                           max_choices=MAX_CHOICES, errors={}, form={})
+
+@authors_bp.route("/lessons/<int:lesson_id>/quiz", methods=["POST"])
+@author_required
+def quiz_add(lesson_id):
+    lesson = _lesson_for_quiz(lesson_id)
+    form = request.form
+    prompt = (form.get("prompt") or "").strip()
+    choices = _read_choices(form)
+
+    errors = {}
+    if not prompt:
+        errors["prompt"] = "Ask something."
+    if len(choices) < 2:
+        errors["choices"] = "Give at least two answers."
+    elif sum(1 for _, correct in choices if correct) != 1:
+        errors["correct"] = "Mark exactly one answer as correct."
+
+    if errors:
+        return render_template("authors/quiz.html", lesson=lesson,
+                               questions=quiz.rows_for(lesson.id),
+                               max_choices=MAX_CHOICES,
+                               errors=errors, form=form), 400
+
+    last = db.session.execute(
+        db.select(db.func.coalesce(db.func.max(LessonQuestion.position), -1))
+        .where(LessonQuestion.lesson_id == lesson.id)).scalar()
+    question = LessonQuestion(lesson_id=lesson.id, position=last + 1,
+                              prompt=prompt[:2000],
+                              explanation=(form.get("explanation") or "")[:2000])
+    db.session.add(question)
+    db.session.flush()
+    for i, (text, correct) in enumerate(choices):
+        db.session.add(LessonChoice(question_id=question.id, position=i,
+                                    text=text, is_correct=correct))
+    db.session.commit()
+    flash("Question added.", "success")
+    return redirect(url_for("authors.quiz_edit", lesson_id=lesson.id))
+
+@authors_bp.route("/questions/<int:question_id>/delete", methods=["POST"])
+@author_required
+def quiz_delete(question_id):
+    question = db.session.get(LessonQuestion, question_id)
+    if question is None:
+        abort(404)
+    lesson = _lesson_for_quiz(question.lesson_id)
+    db.session.delete(question)
+    db.session.commit()
+    flash("Question removed.", "success")
+    return redirect(url_for("authors.quiz_edit", lesson_id=lesson.id))
+
+
+@authors_bp.route("/questions/<int:question_id>/move", methods=["POST"])
+@author_required
+def quiz_move(question_id):
+    question = db.session.get(LessonQuestion, question_id)
+    if question is None:
+        abort(404)
+    lesson = _lesson_for_quiz(question.lesson_id)
+    rows = quiz.rows_for(lesson.id)
+    i = next(n for n, r in enumerate(rows) if r.id == question.id)
+    j = i - 1 if request.form.get("dir") == "up" else i + 1
+    if 0 <= j < len(rows):
+        rows[i], rows[j] = rows[j], rows[i]
+        for n, r in enumerate(rows):
+            r.position = n
+        db.session.commit()
+    return redirect(url_for("authors.quiz_edit", lesson_id=lesson.id))
+
+
+@authors_bp.route("/preview", methods=["POST"])
+@author_required
+def preview():
+    return jsonify(html=str(render_md(request.form.get("body_md") or "")))

@@ -1,0 +1,90 @@
+{% extends "base-dashboard.html" %}
+{% from "authors/_form.html" import err %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='authors.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('authors.index') }}">Author dashboard</a> &middot;
+      <a href="{{ url_for('authors.lesson_form', lesson_id=lesson.id) }}">{{ lesson.title }}</a>
+    </p>
+    <h1>Questions</h1>
+    <p class="learn-lede">
+      Learners must get every question right to finish the lesson.
+      Correct answers stay on the server and are never sent to the browser.
+    </p>
+  </header>
+
+  {% if not questions %}
+    <p class="auth-note">
+      No questions yet &mdash; this lesson cannot be published until it has one.
+    </p>
+  {% endif %}
+
+  {% for q in questions %}
+    <section class="auth-group">
+      <h2>{{ loop.index }}. {{ q.prompt }}</h2>
+      <ul class="auth-list">
+        {% for c in q.choices %}
+          <li class="auth-row">
+            {% if c.is_correct %}<b>&#10003;</b>{% else %}<span>&#9675;</span>{% endif %}
+            {{ c.text }}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if q.explanation %}<p class="auth-hint">{{ q.explanation }}</p>{% endif %}
+
+      <span class="auth-actions">
+        <form method="post" action="{{ url_for('authors.quiz_move', question_id=q.id) }}">
+          {{ csrf_field() }}
+          <input type="hidden" name="dir" value="up">
+          <button class="auth-btn" type="submit" {{ 'disabled' if loop.first }}>Up</button>
+        </form>
+        <form method="post" action="{{ url_for('authors.quiz_move', question_id=q.id) }}">
+          {{ csrf_field() }}
+          <input type="hidden" name="dir" value="down">
+          <button class="auth-btn" type="submit" {{ 'disabled' if loop.last }}>Down</button>
+        </form>
+        <form method="post" action="{{ url_for('authors.quiz_delete', question_id=q.id) }}">
+          {{ csrf_field() }}
+          <button class="auth-btn auth-btn--danger" type="submit">Delete</button>
+        </form>
+      </span>
+    </section>
+  {% endfor %}
+
+  <section class="auth-group">
+    <h2>Add a question</h2>
+    <form class="auth-form" method="post"
+          action="{{ url_for('authors.quiz_add', lesson_id=lesson.id) }}">
+      {{ csrf_field() }}
+      <p><label>Question<br>
+        <input name="prompt" size="60" value="{{ form.get('prompt', '') }}">
+        </label>{{ err(errors, 'prompt') }}</p>
+
+      <p class="auth-hint">Fill in two or more, and pick the right one.</p>
+      {{ err(errors, 'choices') }}{{ err(errors, 'correct') }}
+      {% for i in range(max_choices) %}
+        <p>
+          <input type="radio" name="correct" value="{{ i }}"
+                 {{ 'checked' if form.get('correct') == i|string }}>
+          <input name="choice_{{ i }}" size="50"
+                 value="{{ form.get('choice_' ~ i, '') }}"
+                 placeholder="Answer {{ i + 1 }}">
+        </p>
+      {% endfor %}
+
+      <p><label>Why, shown afterwards (optional)<br>
+        <input name="explanation" size="60"
+               value="{{ form.get('explanation', '') }}"></label></p>
+
+      <button class="btn btn-primary" type="submit">Add question</button>
+    </form>
+  </section>
+</main>
+{% endblock content %}

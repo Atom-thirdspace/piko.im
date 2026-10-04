@@ -106,3 +106,34 @@
 
 .auth-btn--danger { border-color: #b3402f; color: #b3402f; }
 .auth-btn--danger:hover { background: #fdf0ed; }
+
+
+/* ---------- side-by-side editor and preview ---------- */
+.auth-split {
+  display: flex;
+  gap: 1.2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.auth-split > p { flex: 1 1 24rem; margin-top: 0; }
+
+.auth-preview {
+  flex: 1 1 22rem;
+  min-width: 0;
+  border: 1px solid rgba(128, 128, 128, .25);
+  border-radius: 8px;
+  padding: .8rem 1rem;
+}
+.auth-preview__head {
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  opacity: .6;
+  margin: 0 0 .5rem;
+}
+.auth-preview__out { overflow-wrap: anywhere; }
+.auth-preview__out > :first-child { margin-top: 0; }
+.auth-preview__out:empty::after {
+  content: "Nothing to show yet.";
+  opacity: .5;
+}

@@ -1205,18 +1205,11 @@ def review():
     queue.sort(key=lambda pair: pair[1].submitted_at or _utcnow())
     return render_template("admin/review.html", queue=queue)
 
-def _parent_unpublished(kind,row):
-    if kind == "lesson":
-        unit = db.session.get(Unit, row.unit_id)
-        if unit is None or unit.status != PUBLISHED:
-            return "Publish its unit first."
-        if unit.track is None or unit.track.status != PUBLISHED:
-            return "Publish its course first."
-    if kind == "unit":
-        track = db.session.get(Track, row.track_id)
-        if track is None or track.status != PUBLISHED:
-            return "Publish its course first."
-    return None
+def _parent_unpublished(kind, row):
+    from .authors.blockers import waiting_on
+    pending = waiting_on(kind, row)
+    return "Publish %s first." % " and ".join(pending) if pending else None
+
 
 @admin_bp.route("/review/<kind>/<int:row_id>/publish", methods=["POST"])
 @admin_required

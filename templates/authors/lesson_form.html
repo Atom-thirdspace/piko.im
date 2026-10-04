@@ -52,6 +52,17 @@
         <span class="auth-hint">A code lesson has to name a problem.</span>
       </p>
 
+      {% if lesson and lesson.kind == 'quiz' %}
+        <p class="auth-hint">
+          <a href="{{ url_for('authors.quiz_edit', lesson_id=lesson.id) }}">
+            Edit questions</a> &mdash; a quiz lesson needs at least one.
+        </p>
+      {% elif not lesson %}
+        <p class="auth-hint">
+          Save a quiz lesson first, then add its questions.
+        </p>
+      {% endif %}
+
       <p><label>Problem<br>
         <select name="problem_id">
           <option value="">none</option>
@@ -72,13 +83,50 @@
                value="{{ lesson.position if lesson else 0 }}"></label>
       </p>
 
-      <p><label>Body (Markdown)<br>
-        <textarea name="body_md" rows="22" cols="88">{{ form.get('body_md', lesson.body_md if lesson else '') }}</textarea></label>
-      </p>
+      <div class="auth-split">
+        <p><label>Body (Markdown)<br>
+          <textarea name="body_md" rows="22" cols="60">{{ form.get('body_md', lesson.body_md if lesson else '') }}</textarea></label>
+        </p>
+        <div class="auth-preview" data-preview-url="{{ url_for('authors.preview') }}">
+          <h2 class="auth-preview__head">Preview</h2>
+          <div class="auth-preview__out lesson-body" data-preview-out></div>
+        </div>
+      </div>
 
       <button type="submit" class="btn btn-primary">Save draft</button>
     </form>
   {% endif %}
   {{ f.danger('lesson', lesson, 'lesson') }}
 </main>
+
+<script>
+(function () {
+  var box = document.querySelector('[data-preview-url]');
+  var area = document.querySelector('textarea[name="body_md"]');
+  if (!box || !area) { return; }
+  var out = box.querySelector('[data-preview-out]');
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  var timer = null;
+
+  async function draw() {
+    var body = new FormData();
+    body.append('body_md', area.value);
+    try {
+      var res = await fetch(box.dataset.previewUrl, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': meta ? meta.content : '' },
+        body: body
+      });
+      if (!res.ok) { return; }
+      out.innerHTML = (await res.json()).html;
+    } catch (err) { /* keep the last good render */ }
+  }
+
+  area.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(draw, 300);
+  });
+  draw();
+})();
+</script>
 {% endblock content %}

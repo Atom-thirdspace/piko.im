@@ -20,7 +20,7 @@
   </span>
 {%- endmacro %}
 
-{% macro section(kind, label, items, new_url) %}
+{% macro section(kind, label, items, new_url, notes) %}
   <section class="auth-group">
     <h2>{{ label }}</h2>
     {% if not items %}
@@ -34,6 +34,17 @@
 
             {% if row.review_note %}
               <p class="auth-note">Sent back: {{ row.review_note }}</p>
+            {% endif %}
+
+            {% set note = notes.get((kind, row.id)) %}
+            {% if note and note.problems %}
+              <p class="auth-note">
+                Before you send it: {{ note.problems | join(' ') }}
+              </p>
+            {% elif note and note.waiting and row.status == 'review' %}
+              <p class="auth-hint">
+                An editor will publish {{ note.waiting | join(' and ') }} first.
+              </p>
             {% endif %}
 
             <span class="auth-actions">
@@ -80,8 +91,8 @@
     </p>
   </header>
 
-  {{ section('track', 'Courses', tracks, url_for('authors.track_form')) }}
-  {{ section('unit', 'Units', units, url_for('authors.unit_form')) }}
-  {{ section('lesson', 'Lessons', lessons, url_for('authors.lesson_form')) }}
+  {{ section('track', 'Courses', tracks, url_for('authors.track_form'), notes) }}
+  {{ section('unit', 'Units', units, url_for('authors.unit_form'), notes) }}
+  {{ section('lesson', 'Lessons', lessons, url_for('authors.lesson_form'), notes) }}
 </main>
 {% endblock content %}
