@@ -43,7 +43,7 @@ html body * {
     background: rgba(251, 246, 244, .92);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid #e9dccf;
-    padding-right: 6rem;
+    padding-right: 5.8rem;
 }
 
 .topnav a,
@@ -213,7 +213,7 @@ html body * {
     box-sizing: border-box;
     object-fit: cover;
     border-radius: 50%;
-    border: 1.5px solid var(--brand);
+    border: 1.5px solid #77431d;
 
     position: absolute;
     right: 2rem;
