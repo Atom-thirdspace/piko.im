@@ -10,6 +10,7 @@
 body {
     font-family: face, sans-serif;
     margin-top: 0;
+    margin: 0;
 }
 
 html,
@@ -58,6 +59,8 @@ html body * {
 
 
 .topnav form { margin: 0; }
+
+.topnav__search { display: inline-flex; }
 
 .verify-banner {
     display: flex;
@@ -204,6 +207,7 @@ html body * {
 .dashi {
     width: 2.5rem;
     height: 2.5rem;
+    box-sizing: border-box;
     object-fit: cover;
     border-radius: 50%;
     border: 1.5px solid var(--brand);
