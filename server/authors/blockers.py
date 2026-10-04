@@ -19,7 +19,7 @@ def problems(kind, row):
             out.append("At least one test has to be a sample.")
         if not (row.reference_source or "").strip():
             out.append("It has no reference solution.")
-        elif row.verified_at is None:
+        elif row.tests and row.verified_at is None:
             out.append("Run the reference against your tests before sending it.")
     elif kind == "unit" and not row.lessons:
         out.append("It has no lessons yet.")
