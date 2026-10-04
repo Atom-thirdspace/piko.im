@@ -45,6 +45,26 @@
           {% endif %}
         {% elif kind == 'track' and row.description %}
           <p>{{ row.description }}</p>
+        {% elif kind == 'problem' %}
+          <p class="admin-hint">
+            {{ row.difficulty }} &middot; {{ row.xp }} XP &middot;
+            {{ row.tests|length }} test{{ '' if row.tests|length == 1 else 's' }}
+            &middot; {{ row.hints|length }} hint{{ '' if row.hints|length == 1 else 's' }}
+            &middot;
+            {% if row.verified_at %}
+              reference checked {{ row.verified_at.strftime('%d %b %H:%M') }}
+            {% else %}
+              <b>reference not verified</b>
+            {% endif %}
+          </p>
+          <details>
+            <summary>Statement</summary>
+            <pre class="admin-pre">{{ row.statement_md }}</pre>
+          </details>
+          <details>
+            <summary>Reference solution ({{ row.reference_language }})</summary>
+            <pre class="admin-pre">{{ row.reference_source }}</pre>
+          </details>
         {% endif %}
 
         <form class="admin-inline" method="post"

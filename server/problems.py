@@ -3,6 +3,7 @@ import hashlib
 from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
                    request, url_for)
 
+from .content import visible
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
 from .models import (JudgeJob, Lesson, Problem, ProblemHint, ScratchRun,
@@ -30,7 +31,7 @@ MAX_STDIN_BYTES = 16 * 1024
 
 def _problem_or_404(slug):
     problem = db.session.execute(
-        db.select(Problem).filter_by(slug=slug)
+        visible(db.select(Problem).filter_by(slug=slug), Problem, current_user())
     ).scalar_one_or_none()
     if problem is None:
         abort(404)

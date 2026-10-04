@@ -267,7 +267,24 @@ def touch_login(user):
     db.session.commit()
 
 
-class Problem(db.Model):
+DRAFT, REVIEW, PUBLISHED = "draft", "review", "published"
+CONTENT_STATUSES = (DRAFT, REVIEW, PUBLISHED)
+
+class Authored:
+    status = db.Column(db.String(16), nullable = False, default = DRAFT, server_default = DRAFT, index = True)
+    review_note = db.Column(db.Text, nullable=False, default="", server_default="")
+    submitted_at = db.Column(db.DateTime(timezone=True))
+    published_at = db.Column(db.DateTime(timezone=True))
+
+    @declared_attr
+    def created_by_id(cls):
+        return db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    @declared_attr
+    def created_by(cls):
+        return db.relationship("User", foreign_keys=[cls.created_by_id])
+
+
+class Problem(Authored, db.Model):
     __tablename__ = "problems"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -282,11 +299,19 @@ class Problem(db.Model):
     memory_mb = db.Column(db.Integer, nullable=False, default=256)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
 
+    # The author's own solution, run against their tests before review.
+    reference_source = db.Column(db.Text, nullable=False, default="",
+                                 server_default="")
+    reference_language = db.Column(db.String(16), nullable=False,
+                                   default="python", server_default="python")
+    verified_at = db.Column(db.DateTime(timezone=True))
+
     @property
     def xp(self):
         """The effective award, so every reader gets the rule for free."""
         from .xp_rules import problem_base
         return problem_base(self)
+
     hints = db.relationship("ProblemHint", back_populates="problem",
                             cascade="all, delete-orphan",
                             order_by="ProblemHint.position")
@@ -436,23 +461,6 @@ class OnboardingSession(db.Model):
 # --------------------------------------------------------------------------- #
 # content ownership and the draft -> review -> published workflow
 # --------------------------------------------------------------------------- #
-
-DRAFT, REVIEW, PUBLISHED = "draft", "review", "published"
-CONTENT_STATUSES = (DRAFT, REVIEW, PUBLISHED)
-
-class Authored:
-    status = db.Column(db.String(16), nullable = False, default = DRAFT, server_default = DRAFT, index = True)
-    review_note = db.Column(db.Text, nullable=False, default="", server_default="")
-    submitted_at = db.Column(db.DateTime(timezone=True))
-    published_at = db.Column(db.DateTime(timezone=True))
-
-    @declared_attr
-    def created_by_id(cls):
-        return db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
-    @declared_attr
-    def created_by(cls):
-        return db.relationship("User", foreign_keys=[cls.created_by_id])
-
 
 class Track(Authored, db.Model):
     __tablename__ = "tracks"
@@ -1285,6 +1293,7 @@ def publish_generated(draft, reviewer):
     problem = Problem(
         slug=draft.slug, title=draft.title, statement_md=draft.statement_md,
         difficulty=draft.difficulty, topic=draft.topic, xp_override=None,
+        status=PUBLISHED, published_at=_utcnow(),
         time_limit_sec=draft.payload.get("time_limit_sec", 2.0),
         memory_mb=draft.payload.get("memory_mb", 256))
     db.session.add(problem)

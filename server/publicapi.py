@@ -288,7 +288,8 @@ def lesson(track_slug, unit_slug, lesson_slug):
 @api_bp.route("/problems")
 def problems():
     page, per_page = _page_args()
-    stmt = db.select(Problem).order_by(Problem.slug)
+    stmt = (db.select(Problem).where(Problem.status == PUBLISHED)
+            .order_by(Problem.slug))
 
     topic = request.args.get("topic")
     if topic:
@@ -309,7 +310,8 @@ def problems():
 @api_bp.route("/problems/<problem_slug>")
 def problem(problem_slug):
     p = db.session.execute(
-        db.select(Problem).filter_by(slug=problem_slug)).scalar_one_or_none()
+        db.select(Problem).filter_by(slug=problem_slug, status=PUBLISHED)
+    ).scalar_one_or_none()
     if p is None:
         return _error("not_found", "No problem %r." % problem_slug, 404)
     return _ok(_problem_full(p))

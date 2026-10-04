@@ -3,7 +3,7 @@ from datetime import timedelta
 from flask import Blueprint, jsonify, request
 
 from ..learning.markdown import render as render_md
-from ..models import (Lesson, Problem, Submission, _utcnow, db,
+from ..models import (PUBLISHED, Lesson, Problem, Submission, _utcnow, db,
                       log_tutor_message, tutor_calls_since)
 from ..session import current_user, login_required
 from . import guard
@@ -38,6 +38,8 @@ def tutor_ask():
         lesson = db.session.get(Lesson, payload["lesson_id"])
     if payload.get("problem_id"):
         problem = db.session.get(Problem, payload["problem_id"])
+        if problem is not None and problem.status != PUBLISHED:
+            problem = None
     if lesson is not None and problem is None and lesson.problem_id:
         problem = lesson.problem
 

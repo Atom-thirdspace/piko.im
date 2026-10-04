@@ -6,12 +6,16 @@ from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
 from ..admin_gate import is_admin
 from ..learning import quiz
 from ..learning.markdown import render as render_md
+from ..content import visible
+from ..judge import LANGUAGES
 from ..models import (DRAFT, PUBLISHED, REVIEW, Lesson, LessonChoice,
-                      LessonQuestion, Problem, Track, Unit, _utcnow, db)
+                      LessonQuestion, Problem, ProblemHint, ProblemTest, Track,
+                      Unit, _utcnow, db)
 from ..session import current_user, login_required
 from ..validators import SLUG_RE, slugify
 from . import blockers
 from .invites import accept, find_invite, refusal
+from .verify import run_reference
 
 authors_bp = Blueprint("authors", __name__, url_prefix="/authors")
 
@@ -91,12 +95,15 @@ def index():
             stmt = stmt.filter_by(**mine)
         return db.session.execute(stmt).scalars().all()
 
-    tracks, units, lessons = rows(Track), rows(Unit), rows(Lesson)
-    counts = {s: sum(1 for r in tracks + units + lessons if r.status == s)
+    tracks, units = rows(Track), rows(Unit)
+    lessons, probs = rows(Lesson), rows(Problem)
+    everything = tracks + units + lessons + probs
+    counts = {s: sum(1 for r in everything if r.status == s)
               for s in (DRAFT, REVIEW, PUBLISHED)}
 
     notes = {}
-    for kind, items in (("track", tracks), ("unit", units), ("lesson", lessons)):
+    for kind, items in (("track", tracks), ("unit", units), ("lesson", lessons),
+                        ("problem", probs)):
         for row in items:
             if row.status != PUBLISHED:
                 notes[(kind, row.id)] = {
@@ -104,7 +111,8 @@ def index():
                     "waiting": blockers.waiting_on(kind, row),
                 }
     return render_template("authors/index.html", tracks=tracks, units=units,
-                           lessons=lessons, counts=counts, notes=notes)
+                           lessons=lessons, problems=probs, counts=counts,
+                           notes=notes)
 
 def _owned_units():
     user = current_user()
@@ -222,7 +230,8 @@ def lesson_form(lesson_id=None):
     lesson = _mine_or_404(Lesson, lesson_id) if lesson_id else None
     units = _owned_units()
     problems = db.session.execute(
-        db.select(Problem).order_by(Problem.slug)).scalars().all()
+        visible(db.select(Problem).order_by(Problem.slug), Problem,
+                current_user())).scalars().all()
     if request.method == "GET":
         return render_template("authors/lesson_form.html", lesson=lesson,
                                units=units, problems=problems,
@@ -275,7 +284,8 @@ def lesson_form(lesson_id=None):
     return redirect(url_for("authors.lesson_form", lesson_id=lesson.id))
 
 
-MODELS = {"track" : Track, "unit": Unit, "lesson" : Lesson}
+MODELS = {"track": Track, "unit": Unit, "lesson": Lesson,
+          "problem": Problem}
 
 @authors_bp.route("/<kind>/<int:row_id>/submit", methods=["POST"])
 @author_required
@@ -318,6 +328,8 @@ def _edit_url(kind, row_id):
         return url_for("authors.track_form", track_id=row_id)
     if kind == "unit":
         return url_for("authors.unit_form", unit_id=row_id)
+    if kind == "problem":
+        return url_for("authors.problem_form", problem_id=row_id)
     return url_for("authors.lesson_form", lesson_id=row_id)
 
 
@@ -328,6 +340,13 @@ def _children_blocking(kind, row):
     if kind == "unit" and row.lessons:
         return ("This unit still holds %d lesson%s. Empty it first."
                 % (len(row.lessons), "" if len(row.lessons) == 1 else "s"))
+    if kind == "problem":
+        used = db.session.execute(
+            db.select(db.func.count()).select_from(Lesson)
+            .where(Lesson.problem_id == row.id)).scalar() or 0
+        if used:
+            return ("%d lesson%s still points at this problem."
+                    % (used, "" if used == 1 else "s"))
     return None
 
 
@@ -450,3 +469,160 @@ def quiz_move(question_id):
 @author_required
 def preview():
     return jsonify(html=str(render_md(request.form.get("body_md") or "")))
+
+
+# --------------------------------------------------------------------------- #
+# problems
+# --------------------------------------------------------------------------- #
+
+DIFFICULTIES = ("easy", "medium", "hard")
+MAX_TESTS = 50
+
+
+def _unverify(problem):
+    """Any change to the statement, tests or reference invalidates the run."""
+    problem.verified_at = None
+
+
+@authors_bp.route("/problems/new", methods=["GET", "POST"])
+@authors_bp.route("/problems/<int:problem_id>/edit", methods=["GET", "POST"])
+@author_required
+def problem_form(problem_id=None):
+    problem = _mine_or_404(Problem, problem_id) if problem_id else None
+
+    if request.method == "GET":
+        return render_template("authors/problem_form.html", problem=problem,
+                               difficulties=DIFFICULTIES,
+                               languages=sorted(LANGUAGES), errors={}, form={})
+
+    form = request.form
+    errors = {}
+    title = (form.get("title") or "").strip()
+    slug = (form.get("slug") or "").strip().lower() or slugify(title)
+
+    if not title:
+        errors["title"] = "Give it a title."
+    if not SLUG_RE.match(slug):
+        errors["slug"] = "Lowercase letters, numbers and hyphens."
+    else:
+        clash = db.session.execute(
+            db.select(Problem).filter_by(slug=slug)).scalar_one_or_none()
+        if clash is not None and (problem is None or clash.id != problem.id):
+            errors["slug"] = "That slug is taken."
+
+    language = form.get("reference_language")
+    if language not in LANGUAGES:
+        language = "python"
+
+    try:
+        limit = max(0.5, min(float(form.get("time_limit_sec") or 2.0), 10.0))
+        memory = max(32, min(int(form.get("memory_mb") or 256), 1024))
+    except (TypeError, ValueError):
+        errors["time_limit_sec"] = "Numbers only."
+        limit, memory = 2.0, 256
+
+    if errors:
+        return render_template("authors/problem_form.html", problem=problem,
+                               difficulties=DIFFICULTIES,
+                               languages=sorted(LANGUAGES),
+                               errors=errors, form=form), 400
+
+    if problem is None:
+        problem = Problem(slug=slug, statement_md="",
+                          created_by_id=current_user().id, status=DRAFT)
+        db.session.add(problem)
+
+    problem.slug = slug
+    problem.title = title
+    problem.statement_md = form.get("statement_md") or ""
+    problem.difficulty = (form.get("difficulty")
+                          if form.get("difficulty") in DIFFICULTIES else "easy")
+    problem.topic = (form.get("topic") or "").strip() or None
+    problem.xp_override = _xp_override(form.get("xp"))
+    problem.time_limit_sec = limit
+    problem.memory_mb = memory
+    problem.reference_source = form.get("reference_source") or ""
+    problem.reference_language = language
+    _unverify(problem)
+    db.session.commit()
+
+    flash("Problem saved as a draft.", "success")
+    return redirect(url_for("authors.problem_form", problem_id=problem.id))
+
+
+@authors_bp.route("/problems/<int:problem_id>/tests", methods=["POST"])
+@author_required
+def problem_add_test(problem_id):
+    problem = _mine_or_404(Problem, problem_id)
+    if len(problem.tests) >= MAX_TESTS:
+        flash("That is as many tests as one problem can hold.", "error")
+        return redirect(_edit_url("problem", problem.id))
+
+    last = db.session.execute(
+        db.select(db.func.coalesce(db.func.max(ProblemTest.position), -1))
+        .where(ProblemTest.problem_id == problem.id)).scalar()
+    db.session.add(ProblemTest(
+        problem_id=problem.id, position=last + 1,
+        stdin=request.form.get("stdin") or "",
+        expected_stdout=request.form.get("expected_stdout") or "",
+        is_sample=bool(request.form.get("is_sample"))))
+    _unverify(problem)
+    db.session.commit()
+    flash("Test added. Run the reference to fill in what it should print.",
+          "success")
+    return redirect(_edit_url("problem", problem.id))
+
+
+@authors_bp.route("/tests/<int:test_id>/delete", methods=["POST"])
+@author_required
+def problem_delete_test(test_id):
+    test = db.session.get(ProblemTest, test_id)
+    if test is None:
+        abort(404)
+    problem = _mine_or_404(Problem, test.problem_id)
+    db.session.delete(test)
+    _unverify(problem)
+    db.session.commit()
+    flash("Test removed.", "success")
+    return redirect(_edit_url("problem", problem.id))
+
+
+@authors_bp.route("/problems/<int:problem_id>/hints", methods=["POST"])
+@author_required
+def problem_add_hint(problem_id):
+    problem = _mine_or_404(Problem, problem_id)
+    body = (request.form.get("body_md") or "").strip()
+    if not body:
+        flash("An empty hint helps nobody.", "error")
+        return redirect(_edit_url("problem", problem.id))
+
+    last = db.session.execute(
+        db.select(db.func.coalesce(db.func.max(ProblemHint.position), -1))
+        .where(ProblemHint.problem_id == problem.id)).scalar()
+    db.session.add(ProblemHint(problem_id=problem.id, position=last + 1,
+                               body_md=body[:2000]))
+    db.session.commit()
+    flash("Hint added.", "success")
+    return redirect(_edit_url("problem", problem.id))
+
+
+@authors_bp.route("/hints/<int:hint_id>/delete", methods=["POST"])
+@author_required
+def problem_delete_hint(hint_id):
+    hint = db.session.get(ProblemHint, hint_id)
+    if hint is None:
+        abort(404)
+    problem = _mine_or_404(Problem, hint.problem_id)
+    db.session.delete(hint)
+    db.session.commit()
+    flash("Hint removed.", "success")
+    return redirect(_edit_url("problem", problem.id))
+
+
+@authors_bp.route("/problems/<int:problem_id>/verify", methods=["POST"])
+@author_required
+def problem_verify(problem_id):
+    problem = _mine_or_404(Problem, problem_id)
+    ok, message = run_reference(problem)
+    flash(message, "success" if ok else "error")
+    return redirect(_edit_url("problem", problem.id))

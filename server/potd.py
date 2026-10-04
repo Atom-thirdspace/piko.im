@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, time, timedelta, timezone
 
-from .models import Problem, ProblemSolve, User, _utcnow, db
+from .models import PUBLISHED, Problem, ProblemSolve, User, _utcnow, db
 from .progress import award_xp
 
 BONUS_XP = 25
@@ -24,7 +24,8 @@ def _day_bounds(day):
 def problem_for(day=None):
     day = day or potd_date()
     ids = db.session.execute(
-        db.select(Problem.id).order_by(Problem.id)).scalars().all()
+        db.select(Problem.id).where(Problem.status == PUBLISHED)
+        .order_by(Problem.id)).scalars().all()
     if not ids:
         return None
     order = list(ids)

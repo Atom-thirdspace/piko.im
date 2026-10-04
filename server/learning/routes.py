@@ -9,6 +9,7 @@ from ..xp_rules import UNIT_COMPLETE, lesson_base
 from .. import quests
 from .markdown import render as render_md
 from ..admin_gate import is_admin
+from ..content import visible
 from .quiz import questions_for
 
 learn_bp = Blueprint("learn", __name__, url_prefix="/learn")
@@ -28,15 +29,7 @@ def _may_preview(row=None):
 
 def _visible(stmt, model):
     """Learners only ever reach published rows."""
-    user = current_user()
-    if user is None:
-        return stmt.where(model.status == PUBLISHED)
-    if is_admin(user):
-        return stmt
-    if user.is_author:
-        return stmt.where(db.or_(model.status == PUBLISHED,
-                                 model.created_by_id == user.id))
-    return stmt.where(model.status == PUBLISHED)
+    return visible(stmt, model, current_user())
 
 
 def _track_or_404(slug):

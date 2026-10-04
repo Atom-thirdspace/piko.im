@@ -1,0 +1,172 @@
+{% extends "base-dashboard.html" %}
+{% import "authors/_form.html" as f %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='authors.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  {{ f.head('Edit problem' if problem else 'New problem', problem) }}
+
+  <form method="post" class="auth-form">
+    {{ csrf_field() }}
+
+    <p><label>Title<br>
+      <input type="text" name="title" size="60"
+             value="{{ form.get('title', problem.title if problem else '') }}"></label>
+      {{ f.err(errors, 'title') }}
+    </p>
+
+    <p><label>Slug<br>
+      <input type="text" name="slug" size="40"
+             value="{{ form.get('slug', problem.slug if problem else '') }}"></label>
+      {{ f.err(errors, 'slug') }}
+    </p>
+
+    <p>
+      <label>Difficulty
+        <select name="difficulty">
+          {% for d in difficulties %}
+            <option value="{{ d }}"
+              {{ 'selected' if (problem.difficulty if problem else 'easy') == d }}>{{ d }}</option>
+          {% endfor %}
+        </select></label>
+      <label>Topic <input type="text" name="topic" size="18"
+             value="{{ problem.topic or '' if problem else '' }}"></label>
+    </p>
+
+    <p>
+      <label>XP <input type="number" name="xp" size="4" min="0"
+             placeholder="{{ problem.xp if problem else 30 }}"
+             value="{{ problem.xp_override if problem and problem.xp_override is not none else '' }}"></label>
+      <small>Leave blank for the standard award for this difficulty.</small>
+    </p>
+
+    <p>
+      <label>Time limit (s) <input type="number" step="0.5" name="time_limit_sec"
+             size="4" value="{{ problem.time_limit_sec if problem else 2.0 }}"></label>
+      <label>Memory (MB) <input type="number" name="memory_mb" size="5"
+             value="{{ problem.memory_mb if problem else 256 }}"></label>
+      {{ f.err(errors, 'time_limit_sec') }}
+    </p>
+
+    <p><label>Statement (Markdown)<br>
+      <textarea name="statement_md" rows="14" cols="88">{{ form.get('statement_md', problem.statement_md if problem else '') }}</textarea></label>
+    </p>
+
+    <h2>Reference solution</h2>
+    <p class="auth-hint">
+      Yours, and it never reaches a learner. Running it against your tests is
+      what fills in the expected output and proves the problem is solvable.
+    </p>
+    <p>
+      <label>Language
+        <select name="reference_language">
+          {% for l in languages %}
+            <option value="{{ l }}"
+              {{ 'selected' if (problem.reference_language if problem else 'python') == l }}>{{ l }}</option>
+          {% endfor %}
+        </select></label>
+    </p>
+    <p><textarea name="reference_source" rows="16" cols="88"
+                 spellcheck="false">{{ form.get('reference_source', problem.reference_source if problem else '') }}</textarea></p>
+
+    <button type="submit" class="btn btn-primary">Save draft</button>
+  </form>
+
+  {% if problem %}
+    <section class="auth-group">
+      <h2>Test cases ({{ problem.tests|length }})</h2>
+
+      {% if problem.verified_at %}
+        <p class="auth-note">
+          Reference checked {{ problem.verified_at.strftime('%d %b %H:%M') }}.
+        </p>
+      {% else %}
+        <p class="auth-note">
+          Not verified yet &mdash; it cannot be sent for review until the
+          reference runs clean against every test.
+        </p>
+      {% endif %}
+
+      <form method="post"
+            action="{{ url_for('authors.problem_verify', problem_id=problem.id) }}">
+        {{ csrf_field() }}
+        <button type="submit" class="btn btn-primary">Run the reference</button>
+      </form>
+
+      {% if not problem.tests %}
+        <p class="auth-hint">No tests yet. At least one has to be a sample.</p>
+      {% else %}
+        <table class="admin-table">
+          <tr><th>#</th><th>Input</th><th>Expected</th><th>Sample</th><th></th></tr>
+          {% for t in problem.tests %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td><pre class="admin-pre">{{ t.stdin }}</pre></td>
+              <td>
+                {% if t.expected_stdout %}
+                  <pre class="admin-pre">{{ t.expected_stdout }}</pre>
+                {% else %}
+                  <span class="auth-hint">filled in by the reference</span>
+                {% endif %}
+              </td>
+              <td>{{ 'yes' if t.is_sample else '' }}</td>
+              <td>
+                <form method="post"
+                      action="{{ url_for('authors.problem_delete_test', test_id=t.id) }}">
+                  {{ csrf_field() }}
+                  <button class="auth-btn auth-btn--danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% endif %}
+
+      <h3>Add a test</h3>
+      <form class="auth-form" method="post"
+            action="{{ url_for('authors.problem_add_test', problem_id=problem.id) }}">
+        {{ csrf_field() }}
+        <p><label>Input<br>
+          <textarea name="stdin" rows="4" cols="40"></textarea></label></p>
+        <p><label>Expected output, or leave blank and let the reference fill it<br>
+          <textarea name="expected_stdout" rows="4" cols="40"></textarea></label></p>
+        <p><label><input type="checkbox" name="is_sample" value="1">
+          Show this one to learners</label></p>
+        <button class="auth-btn" type="submit">Add test</button>
+      </form>
+    </section>
+
+    <section class="auth-group">
+      <h2>Hints ({{ problem.hints|length }})</h2>
+      <p class="auth-hint">
+        Opening any hint costs a learner the no-hints bonus, so order them
+        from the gentlest nudge to the clearest.
+      </p>
+      {% for h in problem.hints %}
+        <div class="auth-row">
+          <span>{{ loop.index }}. {{ h.body_md }}</span>
+          <form method="post"
+                action="{{ url_for('authors.problem_delete_hint', hint_id=h.id) }}">
+            {{ csrf_field() }}
+            <button class="auth-btn auth-btn--danger" type="submit">Delete</button>
+          </form>
+        </div>
+      {% endfor %}
+      <form class="auth-form" method="post"
+            action="{{ url_for('authors.problem_add_hint', problem_id=problem.id) }}">
+        {{ csrf_field() }}
+        <p><input name="body_md" size="70" placeholder="A nudge, not the answer"></p>
+        <button class="auth-btn" type="submit">Add hint</button>
+      </form>
+    </section>
+  {% else %}
+    <p class="auth-hint">Save it first, then add tests and hints.</p>
+  {% endif %}
+
+  {{ f.danger('problem', problem, 'problem') }}
+</main>
+{% endblock content %}

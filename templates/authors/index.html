@@ -9,6 +9,7 @@
 {% macro edit_url(kind, row) -%}
   {%- if kind == 'track' -%}{{ url_for('authors.track_form', track_id=row.id) }}
   {%- elif kind == 'unit' -%}{{ url_for('authors.unit_form', unit_id=row.id) }}
+  {%- elif kind == 'problem' -%}{{ url_for('authors.problem_form', problem_id=row.id) }}
   {%- else -%}{{ url_for('authors.lesson_form', lesson_id=row.id) }}
   {%- endif -%}
 {%- endmacro %}
@@ -84,6 +85,7 @@
       <a class="btn btn-primary" href="{{ url_for('authors.track_form') }}">New course</a>
       <a class="btn" href="{{ url_for('authors.unit_form') }}">New unit</a>
       <a class="btn" href="{{ url_for('authors.lesson_form') }}">New lesson</a>
+      <a class="btn" href="{{ url_for('authors.problem_form') }}">New problem</a>
     </p>
     <p class="learn-lede">
       Everything starts as a draft. Sending it for review hands it to an
@@ -94,5 +96,6 @@
   {{ section('track', 'Courses', tracks, url_for('authors.track_form'), notes) }}
   {{ section('unit', 'Units', units, url_for('authors.unit_form'), notes) }}
   {{ section('lesson', 'Lessons', lessons, url_for('authors.lesson_form'), notes) }}
+  {{ section('problem', 'Problems', problems, url_for('authors.problem_form'), notes) }}
 </main>
 {% endblock content %}

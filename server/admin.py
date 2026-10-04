@@ -315,7 +315,7 @@ def problem_form(problem_id=None):
                                errors=errors, form=form), 400
 
     if problem is None:
-        problem = Problem(slug=slug)
+        problem = Problem(slug=slug, status=PUBLISHED, published_at=_utcnow())
         db.session.add(problem)
 
     problem.slug = slug
@@ -1189,7 +1189,8 @@ def author_remove(user_id):
     flash("Authorship removed. Their published work stays up.", "success")
     return redirect(url_for("admin.authors"))
 
-REVIEWABLE = {"track": Track, "unit": Unit, "lesson": Lesson}
+REVIEWABLE = {"track": Track, "unit": Unit, "lesson": Lesson,
+              "problem": Problem}
 
 
 @admin_bp.route("/review/")
