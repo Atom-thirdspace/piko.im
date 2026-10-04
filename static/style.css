@@ -260,13 +260,13 @@ img {
 .profile-edit { margin-left: auto; padding: .5rem .9rem; border-radius: 8px;
                 background: rgba(0,0,0,.08); text-decoration: none; color: inherit; }
 .profile-level { margin: 1.6rem 0 .4rem; }
-.profile-level-line { display: flex; justify-content: space-between; font-size: .9rem; }
+.profile-level-line { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 0.5rem; }
 .profile-bar { height: 8px; margin-top: .4rem; border-radius: 4px;
                background: rgba(0,0,0,.12); overflow: hidden; }
 .profile-bar-fill { display: block; height: 100%; background: #6c5ce7; }
 .profile-stats { display: grid; grid-template-columns: repeat(3, 1fr);
                  gap: .8rem; margin: 1.6rem 0; }
-.stat { padding: .8rem; border-radius: 10px; background: #f3f0ff; text-align: center; }
+.stat { padding: .8rem; border-radius: 10px; background: #fffdfb; text-align: center; border: 1px solid #e9dccf; }
 .stat b { display: block; font-size: 1.3rem; }
 .stat span { font-size: .8rem; opacity: .7; }
 .profile-track, .profile-activity { margin-top: 1.8rem; }
