@@ -56,6 +56,14 @@
               </form>
             </div>
           </details>
+          <script>
+            const account = document.querySelector(".topnav__account");
+            document.addEventListener("click", (event) => {
+              if (!account.contains(event.target)) {
+                account.removeAttribute("open");
+              }
+            });
+          </script>
 
         </nav>
         {% if not viewer.email_verified %}

@@ -248,6 +248,15 @@ html body * {
     border-radius: 50%;
 }
 
+.topnav__account::details-content {
+    transition: content-visibility 0.7s allow-discrete,
+                opacity 0.7s ease;
+}
+
+.topnav__account[open]::details-content {
+    opacity: 1;
+}
+
 .topnav__account-menu {
     position: absolute;
     top: calc(100% + .75rem);
