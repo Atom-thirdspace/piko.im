@@ -276,6 +276,8 @@ html body * {
 .topnav__account[open] .topnav__account-menu {
     opacity: 1;
     transform: translateY(0);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
 }
 
 .topnav .topnav__account-menu a,
