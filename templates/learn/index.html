@@ -4,6 +4,45 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
 {% endblock head %}
 
+{#- One track, drawn as a trail. The grey path is the whole route, the
+    brand-coloured one is how far they have walked, and a node is only a
+    link once it has been reached. -#}
+{% macro path_map(row) %}
+  {% set m = row.map %}
+  <div class="pathmap">
+    <svg class="pathmap__svg" viewBox="0 0 {{ m.width }} {{ m.height }}"
+         role="img"
+         aria-label="{{ row.done }} of {{ row.total }} lessons finished on {{ row.track.title }}">
+      <path class="pathmap__trail" d="{{ m.trail }}" fill="none"></path>
+      {% if m.walked %}
+        <path class="pathmap__walked" d="{{ m.walked }}" fill="none"></path>
+      {% endif %}
+
+      {% for n in m.nodes %}
+        <g class="pathnode pathnode--{{ n.state }}">
+          {% if n.current %}
+            <circle class="pathnode__halo" cx="{{ n.x }}" cy="{{ n.y }}" r="26"></circle>
+          {% endif %}
+          <circle class="pathnode__disc" cx="{{ n.x }}" cy="{{ n.y }}" r="18"></circle>
+          <text class="pathnode__glyph" x="{{ n.x }}" y="{{ n.y }}"
+                text-anchor="middle" dominant-baseline="central">
+            {{- '✓' if n.done else n.glyph -}}
+          </text>
+          <text class="pathnode__num" x="{{ n.x }}" y="{{ n.y - 26 }}"
+                text-anchor="middle">{{ n.n }}</text>
+          <title>{{ n.n }}. {{ n.title }} — {{ n.kind }}, {{ n.xp }} XP{% if n.done %} (done){% elif n.current %} (you are here){% endif %}</title>
+        </g>
+      {% endfor %}
+
+      {% if m.finish %}
+        <text class="pathmap__flag" x="{{ m.finish.x + 30 }}"
+              y="{{ m.finish.y + 5 }}">&#9873;</text>
+      {% endif %}
+    </svg>
+  </div>
+{% endmacro %}
+
+
 {% block content %}
 <main class="learn">
   <header class="learn-head">
@@ -11,7 +50,7 @@
     <h1>Course paths</h1>
     <p class="learn-lede">
       {% if any_enrolled %}
-        Switch paths whenever you like - your finished lessons stay finished.
+        Switch paths whenever you like &mdash; your finished lessons stay finished.
       {% else %}
         Pick where to start. Each path is a run of concepts and problems in the
         order they build on each other.
@@ -19,43 +58,57 @@
     </p>
   </header>
 
-  <ul class="track-grid">
+  <div class="tracks">
     {% for row in tracks %}
       {% set track = row.track %}
-      <li class="track-card{% if row.primary %} is-primary{% endif %}">
-        <div class="track-card-top">
-          <h2><a href="{{ url_for('learn.track', track_slug=track.slug) }}">{{ track.title }}</a></h2>
-          {% if row.primary %}
-            <span class="pill pill-on">Current path</span>
-          {% elif row.enrolled %}
-            <span class="pill">Joined</span>
-          {% endif %}
+      <section class="trackmap{% if row.primary %} is-primary{% endif %}">
+
+        <div class="trackmap__head">
+          <div>
+            <h2 class="trackmap__title">
+              <a href="{{ url_for('learn.track', track_slug=track.slug) }}">{{ track.title }}</a>
+              {% if row.primary %}
+                <span class="pill pill-on">Current path</span>
+              {% elif row.enrolled %}
+                <span class="pill">Joined</span>
+              {% endif %}
+              {% if row.total and row.done == row.total %}
+                <span class="pill pill-done">Complete</span>
+              {% endif %}
+            </h2>
+            <p class="trackmap__desc">{{ track.description }}</p>
+          </div>
+
+          <div class="trackmap__score" aria-hidden="true">
+            <span class="trackmap__pct">{{ row.percent }}<small>%</small></span>
+            <span class="trackmap__frac">{{ row.done }} / {{ row.total }}</span>
+          </div>
         </div>
 
-        <p class="track-desc">{{ track.description }}</p>
-
-        <p class="track-meta">
-          {{ row.total }} lesson{{ '' if row.total == 1 else 's' }}
-          · {{ row.xp_total }} XP
-          {% if row.levels %}· {{ row.levels | join(' → ') }}{% endif %}
+        <p class="trackmap__meta">
+          <span class="chip">{{ row.total }} lesson{{ '' if row.total == 1 else 's' }}</span>
+          <span class="chip chip--xp">{{ row.xp_earned }} / {{ row.xp_total }} XP</span>
+          {% for level in row.levels %}
+            <span class="chip chip--level">{{ level }}</span>
+          {% endfor %}
         </p>
 
-        {% if row.done %}
-          <div class="bar" role="img"
-               aria-label="{{ row.done }} of {{ row.total }} lessons done">
-            <span style="width: {{ row.percent }}%"></span>
-          </div>
-          <p class="track-meta">{{ row.done }} / {{ row.total }} done · {{ row.percent }}%</p>
+        {% if row.map and row.map.nodes %}
+          {{ path_map(row) }}
         {% endif %}
 
-        <div class="track-actions">
+        <div class="trackmap__foot">
           {% if row.next %}
             <form method="post" action="{{ url_for('learn.enroll', track_slug=track.slug) }}">
-      {{ csrf_field() }}
+              {{ csrf_field() }}
               <button type="submit" class="btn btn-primary">
                 {% if row.done %}Continue{% elif row.enrolled %}Resume{% else %}Start this path{% endif %}
               </button>
             </form>
+            <p class="trackmap__next">
+              <span class="trackmap__next-label">Up next</span>
+              {{ row.next.title }}
+            </p>
           {% else %}
             <span class="pill pill-done">Finished</span>
           {% endif %}
@@ -63,20 +116,16 @@
             See the syllabus
           </a>
         </div>
-
-        {% if row.next %}
-          <p class="track-next">Next: {{ row.next.title }}</p>
-        {% endif %}
-      </li>
+      </section>
     {% else %}
-      <li class="track-card">
-        <h2>No paths seeded yet</h2>
-        <p class="track-desc">
+      <section class="trackmap">
+        <h2 class="trackmap__title">No paths seeded yet</h2>
+        <p class="trackmap__desc">
           Run <code>flask --app app seed-catalog</code> to load the catalog into
           the database.
         </p>
-      </li>
+      </section>
     {% endfor %}
-  </ul>
+  </div>
 </main>
 {% endblock content %}

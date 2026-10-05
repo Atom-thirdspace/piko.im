@@ -8,6 +8,7 @@ from ..session import current_user, login_required
 from ..xp_rules import UNIT_COMPLETE, lesson_base
 from .. import quests
 from .markdown import render as render_md
+from . import pathmap
 from ..admin_gate import is_admin
 from ..content import visible
 from .quiz import questions_for
@@ -110,19 +111,24 @@ def _next_lesson(track, done_ids):
     return None
 
 
-def _track_summary(track, done_ids):
+def _track_summary(track, done_ids, with_map=False):
     lessons = _ordered_lessons(track)
     done = sum(1 for lesson in lessons if lesson.id in done_ids)
     total = len(lessons)
-    return {
+    nxt = _next_lesson(track, done_ids)
+    summary = {
         "track": track,
         "total": total,
         "done": done,
         "percent": round(done * 100 / total) if total else 0,
         "xp_total": sum(lesson.xp for lesson in lessons),
+        "xp_earned": sum(l.xp for l in lessons if l.id in done_ids),
         "levels": sorted({unit.level for unit in _visible_units(track)}),
-        "next": _next_lesson(track, done_ids),
+        "next": nxt,
     }
+    if with_map:
+        summary["map"] = pathmap.build(track, lessons, done_ids, nxt)
+    return summary
 
 
 def _enroll(user, track, current_lesson):
@@ -226,7 +232,7 @@ def index():
 
     summaries = []
     for track in tracks:
-        summary = _track_summary(track, done_ids)
+        summary = _track_summary(track, done_ids, with_map=True)
         enrollment = enrollments.get(track.id)
         summary["enrolled"] = enrollment is not None
         summary["primary"] = bool(enrollment and enrollment.is_primary)

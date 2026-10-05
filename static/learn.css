@@ -337,3 +337,155 @@
 /* ---------- search ---------- */
 .search-form { display: flex; gap: .5rem; margin: .6rem 0 0; flex-wrap: wrap; }
 .search-meta { opacity: .6; font-size: .9rem; }
+
+/* ===================================================================
+   Course paths, drawn as trails
+   =================================================================== */
+
+.tracks { display: grid; gap: 1.1rem; margin: 1.2rem 0 0; }
+
+.trackmap {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 1.1rem 1.2rem 1rem;
+}
+.trackmap.is-primary {
+  border-color: var(--brand-ink);
+  box-shadow: 0 0 0 1px var(--brand-ink) inset;
+}
+
+.trackmap__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.trackmap__title { margin: 0 0 .2rem; font-size: 1.15rem; }
+.trackmap__title a { color: inherit; text-decoration: none; }
+.trackmap__title a:hover { text-decoration: underline; }
+.trackmap__desc { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+
+/* The score reads as a game stat, not a sentence. */
+.trackmap__score { text-align: right; line-height: 1; flex: none; }
+.trackmap__pct {
+  display: block;
+  font-size: 1.9rem;
+  font-weight: 700;
+  color: var(--brand-ink);
+  font-variant-numeric: tabular-nums;
+}
+.trackmap__pct small { font-size: .9rem; font-weight: 600; }
+.trackmap__frac {
+  font-size: .78rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trackmap__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin: .7rem 0 .2rem;
+}
+.chip {
+  padding: .12rem .5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: .75rem;
+  color: var(--ink-soft);
+}
+.chip--xp { border-color: var(--brand-ink); color: var(--brand-ink); }
+.chip--level { text-transform: capitalize; }
+
+/* ---------- the trail ---------- */
+.pathmap { overflow-x: auto; padding: .2rem 0 .1rem; }
+.pathmap__svg { width: 100%; min-width: 520px; height: auto; display: block; }
+
+.pathmap__trail {
+  stroke: var(--line-strong);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 1 14;      /* the unwalked route reads as stepping stones */
+}
+.pathmap__walked {
+  stroke: var(--brand-ink);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.pathnode__disc {
+  fill: var(--surface);
+  stroke: var(--line-strong);
+  stroke-width: 2.5;
+}
+.pathnode__glyph {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--ink-muted);
+}
+.pathnode__num {
+  font-size: 10px;
+  fill: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pathnode--done .pathnode__disc  { fill: var(--brand); stroke: var(--brand); }
+.pathnode--done .pathnode__glyph { fill: var(--on-brand); }
+
+.pathnode--current .pathnode__disc {
+  fill: var(--surface);
+  stroke: var(--brand-ink);
+  stroke-width: 3.5;
+}
+.pathnode--current .pathnode__glyph { fill: var(--brand-ink); }
+.pathnode--current .pathnode__num   { fill: var(--brand-ink); font-weight: 700; }
+
+.pathnode__halo {
+  fill: none;
+  stroke: var(--brand-ink);
+  stroke-width: 2;
+  opacity: .35;
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: pathpulse 2.4s ease-out infinite;
+}
+@keyframes pathpulse {
+  0%   { transform: scale(.72); opacity: .5; }
+  70%  { transform: scale(1.12); opacity: 0; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+/* A pulsing ring is decoration; it must never be the thing that moves for
+   someone who asked the OS to stop animations. */
+@media (prefers-reduced-motion: reduce) {
+  .pathnode__halo { animation: none; opacity: .4; }
+}
+
+.pathmap__flag { font-size: 20px; fill: var(--ink-muted); }
+
+.pathnode { cursor: default; }
+.pathnode--done:hover .pathnode__disc,
+.pathnode--current:hover .pathnode__disc { stroke-width: 4; }
+
+/* ---------- footer ---------- */
+.trackmap__foot {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-top: .5rem;
+}
+.trackmap__next { margin: 0; font-size: .9rem; color: var(--ink-soft); }
+.trackmap__next-label {
+  display: inline-block;
+  margin-right: .3rem;
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 620px) {
+  .trackmap__head { flex-direction: column; }
+  .trackmap__score { text-align: left; }
+}
