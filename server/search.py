@@ -12,14 +12,6 @@ MIN_CHARS = 2
 
 
 def _term(q):
-    """Drop LIKE metacharacters rather than escaping them.
-
-    'zeb%ra' therefore searches for 'zebra' and '100%' for '100', which is
-    the forgiving behaviour a search box wants. Stripping can empty the
-    term, though, and an empty term would build the pattern '%%' - which
-    matches every row - so the caller checks the length of what comes back,
-    not of what was typed.
-    """
     return q.replace("\\", "").replace("%", "").replace("_", "").strip()
 
 @search_bp.route("/search")

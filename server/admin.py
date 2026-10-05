@@ -56,29 +56,68 @@ def _xp_override(raw):
 
 PAGE_SIZE = 25
 
-NAV = [("admin.overview", "Overview"), ("admin.users", "Users"),
-       ("admin.deletions", "Deletions"),
-       ("admin.problems", "Problems"), ("admin.submissions", "Submissions"),
-       ("admin.content", "Content"), ("admin.lessons", "Lessons"),
-       ("admin.blog", "Blog"),
-       ("admin.tutor", "Tutor"),
-       ("admin.system", "System"),
-       ("admin.audit", "Audit log"),
-       ("admin.reports","Reports"),
-       ("admin.similarity", "Similarity"),
-       ("admin.generated", "Generated"),
-       ("admin.authors", "Authors"), ("admin.review", "Review"),
-       ("admin.subscriptions", "Subscriptions"),
-       ("admin.classrooms", "Classrooms"),
-       ("admin.students", "Students"),
-       ("admin.contests", "Contests"),
-       ("admin.contests", "Contests"),
-       ]
+# Grouped, because twenty flat links in a wrapping row is not navigation.
+# The first group has no heading - Overview stands on its own.
+NAV = [
+    ("", [
+        ("admin.overview", "Overview"),
+    ]),
+    ("Content", [
+        ("admin.overview", "Overview"),
+        ("admin.content", "Courses"),
+        ("admin.lessons", "Lessons"),
+        ("admin.problems", "Problems"),
+        ("admin.review", "Review"),
+        ("admin.generated", "Generated"),
+        ("admin.contests", "Contests"),
+        ("admin.blog", "Blog"),
+        ("admin.stats", "Stats")
+    ]),
+    ("People", [
+        ("admin.users", "Users"),
+        ("admin.authors", "Authors"),
+        ("admin.students", "Students"),
+        ("admin.classrooms", "Classrooms & teams"),
+        ("admin.deletions", "Deletions"),
+    ]),
+    ("Moderation", [
+        ("admin.submissions", "Submissions"),
+        ("admin.reports", "Reports"),
+        ("admin.similarity", "Similarity"),
+    ]),
+    ("Money", [
+        ("admin.subscriptions", "Subscriptions"),
+    ]),
+    ("System", [
+        ("admin.tutor", "Tutor"),
+        ("admin.system", "System"),
+        ("admin.audit", "Audit log"),
+    ]),
+]
+
+
+def _badges():
+    """Only counts that mean somebody is waiting on you.
+
+    Zeros are dropped, so a number in the sidebar always means work.
+    """
+    def count(model, **where):
+        return db.session.execute(
+            db.select(db.func.count()).select_from(model)
+            .filter_by(**where)).scalar() or 0
+
+    queue = sum(count(model, status=REVIEW) for model in REVIEWABLE.values())
+    pairs = (("admin.review", queue),
+             ("admin.reports", open_report_count()),
+             ("admin.students", count(StudentVerification, status="pending")),
+             ("admin.deletions", count(DeletionRequest, status="pending")))
+    return {endpoint: n for endpoint, n in pairs if n}
 
 
 @admin_bp.context_processor
 def _nav():
-    return {"admin_nav" : NAV, "admin_active": request.endpoint}
+    return {"admin_nav": NAV, "admin_active": request.endpoint,
+            "admin_badges": _badges()}
 
 def log_action(action, target ="", detail=""):
     db.session.add(AdminAction(admin_id=current_user().id, action=action, target=str(target)[:120], detail=str(detail)[:500]))
@@ -1675,3 +1714,30 @@ def contest_remove_problem(row_id):
     db.session.delete(row)
     db.session.commit()
     return redirect(url_for("admin.contests"))
+
+@admin_bp.route("/stats")
+@admin_required
+def stats():
+    from . import adminstats
+    from .billing import stats as billing_stats
+
+    signups = adminstats.signups_series()
+    subs = adminstats.submissions_series()
+    months = billing_stats.monthly_series(months=6)
+
+    return render_template(
+        "admin/stats.html",
+        head=adminstats.headline(),
+        funnel=adminstats.funnel(),
+        signups=signups,
+        signup_chart=adminstats.columns(signups, ["value"]),
+        subs=subs,
+        subs_chart=adminstats.columns(subs, ["accepted", "other"]),
+        churn=months,
+        churn_chart=adminstats.diverging(months, "new", "churned"),
+        verdicts=adminstats.verdict_mix(),
+        pipeline=adminstats.content_pipeline(),
+        judge=adminstats.judge_health(),
+        engagement=adminstats.engagement(),
+        billing=billing_stats.overview(),
+    )

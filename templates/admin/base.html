@@ -8,24 +8,42 @@
 {% block app_header %}{% endblock app_header %}
 
 {% block body_before_content %}
-  <nav class="admin-nav">
+  <header class="admin-top">
     <span class="admin-brand">Piko admin</span>
-    {% for endpoint, label in admin_nav %}
-      <a href="{{ url_for(endpoint) }}"
-         class="{{ 'active' if admin_active == endpoint }}">{{ label }}</a>
-    {% endfor %}
+    <span class="admin-top__spacer"></span>
+    <a class="admin-exit" href="{{ url_for('dashboard.index') }}">Back to app</a>
     <form class="admin-lock" method="post" action="{{ url_for('admin.lock') }}">
       {{ csrf_field() }}
       <button type="submit">Lock</button>
     </form>
-    <a class="admin-exit" href="{{ url_for('dashboard.index') }}">Back to app</a>
-  </nav>
+  </header>
 {% endblock body_before_content %}
 
 {% block content %}
+<div class="admin-shell">
+  <nav class="admin-side" aria-label="Admin sections">
+    {% for heading, links in admin_nav %}
+      <div class="admin-side__group">
+        {% if heading %}
+          <h2 class="admin-side__head">{{ heading }}</h2>
+        {% endif %}
+        {% for endpoint, label in links %}
+          <a href="{{ url_for(endpoint) }}"
+             class="admin-side__link {{ 'active' if admin_active == endpoint }}"
+             {% if admin_active == endpoint %}aria-current="page"{% endif %}>
+            <span>{{ label }}</span>
+            {% set count = admin_badges.get(endpoint) %}
+            {% if count %}<span class="admin-side__badge">{{ count }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </nav>
+
   <main class="admin">
     {% block admin_content %}{% endblock admin_content %}
   </main>
+</div>
 {% endblock content %}
 
 {# Jinja macros can't declare **kwargs; the implicit `kwargs` catches the

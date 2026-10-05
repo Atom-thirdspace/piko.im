@@ -1,0 +1,129 @@
+{#- Chart macros. Geometry arrives pre-computed from server/adminstats.py;
+    nothing here does arithmetic beyond placing it. -#}
+
+{% macro stat(label, value, note="") %}
+  <div class="stat">
+    <span class="stat__value">{{ value }}</span>
+    <span class="stat__label">{{ label }}</span>
+    {% if note %}<span class="stat__note">{{ note }}</span>{% endif %}
+  </div>
+{% endmacro %}
+
+
+{#- Horizontal bars for an ordered set of stages. Length carries the
+    magnitude; the ramp only reinforces the ordering. -#}
+{% macro funnel_bars(rows) %}
+  <ol class="funnel">
+    {% for r in rows %}
+      <li class="funnel__row">
+        <span class="funnel__label">{{ r.label }}</span>
+        <span class="funnel__track">
+          <span class="funnel__fill"
+                style="width: {{ '%.1f' % r.percent }}%; background: {{ r.colour }};"></span>
+        </span>
+        <span class="funnel__value">
+          {{ r.value }}
+          <small>{{ '%.0f' % r.percent }}%{% if r.step is not none %}
+            &middot; {{ '%.0f' % r.step }}% of the step above{% endif %}</small>
+        </span>
+      </li>
+    {% endfor %}
+  </ol>
+{% endmacro %}
+
+
+{#- A single series over time. One hue, no legend: the heading names it. -#}
+{% macro column_chart(chart, rows, colour, caption) %}
+  <figure class="chart">
+    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img"
+         aria-label="{{ caption }}" class="chart__svg">
+      {% for t in chart.ticks %}
+        <line class="chart__grid" x1="0" x2="{{ chart.width }}"
+              y1="{{ t.y }}" y2="{{ t.y }}"></line>
+      {% endfor %}
+      {% for b in chart.bars %}
+        {% for seg in b.stack %}
+          <rect x="{{ seg.x }}" y="{{ seg.y }}" width="{{ seg.w }}"
+                height="{{ seg.h }}" rx="3" fill="{{ colour }}">
+            <title>{{ b.row.full }}: {{ seg.value }}</title>
+          </rect>
+        {% endfor %}
+        <text class="chart__tick" x="{{ b.label_x }}"
+              y="{{ chart.height - 8 }}" text-anchor="middle">{{ b.row.label }}</text>
+      {% endfor %}
+    </svg>
+    <figcaption class="chart__cap">
+      {{ caption }} &middot; peak {{ chart.top }}
+    </figcaption>
+  </figure>
+{% endmacro %}
+
+
+{#- Two stacked series. Legend is mandatory at two series, and both are
+    direct-labelled in the legend rather than on every column. -#}
+{% macro stacked_chart(chart, keys, colours, labels, caption) %}
+  <figure class="chart">
+    <p class="chart__legend">
+      {% for k in keys %}
+        <span class="chart__key">
+          <span class="chart__swatch" style="background: {{ colours[k] }};"></span>
+          {{ labels[k] }}
+        </span>
+      {% endfor %}
+    </p>
+    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img"
+         aria-label="{{ caption }}" class="chart__svg">
+      {% for t in chart.ticks %}
+        <line class="chart__grid" x1="0" x2="{{ chart.width }}"
+              y1="{{ t.y }}" y2="{{ t.y }}"></line>
+      {% endfor %}
+      {% for b in chart.bars %}
+        {% for seg in b.stack %}
+          <rect x="{{ seg.x }}" y="{{ seg.y }}" width="{{ seg.w }}"
+                height="{{ seg.h }}" rx="3" fill="{{ colours[seg.key] }}">
+            <title>{{ b.row.full }} &middot; {{ labels[seg.key] }}: {{ seg.value }}</title>
+          </rect>
+        {% endfor %}
+        <text class="chart__tick" x="{{ b.label_x }}"
+              y="{{ chart.height - 8 }}" text-anchor="middle">{{ b.row.label }}</text>
+      {% endfor %}
+    </svg>
+    <figcaption class="chart__cap">{{ caption }}</figcaption>
+  </figure>
+{% endmacro %}
+
+
+{#- Gains above the line, losses below it. Same unit on both arms, so
+    there is only ever one scale to trust. -#}
+{% macro diverging_chart(chart, caption) %}
+  <figure class="chart">
+    <p class="chart__legend">
+      <span class="chart__key">
+        <span class="chart__swatch" style="background: #2a78d6;"></span>New</span>
+      <span class="chart__key">
+        <span class="chart__swatch" style="background: #e34948;"></span>Churned</span>
+    </p>
+    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img"
+         aria-label="{{ caption }}" class="chart__svg">
+      <line class="chart__base" x1="0" x2="{{ chart.width }}"
+            y1="{{ chart.mid }}" y2="{{ chart.mid }}"></line>
+      {% for b in chart.bars %}
+        {% if b.up.h %}
+          <rect x="{{ b.x }}" y="{{ b.up.y }}" width="{{ b.w }}"
+                height="{{ b.up.h }}" rx="3" fill="#2a78d6">
+            <title>{{ b.row.label }}: {{ b.up.value }} new</title>
+          </rect>
+        {% endif %}
+        {% if b.down.h %}
+          <rect x="{{ b.x }}" y="{{ b.down.y }}" width="{{ b.w }}"
+                height="{{ b.down.h }}" rx="3" fill="#e34948">
+            <title>{{ b.row.label }}: {{ b.down.value }} churned</title>
+          </rect>
+        {% endif %}
+        <text class="chart__tick" x="{{ b.label_x }}"
+              y="{{ chart.height - 6 }}" text-anchor="middle">{{ b.row.label }}</text>
+      {% endfor %}
+    </svg>
+    <figcaption class="chart__cap">{{ caption }}</figcaption>
+  </figure>
+{% endmacro %}

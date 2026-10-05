@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+{% import "admin/_charts.html" as ch %}
+
+{% block admin_content %}
+  <h1>Platform stats</h1>
+  <p class="admin-hint">
+    Everything is counted in UTC. Money comes from the same code the
+    subscriptions page uses, so the two can never disagree.
+  </p>
+
+  <div class="stat-row">
+    {{ ch.stat("Accounts", head.users) }}
+    {{ ch.stat("Active this week", head.active, "earned XP in 7 days") }}
+    {{ ch.stat("Live subscriptions", billing.live,
+               "%d paid, %d comped" % (billing.paid, billing.comped)) }}
+    {{ ch.stat("MRR",
+               billing.mrr and (billing.mrr.items() | list | first)[1] | round(2) or 0,
+               (billing.mrr.items() | list | first)[0] | upper if billing.mrr else "no paid plans") }}
+    {{ ch.stat("Published problems", head.problems) }}
+    {{ ch.stat("Submissions", head.submissions,
+               "%.0f%% accepted" % head.accept_rate) }}
+  </div>
+
+  <div class="admin-card">
+    <h2>Signup funnel</h2>
+    <p class="admin-hint">
+      Each stage counts only people who cleared every stage above it, so the
+      bars can never grow as you go down.
+    </p>
+    {{ ch.funnel_bars(funnel) }}
+  </div>
+
+  <div class="admin-card">
+    <h2>New accounts</h2>
+    {{ ch.column_chart(signup_chart, signups, "#2a78d6",
+                       "Accounts created per month") }}
+  </div>
+
+  <div class="admin-card">
+    <h2>Submissions</h2>
+    {{ ch.stacked_chart(subs_chart, ["accepted", "other"],
+                        {"accepted": "#2a78d6", "other": "#eb6834"},
+                        {"accepted": "Accepted", "other": "Not accepted"},
+                        "Submissions per month, by outcome") }}
+  </div>
+
+  <div class="admin-card">
+    <h2>Subscriptions</h2>
+    {{ ch.diverging_chart(churn_chart, "New and churned per month") }}
+    <div class="stat-row stat-row--tight">
+      {{ ch.stat("Trialing", billing.trialing) }}
+      {{ ch.stat("Past due", billing.past_due) }}
+      {{ ch.stat("Ending", billing.ending, "cancel at period end") }}
+      {{ ch.stat("New (30d)", billing.new_30d) }}
+      {{ ch.stat("Churned (30d)", billing.churned_30d) }}
+      {{ ch.stat("Conversion", "%.1f%%" % billing.conversion,
+                 "of all accounts") }}
+    </div>
+    {% if billing.plans %}
+      <table class="admin-table">
+        <tr><th>Plan</th><th>Live</th></tr>
+        {% for plan, n in billing.plans %}
+          <tr><td>{{ plan }}</td><td>{{ n }}</td></tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  </div>
+
+  <div class="admin-card">
+    <h2>Verdicts</h2>
+    {% if not verdicts %}
+      <p class="admin-hint">No submissions yet.</p>
+    {% else %}
+      <table class="admin-table admin-table--bars">
+        {% for v in verdicts %}
+          <tr>
+            <td>{{ v.label }}</td>
+            <td class="bar-cell">
+              <span class="bar" style="width: {{ '%.1f' % v.percent }}%;"></span>
+            </td>
+            <td class="num">{{ v.value }}</td>
+            <td class="num muted">{{ '%.0f' % v.percent }}%</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+  </div>
+
+  <div class="admin-card">
+    <h2>Content pipeline</h2>
+    <table class="admin-table">
+      <tr><th></th><th>Draft</th><th>In review</th><th>Published</th></tr>
+      {% for row in pipeline %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="num">{{ row.draft }}</td>
+          <td class="num">{{ row.review }}</td>
+          <td class="num">{{ row.published }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="admin-card">
+    <h2>Judge and engagement</h2>
+    <div class="stat-row stat-row--tight">
+      {{ ch.stat("Queued", judge.queued) }}
+      {{ ch.stat("Running", judge.running) }}
+      {{ ch.stat("Failed", judge.failed) }}
+      {{ ch.stat("Judged (24h)", judge.done_24h) }}
+      {{ ch.stat("Scratch runs", judge.scratch_runs) }}
+      {{ ch.stat("On a streak", engagement.on_a_streak, "3 days or more") }}
+      {{ ch.stat("Best streak", engagement.best_streak) }}
+      {{ ch.stat("XP awarded", engagement.xp_awarded) }}
+    </div>
+  </div>
+{% endblock admin_content %}

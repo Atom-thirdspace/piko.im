@@ -64,7 +64,7 @@ python app.py
 
 
 ## For Polar Setup
-<p>Currently we are using polar sandbox for the payments, and they are not implemented completely, you can get your sandbox from https://polar.sh and setup your environment in developer mode for contributions.</p>
+<p>Currently we are using polar sandbox for the payments, and they are not implemented completely, you can get your sandbox credentials from https://sandbox.polar.sh and setup your environment in developer mode for contributions.</p>
 
 ---
 
