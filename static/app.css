@@ -297,7 +297,7 @@ html body * {
 
 .topnav .topnav__account-menu a:hover,
 .topnav .topnav__account-menu .settings-link:hover {
-    background: #f3ece5;
+    color: var(--brand);
 }
 
 .topnav__account-menu form { margin: 0; }
