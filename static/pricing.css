@@ -5,8 +5,8 @@
     flex-wrap: wrap;
     padding: .9rem 1.1rem;
     margin-bottom: 1.5rem;
-    background: #f1f8f3;
-    border: 1px solid #2f7d4f;
+    background: var(--good-bg);
+    border: 1px solid var(--good);
     border-radius: .5rem;
 }
 .price-current p { margin: 0; }
@@ -18,7 +18,7 @@
     content: "\2713";
     position: absolute;
     left: 0;
-    color: #2f7d4f;
+    color: var(--good);
     font-weight: 700;
 }
 
@@ -30,14 +30,14 @@
 
 .price-card {
     padding: 1.4rem;
-    border: 1px solid #e6d9cd;
+    border: 1px solid var(--line);
     border-radius: .6rem;
-    background: #fffdfb;
+    background: var(--page);
     display: flex;
     flex-direction: column;
 }
 /* The recommended plan, called out without changing the layout height. */
-.price-card.is-pick { border-color: #77431d; box-shadow: inset 0 0 0 1px #77431d; }
+.price-card.is-pick { border-color: var(--brand-ink); box-shadow: inset 0 0 0 1px var(--brand); }
 .price-card h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
 .price-card form { margin: auto 0 0; }
 
@@ -46,18 +46,18 @@
     font-size: .7rem;
     letter-spacing: .06em;
     text-transform: uppercase;
-    color: #77431d;
+    color: var(--brand-ink);
     font-weight: 700;
 }
 
 .price-amount { margin: 0 0 .5rem; }
 .price-amount b { font-size: 2rem; line-height: 1.1; }
-.price-amount span { color: #7a6455; font-size: .9rem; }
+.price-amount span { color: var(--ink-soft); font-size: .9rem; }
 
-.price-blurb { color: #5d4a3c; font-size: .9rem; margin: 0 0 1rem; }
-.price-note { color: #7a6455; font-size: .9rem; margin: auto 0 0; }
+.price-blurb { color: var(--ink-2); font-size: .9rem; margin: 0 0 1rem; }
+.price-note { color: var(--ink-soft); font-size: .9rem; margin: auto 0 0; }
 
-.price-fine { margin-top: 1.5rem; font-size: .82rem; color: #7a6455; }
+.price-fine { margin-top: 1.5rem; font-size: .82rem; color: var(--ink-soft); }
 
 /* the settings-page billing row */
 

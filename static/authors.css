@@ -13,42 +13,42 @@
     flex-wrap: wrap;
     gap: .6rem;
     padding: .6rem 0;
-    border-bottom: 1px solid #f0e6dc;
+    border-bottom: 1px solid var(--line);
 }
 .auth-row:last-child { border-bottom: 0; }
 
-.auth-title { font-weight: 600; color: #77431d; text-decoration: none; }
+.auth-title { font-weight: 600; color: var(--brand-ink); text-decoration: none; }
 .auth-title:hover { text-decoration: underline; }
 
 .auth-actions { margin-left: auto; display: flex; gap: .4rem; }
 .auth-actions form { margin: 0; }
 
 .auth-btn {
-    border: 1px solid #d8c8ba;
-    background: #fff;
-    color: #5d4a3c;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink-2);
     border-radius: .35rem;
     padding: .28rem .6rem;
     font-size: .82rem;
     cursor: pointer;
 }
-.auth-btn:hover { background: #f6efe8; }
+.auth-btn:hover { background: var(--surface-2); }
 
-.auth-live { font-size: .78rem; color: #9b8878; align-self: center; }
+.auth-live { font-size: .78rem; color: var(--ink-soft); align-self: center; }
 
 /* An editor's rejection note - the one thing on the page an author must read. */
 .auth-note {
     flex-basis: 100%;
     margin: .15rem 0 0;
     font-size: .82rem;
-    color: #8a3423;
+    color: var(--brand-deep);
 }
 
 .auth-feedback {
     margin: .75rem 0 0;
     padding: .7rem .9rem;
-    background: #fdf0ed;
-    border: 1px solid #b3402f;
+    background: var(--bad-bg);
+    border: 1px solid var(--bad);
     border-radius: .5rem;
 }
 .auth-feedback b { display: block; font-size: .8rem; margin-bottom: .2rem; }
@@ -58,7 +58,7 @@
 
 .auth-form { margin-top: 1.25rem; max-width: 46rem; }
 .auth-form p { margin: 0 0 1rem; }
-.auth-form label { font-size: .9rem; color: #5d4a3c; }
+.auth-form label { font-size: .9rem; color: var(--ink-2); }
 
 .auth-form input[type="text"],
 .auth-form input[type="number"],
@@ -67,10 +67,10 @@
 .auth-form textarea {
     margin-top: .2rem;
     padding: .4rem .5rem;
-    border: 1px solid #d8c8ba;
+    border: 1px solid var(--line-strong);
     border-radius: .35rem;
-    background: #fffdfb;
-    color: #2a1a10;
+    background: var(--page);
+    color: var(--ink);
     font-size: .9rem;
     max-width: 100%;
     box-sizing: border-box;
@@ -83,29 +83,29 @@
     resize: vertical;
 }
 
-.auth-hint { display: block; font-size: .78rem; color: #7a6455; margin-top: .2rem; }
-.auth-err { display: block; font-size: .8rem; color: #b3402f; margin-top: .2rem; }
+.auth-hint { display: block; font-size: .78rem; color: var(--ink-soft); margin-top: .2rem; }
+.auth-err { display: block; font-size: .8rem; color: var(--bad); margin-top: .2rem; }
 
 /* deleting your own draft */
 
 .auth-danger {
     margin-top: 2.5rem;
     padding: 1rem 1.1rem;
-    border: 1px solid #edcfc8;
+    border: 1px solid var(--bad-line);
     border-radius: .5rem;
-    background: #fdf6f4;
+    background: var(--bad-bg);
 }
-.auth-danger h2 { margin: 0 0 .3rem; font-size: 1rem; color: #8a3423; }
+.auth-danger h2 { margin: 0 0 .3rem; font-size: 1rem; color: var(--brand-deep); }
 .auth-danger form { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .6rem; }
 .auth-danger code {
-    background: #f6efe8;
+    background: var(--surface-2);
     padding: .05rem .3rem;
     border-radius: .25rem;
     font-size: .85em;
 }
 
-.auth-btn--danger { border-color: #b3402f; color: #b3402f; }
-.auth-btn--danger:hover { background: #fdf0ed; }
+.auth-btn--danger { border-color: var(--bad); color: var(--bad); }
+.auth-btn--danger:hover { background: var(--bad-bg); }
 
 
 /* ---------- side-by-side editor and preview ---------- */

@@ -1,14 +1,14 @@
 input {
     border-radius: 12px;
-    border: 2px solid #e9dccf;
+    border: 2px solid var(--line);
 }
 
 input:not([type="checkbox"]):focus {
     outline: none;
-    border-color: #77431d;
+    border-color: var(--brand-ink);
     box-shadow: 0 0 0 3px rgba(165, 42, 42, 0.15);
 }
 
 input[type="checkbox"] {
-    accent-color: #77431d;
+    accent-color: var(--brand);
 }

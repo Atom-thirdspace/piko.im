@@ -1,9 +1,9 @@
 /* Developer API docs, and the key table in settings. Sits on learn.css. */
 
 .developers section { margin-top: 2.25rem; }
-.developers h2 { border-bottom: 1px solid #e6d9cd; padding-bottom: .35rem; }
+.developers h2 { border-bottom: 1px solid var(--line); padding-bottom: .35rem; }
 .developers code {
-    background: #f6efe8;
+    background: var(--surface-2);
     padding: .08rem .3rem;
     border-radius: .25rem;
     font-family: ui-monospace, Consolas, monospace;
@@ -11,27 +11,27 @@
 }
 
 .api-code {
-    background: #fffdfb;
-    border: 1px solid #d8c8ba;
+    background: var(--page);
+    border: 1px solid var(--line-strong);
     border-radius: .5rem;
     padding: .75rem .9rem;
     overflow-x: auto;
     font-family: ui-monospace, Consolas, monospace;
     font-size: .85rem;
     line-height: 1.5;
-    color: #2a1a10;
+    color: var(--ink);
 }
 
 .api-endpoint {
-    border-left: 3px solid #e6d9cd;
+    border-left: 3px solid var(--line);
     padding: .1rem 0 .1rem .8rem;
     margin: .8rem 0;
 }
 .api-sig { margin: 0; }
 .api-verb {
     display: inline-block;
-    background: #77431d;
-    color: #fff;
+    background: var(--brand);
+    color: var(--on-brand);
     border-radius: .25rem;
     padding: .05rem .4rem;
     font-size: .72rem;
@@ -39,16 +39,16 @@
     vertical-align: middle;
     margin-right: .35rem;
 }
-.api-note { margin: .2rem 0 0; font-size: .85rem; color: #5d4a3c; }
+.api-note { margin: .2rem 0 0; font-size: .85rem; color: var(--ink-2); }
 
 .api-warn {
     margin-top: .8rem;
     padding: .7rem .9rem;
-    background: #fdf6f4;
-    border: 1px solid #edcfc8;
+    background: var(--bad-bg);
+    border: 1px solid var(--bad-line);
     border-radius: .5rem;
     font-size: .88rem;
-    color: #5d4a3c;
+    color: var(--ink-2);
 }
 
 .api-table { width: 100%; border-collapse: collapse; margin: .6rem 0; }
@@ -57,13 +57,13 @@
     font-size: .78rem;
     text-transform: uppercase;
     letter-spacing: .04em;
-    color: #7a6455;
+    color: var(--ink-soft);
     padding: .35rem .6rem .35rem 0;
-    border-bottom: 1px solid #e6d9cd;
+    border-bottom: 1px solid var(--line);
 }
 .api-table td {
     padding: .4rem .6rem .4rem 0;
-    border-bottom: 1px solid #f0e6dc;
+    border-bottom: 1px solid var(--line);
     font-size: .9rem;
     vertical-align: top;
 }
@@ -73,8 +73,8 @@
 .key-fresh {
     margin: .75rem 0;
     padding: .8rem .95rem;
-    background: #f1f8f3;
-    border: 1px solid #2f7d4f;
+    background: var(--good-bg);
+    border: 1px solid var(--good);
     border-radius: .5rem;
 }
 .key-fresh p { margin: 0 0 .4rem; font-size: .9rem; }
@@ -82,9 +82,9 @@
     width: 100%;
     box-sizing: border-box;
     padding: .45rem .6rem;
-    border: 1px solid #d8c8ba;
+    border: 1px solid var(--line-strong);
     border-radius: .35rem;
-    background: #fff;
+    background: var(--surface);
     font-family: ui-monospace, Consolas, monospace;
     font-size: .82rem;
 }
@@ -95,18 +95,18 @@
     font-size: .74rem;
     text-transform: uppercase;
     letter-spacing: .04em;
-    color: #7a6455;
+    color: var(--ink-soft);
     padding: .3rem .5rem .3rem 0;
-    border-bottom: 1px solid #e6d9cd;
+    border-bottom: 1px solid var(--line);
 }
 .key-table td {
     padding: .45rem .5rem .45rem 0;
-    border-bottom: 1px solid #f0e6dc;
+    border-bottom: 1px solid var(--line);
     font-size: .86rem;
 }
 .key-table tr.is-dead td { opacity: .5; text-decoration: line-through; }
 .key-table form { margin: 0; }
 
 .key-scopes { border: 0; padding: 0; margin: .6rem 0; }
-.key-scopes legend { font-size: .82rem; color: #7a6455; padding: 0; }
+.key-scopes legend { font-size: .82rem; color: var(--ink-soft); padding: 0; }
 .key-scopes label { display: block; font-size: .88rem; margin: .25rem 0; }

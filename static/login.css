@@ -40,14 +40,14 @@ body{
     margin-top: 0;
 }
 .bold {
-    border: 2px solid #77431d;
+    border: 2px solid var(--brand-ink);
 }
 
 .oauth-btn img {
     width: 35px;
     display: block;
     margin: auto;
-    border: 2px solid #77431d;
+    border: 2px solid var(--brand-ink);
 
     padding: 10px;
     transition: 0.3s;
@@ -81,15 +81,15 @@ form {
 
 .auth-form input:focus {
     outline: none;
-    border-color: #77431d;
+    border-color: var(--brand-ink);
     box-shadow: 0 0 0 2px rgba(119, 67, 29, 0.15);
 }
 h1 {
     transform: translateY(-25%) translateX(21%);
-    color: #77431d;
+    color: var(--brand-ink);
 }
 label{
-    color: #77431d;
+    color: var(--brand-ink);
 }
 
 .green {
@@ -98,8 +98,8 @@ label{
 .auth-form input:-webkit-autofill,
 .auth-form input:-webkit-autofill:hover,
 .auth-form input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px #fffdfb inset;
-    -webkit-text-fill-color: #2a1a10;
+    -webkit-box-shadow: 0 0 0 1000px var(--page) inset;
+    -webkit-text-fill-color: var(--ink);
 }
 
 #leaf {

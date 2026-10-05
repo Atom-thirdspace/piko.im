@@ -1,0 +1,158 @@
+/* Design tokens, light and dark.
+ *
+ * Loaded before every other stylesheet. Nothing else in the project should
+ * hard-code a colour: add a token here instead, so dark mode stays a single
+ * place to edit.
+ *
+ * The dark column is chosen for the dark surface, not flipped from the light
+ * one. Every text pair clears WCAG AA against the surface it sits on, and
+ * white-on-brand still passes at 5.67:1 so solid brand buttons keep working.
+ */
+
+:root {
+  color-scheme: light;
+
+  --page:         #fffdfb;
+  --surface:      #ffffff;
+  --surface-2:    #fdf5ec;
+  --surface-3:    #f3ece5;
+
+  --line:         #e6d9cd;
+  --line-strong:  #d8c8ba;
+
+  --ink:          #2a1a10;
+  --ink-2:        #5d4a3c;
+  --ink-soft:     #7a6455;
+  --ink-muted:    #898781;
+
+  --brand:        #77431d;   /* solid fills: white text sits on this */
+  --brand-ink:    #77431d;   /* text and borders */
+  --brand-deep:   #8a3423;
+  --brand-press:  #5d3416;
+  --on-brand:     #ffffff;
+
+  --good:         #2f7d4f;
+  --good-bg:      #f1f8f3;
+  --bad:          #b3402f;
+  --bad-strong:   #c0392b;
+  --bad-bg:       #fdf0ed;
+  --bad-line:     #edcfc8;
+  --danger-solid: #c0392b;   /* white text sits on this in both modes */
+
+  --accent:       #6c5ce7;
+
+  /* Code stays dark in both modes - a light code block in a dark page is
+     the thing people complain about most. */
+  --code-bg:      #2a1a10;
+  --code-ink:     #f3ece5;
+
+  --shadow:       rgba(58, 36, 22, .10);
+}
+
+/* The OS preference, unless the viewer has stamped a light theme. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+
+    --page:         #15110e;
+    --surface:      #1d1814;
+    --surface-2:    #241e18;
+    --surface-3:    #2b241d;
+
+    --line:         #3a3029;
+    --line-strong:  #4b3f35;
+
+    --ink:          #f6efe8;
+    --ink-2:        #d8c8ba;
+    --ink-soft:     #b8a695;
+    --ink-muted:    #94897f;
+
+    --brand:        #9a5526;
+    --brand-ink:    #e3996a;
+    --brand-deep:   #e07a5f;
+    --brand-press:  #b0652f;
+    --on-brand:     #ffffff;
+
+    --good:         #4bbd7a;
+    --good-bg:      #16281e;
+    --bad:          #f07a68;
+    --bad-strong:   #e35c4a;
+    --bad-bg:       #2d1a16;
+    --bad-line:     #5a2f26;
+    --danger-solid: #c0392b;
+
+    --accent:       #8e81f0;
+
+    --code-bg:      #0f0c0a;
+    --code-ink:     #e9dccf;
+
+    --shadow:       rgba(0, 0, 0, .45);
+  }
+}
+
+/* The explicit choice wins over the OS setting, both ways. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page:         #15110e;
+  --surface:      #1d1814;
+  --surface-2:    #241e18;
+  --surface-3:    #2b241d;
+
+  --line:         #3a3029;
+  --line-strong:  #4b3f35;
+
+  --ink:          #f6efe8;
+  --ink-2:        #d8c8ba;
+  --ink-soft:     #b8a695;
+  --ink-muted:    #94897f;
+
+  --brand:        #9a5526;
+  --brand-ink:    #e3996a;
+  --brand-deep:   #e07a5f;
+  --brand-press:  #b0652f;
+  --on-brand:     #ffffff;
+
+  --good:         #4bbd7a;
+  --good-bg:      #16281e;
+  --bad:          #f07a68;
+  --bad-strong:   #e35c4a;
+  --bad-bg:       #2d1a16;
+  --bad-line:     #5a2f26;
+  --danger-solid: #c0392b;
+
+  --accent:       #8e81f0;
+
+  --code-bg:      #0f0c0a;
+  --code-ink:     #e9dccf;
+
+  --shadow:       rgba(0, 0, 0, .45);
+}
+
+/* ---------- the toggle ---------- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .25rem .6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: .85rem;
+  cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--line-strong); }
+
+/* One icon shows at a time; which one depends on the resolved theme. */
+.theme-toggle__dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .theme-toggle__light { display: none; }
+  :root:where(:not([data-theme="light"])) .theme-toggle__dark { display: inline; }
+}
+:root[data-theme="dark"] .theme-toggle__light { display: none; }
+:root[data-theme="dark"] .theme-toggle__dark { display: inline; }
+:root[data-theme="light"] .theme-toggle__light { display: inline; }
+:root[data-theme="light"] .theme-toggle__dark { display: none; }
