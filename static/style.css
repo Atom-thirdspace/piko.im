@@ -668,8 +668,3 @@ button:hover { background: #5d3416; }
 
 button--quiet { border-color: #d8c8ba; color: var(--ink-soft); padding: .45rem .9rem; }
 
-main {
-    margin-left: 25%;
-    margin-right: 25%;
-    margin-top: 2%;
-}
