@@ -48,7 +48,7 @@
     {% if people %}
       <ul class="cm__grid">
         {% for p in people %}
-          <li class="person">
+          <li class="card">
             {% if p.avatar_url %}
               <img class="person__avatar" src="{{ p.avatar_url }}" alt="" loading="lazy">
             {% else %}

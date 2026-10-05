@@ -1,3 +1,15 @@
+:root {
+    --bg: rgb(251, 246, 244);
+    --card: #fffdfb;
+    --ink: #2a1a10;
+    --ink-soft: #7a6455;
+    --brand: #77431d;
+    --brand-soft: #fdf5ec;
+    --line: #e9dccf;
+    --good: #2f7d4f;
+    --radius: .85rem;
+}
+
 .cm { max-width: 60rem; margin: 2rem auto 4rem; padding: 0 1rem; }
 .cm--narrow { max-width: 40rem; }
 .cm__head { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
@@ -133,3 +145,19 @@
     padding: 0; margin: .4rem 0 0; }
 .showcase-topics li { background: #f3ece5; border-radius: 8px;
     padding: .2rem .55rem; font-size: .8rem; }
+
+
+.card {
+    position: relative;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow:
+        0 3px 0 var(--line),
+        0 8px 20px rgba(42, 26, 16, 0.06);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease;
+}

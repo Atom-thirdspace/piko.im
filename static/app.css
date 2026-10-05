@@ -10,6 +10,7 @@
 body {
     font-family: face, sans-serif;
     margin-top: 0;
+    margin: 0;
 }
 
 html,
@@ -42,6 +43,7 @@ html body * {
     background: rgba(251, 246, 244, .92);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid #e9dccf;
+    padding-right: 5.8rem;
 }
 
 .topnav a,
@@ -58,6 +60,8 @@ html body * {
 
 
 .topnav form { margin: 0; }
+
+.topnav__search { display: inline-flex; }
 
 .verify-banner {
     display: flex;
@@ -176,3 +180,128 @@ html body * {
 .ach__item--consistency { border-color: #d9a441; }
 .ach__item--level { border-color: #77431d; }
 .ach__item--range { border-color: #6aa3c8; }
+#search {
+    border-radius: 12px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    width: 8rem;
+    border: 0.07rem solid black;
+    background-color: white;
+
+
+}
+
+#search:focus {
+    outline: none;
+    border-color: #77431d;
+    box-shadow: 0 0 0 3px rgba(165, 42, 42, 0.15);
+}
+
+.tito {
+    text-decoration: none;
+    color: black;
+}
+
+.point {
+    display: flex;
+    flex-direction: row;
+}
+
+.dashi {
+    width: 2.5rem;
+    height: 2.5rem;
+    box-sizing: border-box;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 1.5px solid #77431d;
+
+    display: block;
+}
+
+.dashi--blank {
+    display: grid;
+    place-items: center;
+    background: #77431d;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.topnav__account {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 110;
+}
+
+.topnav__account-trigger {
+    display: block;
+    list-style: none;
+    cursor: pointer;
+}
+
+.topnav__account-trigger::-webkit-details-marker { display: none; }
+.topnav__account-trigger::marker { content: ""; }
+.topnav__account-trigger:focus-visible {
+    outline: 3px solid #a06a2c;
+    outline-offset: 3px;
+    border-radius: 50%;
+}
+
+.topnav__account::details-content {
+    transition: content-visibility 0.15s allow-discrete,
+                opacity 0.15s ease;
+}
+
+.topnav__account[open]::details-content {
+    opacity: 1;
+}
+
+.topnav__account-menu {
+    position: absolute;
+    top: calc(100% + .75rem);
+    right: 0;
+    min-width: 10rem;
+    padding: .4rem;
+    background-image: url(https://cdn.hackclub.com/01a10a31-9f25-7eb0-8c0c-cbf1f4ac8f41/menu.avif);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(-10px);
+}
+
+.topnav__account[open] .topnav__account-menu {
+    opacity: 1;
+    transform: translateY(0);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.topnav .topnav__account-menu a,
+.topnav .topnav__account-menu .settings-link {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: .65rem 4.5rem;
+    border-radius: 8px;
+    color: #2a1a10;
+    text-align: left;
+    text-decoration: none;
+    font-size: .9rem;
+}
+
+.topnav .topnav__account-menu a::after { display: none; }
+
+.topnav .topnav__account-menu a:hover,
+.topnav .topnav__account-menu .settings-link:hover {
+    color: var(--brand);
+}
+
+.topnav__account-menu form { margin: 0; }
+
+@media (max-width: 60rem) {
+    .topnav__account { right: 1rem; }
+}

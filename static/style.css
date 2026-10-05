@@ -9,6 +9,18 @@
     z-index: 400;
 
 }
+
+:root {
+    --bg: rgb(251, 246, 244);
+    --card: #fffdfb;
+    --ink: #2a1a10;
+    --ink-soft: #7a6455;
+    --brand: #77431d;
+    --brand-soft: #fdf5ec;
+    --line: #e9dccf;
+    --good: #2f7d4f;
+    --radius: .85rem;
+}
 body {
     margin: 0;
     
@@ -251,7 +263,7 @@ img {
 /* --- profile & settings --- */
 .profile, .settings { max-width: 640px; margin: 3rem auto; padding: 0 1rem; }
 .profile-head { display: flex; align-items: center; gap: 1rem; }
-.profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; }
+.profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 1.5px solid #77431d; }
 .profile-avatar-blank { display: grid; place-items: center; font-size: 1.8rem;
                         background: #6c5ce7; color: #fff; }
 .profile-id h1 { margin: 0; font-size: 1.4rem; }
@@ -260,13 +272,13 @@ img {
 .profile-edit { margin-left: auto; padding: .5rem .9rem; border-radius: 8px;
                 background: rgba(0,0,0,.08); text-decoration: none; color: inherit; }
 .profile-level { margin: 1.6rem 0 .4rem; }
-.profile-level-line { display: flex; justify-content: space-between; font-size: .9rem; }
+.profile-level-line { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 0.5rem; }
 .profile-bar { height: 8px; margin-top: .4rem; border-radius: 4px;
                background: rgba(0,0,0,.12); overflow: hidden; }
 .profile-bar-fill { display: block; height: 100%; background: #6c5ce7; }
 .profile-stats { display: grid; grid-template-columns: repeat(3, 1fr);
                  gap: .8rem; margin: 1.6rem 0; }
-.stat { padding: .8rem; border-radius: 10px; background: #f3f0ff; text-align: center; }
+.stat { padding: .8rem; border-radius: 10px; background: #fffdfb; text-align: center; border: 1px solid #e9dccf; }
 .stat b { display: block; font-size: 1.3rem; }
 .stat span { font-size: .8rem; opacity: .7; }
 .profile-track, .profile-activity { margin-top: 1.8rem; }
@@ -519,7 +531,7 @@ img {
 .settings-check--stacked { flex-direction: column; align-items: stretch;
     gap: .3rem; margin-top: .8rem; }
 .settings-check--stacked textarea { width: 100%; font: inherit; padding: .5rem;
-    border: 1px solid #d9cec4; border-radius: 8px; resize: vertical; }
+    border: 1px solid #d9cec4; border-radius: 8px; resize: none; height: 1.3rem; }
 
 /* Security keys */
 .key-list { list-style: none; margin: .6rem 0; padding: 0; }
@@ -531,4 +543,128 @@ img {
 .key-when { color: #7a6455; font-size: .8rem; flex: 1; }
 .key-add { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .6rem; }
 
+
+/* ---------------------------------------------------------------- meter */
+
+.meter {
+    width: 100%;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    border: 2px solid #3b2416;
+    border-radius: 999px;
+    background: #e7ddd5;
+    box-shadow: 0 2px 0 #3b2416;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.meter__fill {
+    display: block;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 999px;
+
+    /* Your brand color */
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, #77431d 80%, white),
+        #77431d
+    );
+
+    box-shadow:
+        0 0 6px color-mix(in srgb, #77431d 65%, transparent),
+        0 0 14px color-mix(in srgb, #77431d 35%, transparent);
+
+    position: relative;
+    overflow: hidden;
+
+    /* Jinja's inline width controls the progress */
+    transition: width .4s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* Moving shine */
+.meter__fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 35%;
+    height: 100%;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, .25),
+        transparent
+    );
+
+    animation: meter-shine 2.2s ease-in-out infinite;
+}
+
+/* Green version if you use .meter--goal */
+.meter--goal .meter__fill {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, #2f7d4f 80%, white),
+        #2f7d4f
+    );
+
+    box-shadow:
+        0 0 6px color-mix(in srgb, #2f7d4f 65%, transparent),
+        0 0 14px color-mix(in srgb, #2f7d4f 35%, transparent);
+}
+
+@keyframes meter-shine {
+    from {
+        transform: translateX(-150%);
+    }
+
+    to {
+        transform: translateX(400%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .meter__fill::after {
+        animation: none;
+    }
+}
+
+/* ---------------------------------------------------------------- */
+.card {
+    position: relative;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow:
+        0 3px 0 var(--line),
+        0 8px 20px rgba(42, 26, 16, 0.06);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease;
+}
+
+button {
+    display: inline-block;
+    padding: .55rem 1.1rem;
+    border-radius: .5rem;
+    border: 1px solid var(--brand);
+    background: none;
+    color: var(--brand);
+    font: inherit;
+    font-size: .92rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+}
+button:hover { background: var(--brand-soft); }
+button:active { transform: scale(.98); }
+
+button { background: var(--brand); color: #fff; }
+button:hover { background: #5d3416; }
+
+button--quiet { border-color: #d8c8ba; color: var(--ink-soft); padding: .45rem .9rem; }
 
