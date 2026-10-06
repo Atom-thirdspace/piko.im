@@ -40,19 +40,19 @@ body{
     margin-top: 0;
 }
 .bold {
-    border: 2px solid var(--brand-ink);
+    border: 2px solid var(--sign-brand);
 }
 
 .oauth-btn img {
     width: 35px;
     display: block;
     margin: auto;
-    border: 2px solid var(--brand-ink);
+    border: 2px solid var(--sign-brand);
 
     padding: 10px;
     transition: 0.3s;
     border-radius: 12px;
-    background-color: rgb(255, 222, 169);
+    background-color: var(--sign-field);
 }
 
 .oauth-btn img:hover {
@@ -76,20 +76,24 @@ form {
 
 .auth-form input,
 .auth-form button {
-    background-color: rgb(255, 222, 169);
+    background-color: var(--sign-field);
+    color: var(--sign-ink);
 }
 
 .auth-form input:focus {
     outline: none;
-    border-color: var(--brand-ink);
-    box-shadow: 0 0 0 2px rgba(119, 67, 29, 0.15);
+    border-color: var(--sign-brand);
+    box-shadow: 0 0 0 2px rgba(119, 67, 29, 0.25);
 }
 h1 {
     transform: translateY(-25%) translateX(21%);
-    color: var(--brand-ink);
+    color: var(--sign-brand);
 }
+/* Labels take the darker ink: brand-on-sign measures 3.27:1, which is
+   under AA for text this size. Swap to --sign-brand to restore the
+   original look. */
 label{
-    color: var(--brand-ink);
+    color: var(--sign-ink);
 }
 
 .green {
@@ -98,8 +102,8 @@ label{
 .auth-form input:-webkit-autofill,
 .auth-form input:-webkit-autofill:hover,
 .auth-form input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px var(--page) inset;
-    -webkit-text-fill-color: var(--ink);
+    -webkit-box-shadow: 0 0 0 1000px var(--sign-field) inset;
+    -webkit-text-fill-color: var(--sign-ink);
 }
 
 #leaf {
@@ -131,3 +135,10 @@ label{
     font-size: 1.1rem;
 
 }
+
+/* The divider and the passkey button also sit on the sign. */
+.auth .auth-divider { color: var(--sign-soft); opacity: 1; }
+#passkey-btn { color: var(--sign-ink); }
+
+/* This one sits below the sign, on the page, so it follows the theme. */
+.auth-alt { color: var(--ink); }

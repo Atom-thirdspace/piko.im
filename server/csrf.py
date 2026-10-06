@@ -1,6 +1,6 @@
 import hmac
 import secrets
-from flask import abort, current_app, request, session
+from flask import abort, current_app, jsonify, request, session
 from markupsafe import Markup
 
 FIELD = "_csrf"
@@ -36,6 +36,12 @@ def init_csrf(app):
         expected = session.get(SESSION_KEY) or ""
         if not expected or not hmac.compare_digest(sent, expected):
             current_app.logger.warning("CSRF reject on %s", request.endpoint)
-            abort(400, description="Your session expired. Reload and try again.")
+            message = "Your session expired. Reload and try again."
+            # A fetch() caller parses the body as JSON. Handing it an HTML
+            # error page turns a clear message into "Something went wrong".
+            if request.is_json or "application/json" in (
+                    request.headers.get("Accept") or ""):
+                return jsonify(error=message), 400
+            abort(400, description=message)
 
             

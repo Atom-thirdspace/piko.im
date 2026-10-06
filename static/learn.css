@@ -24,17 +24,21 @@
     display: inline-block; padding: .15rem .55rem; border-radius: 999px;
     font-size: .75rem; background: var(--surface-3); color: var(--ink-2); letter-spacing: .02em;
 }
-.pill-on, .pill-done { background: var(--good-bg); color: var(--on-brand); }
-.pill-fail { background: var(--bad-bg); color: var(--on-brand); }
+/* Solid chips: white text sits on them, so the fill stays solid in both
+   modes rather than becoming the pale tint. */
+.pill-on, .pill-done { background: var(--good-solid); color: var(--on-brand); }
+.pill-fail { background: var(--bad-solid); color: var(--on-brand); }
 .pill-code { background: var(--brand); color: var(--on-brand); }
 .pill-quiz { background: #4a5fa5; color: var(--on-brand); }
 .pill-reading { background: var(--surface-3); color: var(--ink-2); }
-.pill-beginner { background: var(--surface-3); color: #2f5d42; }
-.pill-intermediate { background: var(--surface-3); color: #7a5a1f; }
-.pill-advanced { background: var(--surface-3); color: var(--brand-deep); }
-.pill-easy { background: var(--surface-3); color: #2f5d42; }
-.pill-medium { background: var(--surface-3); color: #7a5a1f; }
-.pill-hard { background: var(--surface-3); color: var(--brand-deep); }
+.pill-beginner { background: var(--good-bg); color: var(--good); }
+.pill-intermediate { background: var(--surface-3); color: var(--brand-ink); }
+.pill-advanced { background: var(--bad-bg); color: var(--bad); }
+/* Difficulty keeps its green/warm/red coding, but both halves of each
+   pair now flip together. */
+.pill-easy { background: var(--good-bg); color: var(--good); }
+.pill-medium { background: var(--surface-3); color: var(--brand-ink); }
+.pill-hard { background: var(--bad-bg); color: var(--bad); }
 
 /* buttons */
 .btn {
