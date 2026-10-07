@@ -11,6 +11,7 @@ from .markdown import render as render_md
 from . import pathmap
 from ..admin_gate import is_admin
 from ..content import visible
+from ..memo import per_request
 from .quiz import questions_for
 
 learn_bp = Blueprint("learn", __name__, url_prefix="/learn")
@@ -56,6 +57,7 @@ def _lesson_or_404(track, unit_slug, lesson_slug):
     return unit, lesson
 
 
+@per_request(lambda track: track.id)
 def _visible_units(track):
     """track.units is an unfiltered relationship - drafts would show through."""
     return [u for u in track.units if u.status == PUBLISHED or _may_preview(u)]
@@ -65,8 +67,13 @@ def _visible_lessons(unit):
     return [l for l in unit.lessons if l.status == PUBLISHED or _may_preview(l)]
 
 
+@per_request(lambda track: track.id)
 def _ordered_lessons(track):
-    """Every lesson in the track, in the order a learner walks them."""
+    """Every lesson in the track, in the order a learner walks them.
+
+    Memoised per request: _track_summary, _next_lesson and the path map all
+    want the same list, and each call was its own round trip.
+    """
     stmt = (db.select(Lesson)
             .join(Unit, Lesson.unit_id == Unit.id)
             .where(Unit.track_id == track.id)

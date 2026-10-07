@@ -2,8 +2,10 @@ from flask import Blueprint, jsonify, redirect, render_template, url_for
 
 from . import potd, quests
 from .achievements import describe
-from .models import (Enrollment, LessonProgress, Submission, XpEvent, db,
-                     earned_rows, recent_freeze_uses)
+from sqlalchemy.orm import joinedload
+
+from .models import (Enrollment, Lesson, LessonProgress, Submission, XpEvent,
+                     db, earned_rows, recent_freeze_uses)
 from .progress import level_progress, user_today, MAX_FREEZES, streak_state
 from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
@@ -14,30 +16,35 @@ dashboard_bp = Blueprint("dashboard", __name__)
 
 
 def _stats(user):
-    lessons_done = db.session.execute(
-        db.select(db.func.count())
-        .select_from(LessonProgress)
-        .where(LessonProgress.user_id == user.id)
-    ).scalar() or 0
-    problems_solved = db.session.execute(
+    """One round trip instead of three.
+
+    Correlated subqueries keep each count independent - a join would fan
+    the rows out and inflate two of the three.
+    """
+    row = db.session.execute(db.select(
+        db.select(db.func.count()).select_from(LessonProgress)
+          .where(LessonProgress.user_id == user.id).scalar_subquery(),
         db.select(db.func.count(db.distinct(Submission.problem_id)))
-        .where(Submission.user_id == user.id, Submission.verdict == "accepted")
-    ).scalar() or 0
-    submissions = db.session.execute(
-        db.select(db.func.count())
-        .select_from(Submission)
-        .where(Submission.user_id == user.id)
-    ).scalar() or 0
+          .where(Submission.user_id == user.id,
+                 Submission.verdict == "accepted").scalar_subquery(),
+        db.select(db.func.count()).select_from(Submission)
+          .where(Submission.user_id == user.id).scalar_subquery(),
+    )).one()
     return {
-        "lessons_done": lessons_done,
-        "problems_solved": problems_solved,
-        "submissions": submissions,
+        "lessons_done": row[0] or 0,
+        "problems_solved": row[1] or 0,
+        "submissions": row[2] or 0,
     }
 
 
 def _primary_enrollment(user):
+    # track, current_lesson and that lesson's unit were four separate lazy
+    # loads; one join fetches the lot.
     enrollment = db.session.execute(
-        db.select(Enrollment).where(
+        db.select(Enrollment)
+        .options(joinedload(Enrollment.track),
+                 joinedload(Enrollment.current_lesson).joinedload(Lesson.unit))
+        .where(
             Enrollment.user_id == user.id,
             Enrollment.is_primary.is_(True),
         )
@@ -92,7 +99,9 @@ def _activity(user, limit=8):
 
 def _dashboard_data(user):
     today = user_today(user)
-    quests.sync(user)
+    # One evaluation of the quest board, shared between the payout and
+    # the render.
+    _, board = quests.sync_board(user, today)
     # One grouped query replaces the old pass over every XpEvent row, and
     # serves the heatmap from the same result.
     grid = heatmap(user)
@@ -116,7 +125,7 @@ def _dashboard_data(user):
         "max_freezes": MAX_FREEZES,
         "achievements": describe([r.key for r in earned_rows(user, limit=6)]),
         "next_up": recommend.next_problem(user),
-        "quests": quests.board(user, today),
+        "quests": board,
         "potd": potd.card(user),
         "goal_choices": DAILY_GOAL_CHOICES,
     }

@@ -1,7 +1,8 @@
 import random
 from datetime import datetime, time, timedelta, timezone
 
-from .models import PUBLISHED, Problem, ProblemSolve, User, _utcnow, db
+from .memo import per_request
+from .models import (PUBLISHED, Problem, ProblemSolve, User, _utcnow, db)
 from .progress import award_xp
 
 BONUS_XP = 25
@@ -21,6 +22,7 @@ def _day_bounds(day):
     return start, start + timedelta(days=1)
 
 
+@per_request(lambda day=None: day or potd_date())
 def problem_for(day=None):
     day = day or potd_date()
     ids = db.session.execute(

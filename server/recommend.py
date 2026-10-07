@@ -38,6 +38,13 @@ def _by_topic(user):
 def next_problem(user):
     if user is None:
         return None
+
+    live = db.session.execute(
+        db.select(Problem.id).where(Problem.status == PUBLISHED).limit(1)
+    ).scalar()
+    if live is None:
+        return None
+
     solved = _solved_ids(user)
     strength = _by_topic(user)
     target = _target_difficulty(len(solved))
@@ -65,11 +72,14 @@ def next_problem(user):
         if hit:
             return hit
 
-    order = ([target] + [d for d in LADDER if d != target])
-    for difficulty in order:
-        hit = pick(base.where(Problem.difficulty == difficulty)
-                   .order_by(Problem.id),
-                   "a %s one to keep moving" % difficulty)
-        if hit:
-            return hit
+    # One ordered query rather than a round trip per rung: the CASE ranks
+    # the target difficulty first, then the rest of the ladder.
+    rung = {d: i for i, d in enumerate([target]
+                                       + [d for d in LADDER if d != target])}
+    row = db.session.execute(
+        base.order_by(db.case(rung, value=Problem.difficulty, else_=99),
+                      Problem.id).limit(1)).scalars().first()
+    if row is not None:
+        return {"problem": row,
+                "reason": "a %s one to keep moving" % row.difficulty}
     return None 

@@ -39,6 +39,7 @@ from server.search import search_bp
 from server.contests import contests_bp
 from server import notify as _notify
 from server.models import unread_count as _unread
+from server.memo import per_request
 
 load_dotenv()
 
@@ -52,6 +53,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=os.environ.get("FLASK_ENV") == "production",
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
+_unread_cached = per_request(lambda user: user.id if user else 0)(_unread)
 
 init_db(app)
 init_oauth(app)
@@ -88,7 +90,7 @@ app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels
 app.jinja_env.globals["is_pro"] = lambda: _is_pro(current_user())
 app.jinja_env.globals["billing_state"] = lambda: _sub_state(current_user())
-app.jinja_env.globals["unread_notifications"] = lambda: _unread(current_user())
+app.jinja_env.globals["unread_notifications"] = lambda: _unread_cached(current_user())
 _notify.register_cli(app)
 
 

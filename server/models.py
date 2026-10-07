@@ -148,7 +148,7 @@ def init_db(app):
     app.config["SQLALCHEMY_DATABASE_URI"] = _normalize_db_url(url)
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     # Neon drops idle connections; pre_ping avoids handing out a dead one.
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_recycle": 300}
     db.init_app(app)
     with app.app_context():
         db.create_all()

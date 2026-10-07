@@ -8,6 +8,8 @@ from .models import (PUBLISHED, Enrollment, Lesson, LessonProgress,
                      Problem, ProblemSolve, Unit, XpEvent, db)
 from .progress import award_xp, day_bounds, user_today
 
+from .memo import per_request
+
 QUESTS_PER_DAY = 3
 ALL_THREE_BONUS = 40
 
@@ -153,13 +155,8 @@ REGISTRY = (
 BY_KEY = {q.key: q for q in REGISTRY}
 
 
+@per_request(lambda user, day : (user.id, day))
 def todays_quests(user, day):
-    """Stable for a (user, day) even as the catalogue changes underneath.
-
-    Shuffling the whole registry and walking it keeps the draw from
-    reshuffling when a quest becomes newly feasible, and anything already
-    paid for today is locked in so earned progress can never vanish.
-    """
     cap = capability(user)
     order = list(REGISTRY)
     random.Random("%s:%d" % (day.isoformat(), user.id)).shuffle(order)
@@ -176,6 +173,7 @@ def todays_quests(user, day):
 def _ref(day, key):
     return "%s:%s" % (day.isoformat(), key)
 
+@per_request(lambda user, day: (user.id, day))
 def _paid_keys(user, day):
     return {r.split(":", 1)[1] for r in _paid_refs(user, day)} - {"all"}
 
@@ -211,17 +209,34 @@ def board(user, day=None):
             "bonus_paid": _ref(day, "all") in paid}
 
 
-def sync(user, day=None):
+def sync_board(user, day=None):
+    """Pay for anything finished, and hand back the board it was read from.
+
+    One evaluation instead of two. board() is deliberately not cached - a
+    request that solves a problem and then reads the board must see the
+    solve - so the saving comes from sharing this result, not from a memo.
+    """
     day = day or user_today(user)
-    lo, hi = day_bounds(user, day)
-    quests = todays_quests(user, day)
+    state = board(user, day)
 
-    gained, done_count = 0, 0
-    for q in quests:
-        if q.count(user, lo, hi) >= q.target:
-            done_count += 1
-            gained += award_xp(user, q.reward, "daily", _ref(day, q.key))["awarded"]
+    gained = 0
+    for task in state["tasks"]:
+        if task["complete"] and not task["paid"]:
+            got = award_xp(user, task["reward"], "daily",
+                           _ref(day, task["key"]))["awarded"]
+            if got:
+                task["paid"] = True
+            gained += got
 
-    if quests and done_count == len(quests):
-        gained += award_xp(user, ALL_THREE_BONUS, "daily", _ref(day, "all"))["awarded"]
-    return gained
+    if state["all_done"] and not state["bonus_paid"]:
+        got = award_xp(user, ALL_THREE_BONUS, "daily",
+                       _ref(day, "all"))["awarded"]
+        if got:
+            state["bonus_paid"] = True
+        gained += got
+    return gained, state
+
+
+def sync(user, day=None):
+    """Just the payout, for callers with no page to render."""
+    return sync_board(user, day)[0]
