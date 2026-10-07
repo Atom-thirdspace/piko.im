@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>You have been invited to a Piko classroom</title>
+  <style>
+    {% include "emails/classroom-invite.css" %}
+  </style>
+</head>
+<body class="email email-classroom-invite">
+  <div class="email-wrapper">
+    <table class="email-shell" role="presentation">
+      <tr>
+        <td class="email-header"><a class="brand" href="https://piko.im">Piko</a></td>
+      </tr>
+      <tr>
+        <td class="email-content">
+          <p class="eyebrow">Classroom invite</p>
+          <h1 class="email-title">
+            {% if teacher %}{{ teacher }} has{% else %}You have been{% endif %}
+            invited you to join
+            {% if room_name %}{{ room_name }}{% else %}a classroom{% endif %}
+          </h1>
+          <div class="message">
+            <p>
+              Joining puts you on the roster and gives you the classroom's
+              Pro access for as long as it runs.
+            </p>
+          </div>
+
+          <p class="code-box">{{ code }}</p>
+
+          {% if join_url %}
+            <p><a class="button" href="{{ join_url }}">Join the classroom</a></p>
+            <p class="fine-print">
+              Or go to <a href="{{ join_url }}">{{ join_url }}</a> and enter the
+              code above.
+            </p>
+          {% endif %}
+
+          <p class="fine-print">
+            If you were not expecting this, ignore it &mdash; nothing happens
+            until you enter the code.
+          </p>
+        </td>
+      </tr>
+      <tr><td class="email-footer"><p>Piko</p></td></tr>
+    </table>
+  </div>
+</body>
+</html>

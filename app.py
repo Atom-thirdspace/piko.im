@@ -37,6 +37,7 @@ from server.students import students_bp
 from server.notification_routes import notifications_bp
 from server.search import search_bp
 from server.contests import contests_bp
+from server.health import health_bp
 from server import notify as _notify
 from server.models import unread_count as _unread
 from server.memo import per_request
@@ -80,6 +81,7 @@ app.register_blueprint(students_bp)
 app.register_blueprint(notifications_bp)
 app.register_blueprint(search_bp)
 app.register_blueprint(contests_bp)
+app.register_blueprint(health_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)

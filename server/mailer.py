@@ -8,6 +8,7 @@ VERIFY_SUBJECT = "Confirm your email for Piko"
 LOGIN_ALERT_SUBJECT = "New sign-in to your Piko account"
 AUTHOR_INVITE_SUBJECT = "You have been invited to write for Piko"
 STUDENT_CODE_SUBJECT = "Your Piko student verification code"
+CLASSROOM_INVITE_SUBJECT = "You have been invited to a Piko classroom"
 
 
 def _client_ready():
@@ -34,7 +35,6 @@ def _send(to_email, subject, html):
 
 
 def send_welcome_email(to_email, name=None):
-    """For signups where the provider already vouched for the address."""
     html = render_template(
         "emails/authentication.html",
         name=name,
@@ -104,3 +104,9 @@ def send_notification_email(to_email, title, body, url=None, name=None):
     html = render_template("emails/notification.html", title=title,
                            body=body, url=_absolute(url), name=name)
     return _send(to_email, title, html)
+
+
+def send_classroom_invite_email(to_email, join_url, code, room_name, teacher):
+    html = render_template("emails/classroom-invite.html", join_url=join_url,
+                           code=code, room_name=room_name, teacher=teacher)
+    return _send(to_email, CLASSROOM_INVITE_SUBJECT, html)

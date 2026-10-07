@@ -1,0 +1,15 @@
+/* Classroom invite email. */
+{% include "emails/_shell.css" %}
+
+.code-box {
+    margin: 18px 0;
+    padding: 14px 18px;
+    background: #f6efe8;
+    border: 1px solid #e6d9cd;
+    border-radius: 8px;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 26px;
+    letter-spacing: .25em;
+    text-align: center;
+    color: #2a1a10;
+}

@@ -1,0 +1,47 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.detail', class_id=room.id) }}">{{ room.name or 'Your classroom' }}</a> &middot;
+      <a href="{{ url_for('classroom.assignments', class_id=room.id) }}">Assignments</a>
+    </p>
+    <h1>Who is stuck</h1>
+    <p class="learn-lede">
+      Students who have submitted the same problem four or more times in the
+      last week without getting it accepted. Someone trying hard and getting
+      nowhere does not show up in a completion count.
+    </p>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">Nobody is stuck right now.</p>
+  {% else %}
+    <table class="admin-table">
+      <tr><th>Student</th><th>Problem</th><th>Attempts</th></tr>
+      {% for r in rows %}
+        <tr>
+          <td>
+            {% if r.student %}{{ r.student.username or r.student.name }}
+            {% else %}&mdash;{% endif %}
+          </td>
+          <td>
+            {% if r.problem %}
+              <a href="{{ url_for('problems.page', slug=r.problem.slug) }}">
+                {{ r.problem.title }}</a>
+              <span class="pill pill-{{ r.problem.difficulty }}">{{ r.problem.difficulty }}</span>
+            {% else %}&mdash;{% endif %}
+          </td>
+          <td>{{ r.attempts }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}

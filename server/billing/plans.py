@@ -57,7 +57,7 @@ PLANS = {
 }
 
 PERKS = [
-    "Unlimited runs against your own input",
+    "Run your code as much as you like, without the hourly cap",
     "The AI tutor without the hourly cap",
     "Full solutions and editorials on every problem",
     "Priority in the judge queue",

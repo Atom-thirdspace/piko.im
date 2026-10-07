@@ -1,0 +1,64 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.index') }}">Classrooms</a> &middot;
+      <a href="{{ url_for('classroom.detail', class_id=room.id) }}">{{ room.name or 'Your classroom' }}</a>
+    </p>
+    <h1>Assignments</h1>
+    <p class="learn-lede">
+      Give the class a set of problems and a date. Progress is read from
+      what they have already solved &mdash; there is nothing for them to
+      hand in.
+    </p>
+  </header>
+
+  {% if not assignments %}
+    <p class="learn-lede">Nothing assigned yet.</p>
+  {% else %}
+    <ul class="auth-list">
+      {% for a in assignments %}
+        <li class="auth-row">
+          <a class="auth-title"
+             href="{{ url_for('classroom.assignment', class_id=room.id, assignment_id=a.id) }}">
+            {{ a.title }}</a>
+          <span class="search-meta">
+            {{ a.items|length }} item{{ '' if a.items|length == 1 else 's' }}
+            {% if a.due_at %}
+              &middot; due {{ a.due_at.strftime('%d %b %H:%M') }} UTC
+            {% else %}&middot; no due date{% endif %}
+          </span>
+          {% if a.overdue %}<span class="pill pill-fail">past due</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <section class="room-card">
+    <h2>New assignment</h2>
+    <form class="room-form" method="post"
+          action="{{ url_for('classroom.assignment_new', class_id=room.id) }}">
+      {{ csrf_field() }}
+      <p><label>Title<br>
+        <input name="title" size="40" required placeholder="Week 3 - arrays"></label></p>
+      <p><label>Due (UTC, optional)<br>
+        <input name="due_at" type="datetime-local"></label></p>
+      <p><label>Note for the class (optional)<br>
+        <textarea name="note_md" rows="3" cols="40"></textarea></label></p>
+      <button type="submit" class="btn btn-primary">Create</button>
+    </form>
+  </section>
+
+  <p class="auth-new">
+    <a class="btn" href="{{ url_for('classroom.stuck', class_id=room.id) }}">
+      Who is stuck</a>
+  </p>
+</main>
+{% endblock content %}

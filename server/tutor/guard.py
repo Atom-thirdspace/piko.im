@@ -7,6 +7,7 @@ from ..models import _utcnow, tutor_calls_since
 MAX_QUESTION = 500
 MIN_QUESTION = 5
 DEFAULT_HOURLY_LIMIT = 30
+PRO_HOURLY_LIMIT = 200
 
 _CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -16,7 +17,14 @@ _SUSPICIOUS = (
     "pretend you are", "developer mode",
 )
 
-def hourly_limit():
+def hourly_limit(user=None):
+    from ..billing.service import is_pro
+    if user is not None and is_pro(user):
+        try:
+            return int(os.environ.get("TUTOR_PRO_HOURLY_LIMIT",
+                                      PRO_HOURLY_LIMIT))
+        except ValueError:
+            return PRO_HOURLY_LIMIT
     try:
         return int(os.environ.get("TUTOR_HOURLY_LIMIT", DEFAULT_HOURLY_LIMIT))
     except ValueError:
@@ -33,13 +41,15 @@ def looks_suspicious(question):
     return any(marker in low for marker in _SUSPICIOUS)
 
 def check(user, question):
-    """Returns (error, http_status), or (None, None) when the call may proceed.
-    A malformed question is a 400; only the rate limit is a 429."""
     if len(question) < MIN_QUESTION:
         return "Ask a fuller question than that.", 400
 
+    cap = hourly_limit(user)
     used = tutor_calls_since(user, _utcnow() - timedelta(hours=1))
-    if used >= hourly_limit():
+    if used >= cap:
+        from ..billing.service import is_pro
+        tail = ("" if is_pro(user)
+                else " Pro raises this to %d." % PRO_HOURLY_LIMIT)
         return ("You've used your %d tutor questions for this hour. "
-                "It resets shortly." % hourly_limit()), 429
+                "It resets shortly.%s" % (cap, tail)), 429
     return None, None

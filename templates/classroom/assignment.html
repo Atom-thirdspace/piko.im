@@ -1,0 +1,86 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.detail', class_id=room.id) }}">{{ room.name or 'Your classroom' }}</a> &middot;
+      <a href="{{ url_for('classroom.assignments', class_id=room.id) }}">Assignments</a>
+    </p>
+    <h1>{{ assignment.title }}</h1>
+    <p class="learn-lede">
+      {% if assignment.due_at %}
+        Due {{ assignment.due_at.strftime('%d %b %H:%M') }} UTC
+        {% if assignment.overdue %}&middot; <b>past due</b>{% endif %}
+      {% else %}
+        No due date.
+      {% endif %}
+      {% if grid.possible %}
+        &middot; {{ grid.done }} of {{ grid.possible }} done
+      {% endif %}
+    </p>
+    {% if assignment.note_md %}
+      <p class="learn-lede">{{ assignment.note_md }}</p>
+    {% endif %}
+  </header>
+
+  {% if not grid.work %}
+    <p class="learn-lede">Nothing assigned yet. Add a problem below.</p>
+  {% elif not grid.rows %}
+    <p class="learn-lede">Nobody has joined this classroom yet.</p>
+  {% else %}
+    <table class="admin-table gradebook">
+      <tr>
+        <th>Student</th>
+        {% for item in grid.work %}
+          <th title="{{ item.title }}">{{ loop.index }}</th>
+        {% endfor %}
+        <th>Done</th>
+      </tr>
+      {% for row in grid.rows %}
+        <tr class="{{ 'is-complete' if row.complete }}">
+          <td>{{ row.student.username or row.student.name or 'someone' }}</td>
+          {% for item in grid.work %}
+            <td class="cell {{ 'is-done' if row.cells[item.id] }}">
+              {{ '&#10003;' | safe if row.cells[item.id] else '' }}
+            </td>
+          {% endfor %}
+          <td>{{ row.done }} / {{ row.total }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+
+    <ol class="gradebook__key">
+      {% for item in grid.work %}
+        <li>{{ item.title }} <span class="search-meta">{{ item.kind }}</span></li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  <section class="room-card">
+    <h2>Assign a problem</h2>
+    {% if not problems %}
+      <p class="room-hint">
+        There are no published problems to assign yet.
+      </p>
+    {% else %}
+      <form class="room-join" method="post"
+            action="{{ url_for('classroom.assignment_add_item',
+                               class_id=room.id, assignment_id=assignment.id) }}">
+        {{ csrf_field() }}
+        <select name="problem_id" aria-label="Problem">
+          {% for p in problems %}
+            <option value="{{ p.id }}">{{ p.slug }} ({{ p.difficulty }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Add</button>
+      </form>
+    {% endif %}
+  </section>
+</main>
+{% endblock content %}

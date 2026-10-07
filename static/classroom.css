@@ -121,3 +121,10 @@
     background: var(--page);
     font-size: .95rem;
 }
+
+/* ---------- gradebook ---------- */
+.gradebook .cell { text-align: center; }
+.gradebook .cell.is-done { color: var(--good); font-weight: 700; }
+.gradebook tr.is-complete td { background: var(--good-bg); }
+.gradebook__key { font-size: .85rem; color: var(--ink-soft); }
+.gradebook__key li { padding: .1rem 0; }

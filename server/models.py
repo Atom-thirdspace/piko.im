@@ -305,6 +305,10 @@ class Problem(Authored, db.Model):
     reference_language = db.Column(db.String(16), nullable=False,
                                    default="python", server_default="python")
     verified_at = db.Column(db.DateTime(timezone=True))
+    editorial_md = db.Column(db.Text, nullable=False, default="",
+                             server_default="")
+    editorial_published = db.Column(db.Boolean, nullable=False, default=False,
+                                    server_default="false")
 
     @property
     def xp(self):
@@ -965,7 +969,8 @@ class JudgeJob(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     claimed_at = db.Column(db.DateTime(timezone=True))
     finished_at = db.Column(db.DateTime(timezone=True))
-
+    priority = db.Column(db.Integer, nullable=False, default=0, 
+                         server_default="0", index=True)
     submission = db.relationship("Submission")
 
 
@@ -1902,3 +1907,64 @@ def unread_count(user):
         .where(Notification.user_id == user.id,
                Notification.read_at.is_(None))).scalar() or 0
 
+def may_read_editorial(user, problem):
+    if user is None or not problem.editorial_published:
+        return False
+    solved = db.session.execute(
+        db.select(ProblemSolve.id).filter_by(user_id=user.id,
+                                             problem_id=problem.id)).scalar()
+    if solved is not None:
+        return True
+    from .billing.service import is_pro
+    return is_pro(user)
+
+class Assignment(db.Model):
+    __tablename__= "assignments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    classroom_id = db.Column(db.Integer,
+                             db.ForeignKey("classrooms.id", ondelete="CASCADE"),
+                             nullable=False, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    note_md = db.Column(db.Text, nullable=False, default="", server_default="")
+    due_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    created_by_id = db.Column(db.Integer,
+                              db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    classroom = db.relationship("Classroom")
+    created_by = db.relationship("User")
+    items = db.relationship("AssignmentItem", back_populates="assignment",
+                            cascade="all, delete-orphan",
+                            order_by="AssignmentItem.position")
+
+    @property
+    def overdue(self):
+        return self.due_at is not None and self.due_at < _utcnow()
+
+class AssignmentItem(db.Model):
+    __tablename__ = "assignment_items"
+    id = db.Column(db.Integer, primary_key = True)
+    assignment_id = db.Column(db.Integer,
+                              db.ForeignKey("assignments.id", ondelete="CASCADE"),
+                              nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"))
+    lesson_id = db.Column(db.Integer,
+                          db.ForeignKey("lessons.id", ondelete="CASCADE"))
+
+    assignment = db.relationship("Assignment", back_populates="items")
+    problem = db.relationship("Problem")
+    lesson = db.relationship("Lesson")
+
+    @property
+    def title(self):
+        row = self.problem or self.lesson
+        return row.title if row is not None else "(removed)"
+
+    @property
+    def kind(self):
+        return "problem" if self.problem_id else "lesson"
+    

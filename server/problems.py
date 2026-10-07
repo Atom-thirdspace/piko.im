@@ -9,7 +9,7 @@ from .learning.markdown import render as render_md
 from .models import (JudgeJob, Lesson, Problem, ProblemHint, ScratchRun,
                      StreakFreezeUse, Submission, User, attempts_on, db,
                      reveal_hint, revealed_hint_ids, solve_percentile,
-                     used_hints)
+                     used_hints, may_read_editorial)
 from .progress import streak_state, user_today
 from .xp_rules import solve_award, summarise, total
 from .ratelimit import run_block_reason, submit_block_reason
@@ -186,8 +186,10 @@ def _result_payload(problem, sub):
 @problems_bp.route("/problems/<slug>/submit", methods=["POST"])
 @login_required
 def submit(slug):
+    from .billing.service import is_pro
     problem = _problem_or_404(slug)
     user = current_user()
+    job = JudgeJob(submission_id=sub.id, priority=1 if is_pro(user) else 0)
 
     payload = request.get_json(silent=True) or {}
     language = payload.get("language", "")

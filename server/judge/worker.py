@@ -22,9 +22,10 @@ RUN_MEMORY_MB = 256
 def _claim():
     job = db.session.execute(
         db.select(JudgeJob).where(JudgeJob.status == "queued")
-        .order_by(JudgeJob.created_at).limit(1)
+        .order_by(JudgeJob.priority.desc(), JudgeJob.created_at).limit(1)
         .with_for_update(skip_locked=True)
     ).scalar_one_or_none()
+
     if job is None:
         return None
 

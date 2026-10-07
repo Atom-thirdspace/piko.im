@@ -92,6 +92,7 @@ NAV = [
         ("admin.tutor", "Tutor"),
         ("admin.system", "System"),
         ("admin.audit", "Audit log"),
+        ("health.detail", "Health"),
     ]),
 ]
 
