@@ -1,5 +1,5 @@
 :root {
-    --bg: rgb(251, 246, 244);
+    --bg: var(--page);
     --card: var(--page);
     --brand-soft: var(--surface-2);
     --radius: .85rem;

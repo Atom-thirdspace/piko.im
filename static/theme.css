@@ -38,6 +38,8 @@
   --bad-bg:       #fdf0ed;
   --bad-line:     #edcfc8;
   --danger-solid: #c0392b;   /* white text sits on this in both modes */
+  --good-solid:   #2f7d4f;
+  --bad-solid:    #b3402f;
 
   --accent:       #6c5ce7;
 
@@ -47,6 +49,11 @@
   --code-ink:     #f3ece5;
 
   --shadow:       rgba(58, 36, 22, .10);
+
+  /* Surfaces written as rgb(), which the first pass never saw. */
+  --page-veil:    rgba(251, 246, 244, .92);
+  --auth-panel:   rgb(255, 222, 169);
+  --doodle:       1;
 }
 
 /* The OS preference, unless the viewer has stamped a light theme. */
@@ -80,6 +87,8 @@
     --bad-bg:       #2d1a16;
     --bad-line:     #5a2f26;
     --danger-solid: #c0392b;
+    --good-solid:   #2f7d4f;
+    --bad-solid:    #b3402f;
 
     --accent:       #8e81f0;
 
@@ -87,6 +96,10 @@
     --code-ink:     #e9dccf;
 
     --shadow:       rgba(0, 0, 0, .45);
+
+    --page-veil:  rgba(21, 17, 14, .92);
+    --auth-panel: #3d2c18;
+    --doodle:     .05;
   }
 }
 
@@ -120,6 +133,8 @@
   --bad-bg:       #2d1a16;
   --bad-line:     #5a2f26;
   --danger-solid: #c0392b;
+  --good-solid:   #2f7d4f;
+  --bad-solid:    #b3402f;
 
   --accent:       #8e81f0;
 
@@ -127,6 +142,34 @@
   --code-ink:     #e9dccf;
 
   --shadow:       rgba(0, 0, 0, .45);
+
+  --page-veil:  rgba(21, 17, 14, .92);
+  --auth-panel: #3d2c18;
+  --doodle:     .05;
+}
+
+
+/* The login sign is a fixed light illustration. Anything printed on it keeps
+   a light palette in both themes, because the artwork cannot follow one. */
+:root {
+  --sign-ink:   #2a1a10;
+  --sign-soft:  #5d4a3c;
+  --sign-brand: #77431d;
+  --sign-field: rgb(255, 222, 169);
+}
+
+
+/* The doodle tile used as a page background is a light-on-transparent PNG,
+   so on a dark page it has to be knocked back. One rule here rather than a
+   copy in every stylesheet that uses the tile. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background: var(--page);
+  opacity: calc(1 - var(--doodle));
 }
 
 /* ---------- the toggle ---------- */

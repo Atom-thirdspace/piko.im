@@ -42,7 +42,7 @@ html body * {
     justify-content: flex-end;
     gap: 1.5rem;
     padding: .9rem 2rem;
-    background: rgba(251, 246, 244, .92);
+    background: var(--page-veil);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid var(--line);
     padding-right: 5.8rem;

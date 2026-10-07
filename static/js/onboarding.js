@@ -27,10 +27,18 @@
   var selection = null;     // string for "choice", array for "multi"
   var placementAnswers = {};
 
+  function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute("content") : "";
+  }
+
   function api(url, method, payload) {
     return fetch(url, {
       method: method || "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken(),
+      },
       credentials: "same-origin",
       body: payload ? JSON.stringify(payload) : undefined,
     }).then(function (res) {
