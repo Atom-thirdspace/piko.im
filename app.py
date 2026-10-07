@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 import os 
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -90,6 +90,9 @@ app.jinja_env.globals["is_pro"] = lambda: _is_pro(current_user())
 app.jinja_env.globals["billing_state"] = lambda: _sub_state(current_user())
 app.jinja_env.globals["unread_notifications"] = lambda: _unread(current_user())
 _notify.register_cli(app)
+@app.route("/error")
+def error():
+    return render_template("error.html")
 
 
 if base.startswith("https://"):
