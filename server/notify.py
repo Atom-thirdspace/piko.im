@@ -55,7 +55,6 @@ def prune(keep=MAX_KEEP):
 def register_cli(app):
     @app.cli.command("notify-streaks")
     def _streaks():
-        """Warn anyone whose streak dies tonight. Safe to run hourly."""
         from datetime import timedelta
 
         from .models import User
@@ -77,3 +76,26 @@ def register_cli(app):
     @app.cli.command("notify-prune")
     def _prune():
         print("removed %d" % prune())
+
+def send_many(users, kind, title, body="", url="", ref="", email=False):
+    people = [u for u in users if u is not None]
+    if not people:
+        return 0
+
+    db.session.add_all([
+        Notification(user_id=u.id, kind=kind, ref=(ref or "")[:64],
+                     title=title[:200], body=body or "", url=(url or "")[:300])
+        for u in people])
+    db.session.commit()
+
+    if email:
+        from . import mailer
+        for user in people:
+            if not (user.email and user.email_verified_at):
+                continue
+            try:
+                mailer.send_notification_email(user.email, title, body, url,
+                                               name=user.name or user.username)
+            except Exception:
+                current_app.logger.exception("notify %s failed", user.id)
+    return len(people)

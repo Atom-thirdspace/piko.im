@@ -10,6 +10,11 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 db = SQLAlchemy()
 
 
+ROLE_STUDENT = "student"
+ROLE_TA = "ta"
+CLASS_ROLES = (ROLE_STUDENT, ROLE_TA)
+
+
 def _utcnow():
     return datetime.now(timezone.utc)
 
@@ -741,6 +746,31 @@ class DeletionRequest(db.Model):
     user = db.relationship("User", foreign_keys=[user_id])
     decided_by = db.relationship("User", foreign_keys=[decided_by_id])
 
+class TutorThread(db.Model):
+    __tablename__ = "tutor_threads"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    lesson_id = db.Column(db.Integer,
+                          db.ForeignKey("lessons.id", ondelete="SET NULL"))
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="SET NULL"))
+    title = db.Column(db.String(200), nullable=False, default="",
+                      server_default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    last_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                        nullable=False)
+
+    user = db.relationship("User")
+    lesson = db.relationship("Lesson")
+    problem = db.relationship("Problem")
+
+    messages = db.relationship("TutorMessage", back_populates="thread",
+                               cascade="all, delete-orphan",
+                               order_by="TutorMessage.created_at")
+
 
 class TutorMessage(db.Model):
     """Every tutor exchange, for rate limiting and abuse review."""
@@ -761,9 +791,14 @@ class TutorMessage(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
                            nullable=False, index=True)
 
+    thread_id = db.Column(db.Integer,
+                          db.ForeignKey("tutor_threads.id", ondelete="SET NULL"),
+                          index=True)
+    
     user = db.relationship("User")
     lesson = db.relationship("Lesson")
     problem = db.relationship("Problem")
+    thread = db.relationship("TutorThread", back_populates="messages")
 
 
 def tutor_calls_since(user, since):
@@ -773,19 +808,50 @@ def tutor_calls_since(user, since):
     ).scalar() or 0
 
 
+def thread_for(user, lesson, problem, reuse_within_minutes=120):
+    subject = lesson or problem
+    cutoff = _utcnow() - timedelta(minutes=reuse_within_minutes)
+    stmt = db.select(TutorThread).where(
+        TutorThread.user_id == user.id,
+        TutorThread.last_at >= cutoff,
+        TutorThread.lesson_id == (lesson.id if lesson else None),
+        TutorThread.problem_id == (problem.id if problem else None),
+    ).order_by(TutorThread.last_at.desc()).limit(1)
+
+    row = db.session.execute(stmt).scalar_one_or_none()
+    if row is not None:
+        return row
+
+    row = TutorThread(
+        user_id=user.id,
+        lesson_id=lesson.id if lesson else None,
+        problem_id=problem.id if problem else None,
+        title=(subject.title if subject is not None else "Tutor")[:200])
+    db.session.add(row)
+    db.session.flush()
+    return row
+
 def log_tutor_message(user, lesson, problem, mode, question, answer, model,
-                      ok=True, flagged=False):
+                      ok=True, flagged=False, thread=None):
+    if thread is None:
+        thread = thread_for(user, lesson, problem)
     row = TutorMessage(
         user_id=user.id,
+        thread_id=thread.id,
         lesson_id=lesson.id if lesson else None,
         problem_id=problem.id if problem else None,
         mode=mode, question=question[:4000], answer=(answer or "")[:8000],
         model=model, ok=ok, flagged=flagged,
     )
+    thread.last_at = _utcnow()
     db.session.add(row)
     db.session.commit()
     return row
 
+def tutor_threads_for(user, limit=50):
+    return db.session.execute(
+        db.select(TutorThread).where(TutorThread.user_id == user.id)
+        .order_by(TutorThread.last_at.desc()).limit(limit)).scalars().all()
 
 def pending_deletion_request(user):
     return db.session.execute(
@@ -1000,6 +1066,10 @@ class ScratchRun(db.Model):
                            nullable=False, index=True)
     claimed_at = db.Column(db.DateTime(timezone=True))
     finished_at = db.Column(db.DateTime(timezone=True))
+
+    saved_test_id = db.Column(db.Integer,
+                              db.ForeignKey("saved_tests.id", ondelete="SET NULL"))
+
 
     user = db.relationship("User")
     problem = db.relationship("Problem")
@@ -1582,6 +1652,14 @@ class Classroom(db.Model):
         return [m for m in self.members if m.removed_at is None]
 
     @property
+    def students(self):
+        return [m for m in self.roster if m.role != ROLE_TA]
+
+    @property
+    def assistants(self):
+        return [m for m in self.roster if m.role == ROLE_TA]
+
+    @property
     def seats_used(self):
         return len(self.roster)
 
@@ -1590,7 +1668,7 @@ class Classroom(db.Model):
         return max(0, self.seats - self.seats_used)
 
     @property
-    def over_capactiy(self):
+    def over_capacity(self):
         return max(0, self.seats_used - self.seats)
 
 class ClassroomMember(db.Model):
@@ -1605,6 +1683,8 @@ class ClassroomMember(db.Model):
                         nullable=False, index=True)
     joined_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     removed_at = db.Column(db.DateTime(timezone=True))
+    role = db.Column(db.String(16), nullable=False, default=ROLE_STUDENT,
+                     server_default="student")
 
     classroom = db.relationship("Classroom", back_populates="members")
     user = db.relationship("User")
@@ -1967,4 +2047,45 @@ class AssignmentItem(db.Model):
     @property
     def kind(self):
         return "problem" if self.problem_id else "lesson"
-    
+
+class ClassroomPost(db.Model):
+    __tablename__ = "classroom_posts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    classroom_id = db.Column(db.Integer,
+                             db.ForeignKey("classrooms.id", ondelete="CASCADE"),
+                             nullable=False, index=True)
+    author_id = db.Column(db.Integer,
+                          db.ForeignKey("users.id", ondelete="SET NULL"))
+    title = db.Column(db.String(200), nullable=False)
+    body_md = db.Column(db.Text, nullable=False, default="", server_default="")
+    pinned = db.Column(db.Boolean, nullable=False, default=False,
+                       server_default="false")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    classroom = db.relationship("Classroom")
+    author = db.relationship("User")
+
+class SavedTest(db.Model):
+    __tablename__ = "saved_tests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False, default="", server_default="")
+    stdin = db.Column(db.Text, nullable=False, default="", server_default="")
+    expected = db.Column(db.Text, nullable=False, default="", server_default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    user = db.relationship("User")
+    problem = db.relationship("Problem")
+
+def saved_tests_for(user, problem):
+    return db.session.execute(
+        db.select(SavedTest).filter_by(user_id=user.id, problem_id=problem.id)
+        .order_by(SavedTest.id)).scalars().all()

@@ -1,0 +1,57 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Tutor history</h1>
+    {% if threads is none %}
+      <p class="learn-lede">
+        Re-reading past tutor conversations is a Pro feature.
+        <a href="{{ url_for('billing.pricing') }}">See Pro</a>
+      </p>
+    {% else %}
+      <p class="learn-lede">
+        Every conversation you have had with the tutor, newest first.
+      </p>
+    {% endif %}
+  </header>
+
+  {% if threads %}
+    <div class="history">
+      <ul class="room-list history__list">
+        {% for t in threads %}
+          <li class="room-row">
+            <a class="room-name"
+               href="{{ url_for('tutor_pages.thread', thread_id=t.id) }}">
+              {{ t.title or 'Tutor' }}</a>
+            <span class="room-seats">{{ t.last_at.strftime('%d %b %H:%M') }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+
+      {% if thread %}
+        <section class="history__thread">
+          <h2>{{ thread.title or 'Tutor' }}</h2>
+          {% for m in messages %}
+            <article class="history__turn">
+              <p class="history__q">{{ m.row.question }}</p>
+              <div class="prose">{{ m.answer_html }}</div>
+              <p class="search-meta">
+                {{ m.row.mode }} &middot;
+                {{ m.row.created_at.strftime('%d %b %H:%M') }} UTC
+              </p>
+            </article>
+          {% endfor %}
+        </section>
+      {% endif %}
+    </div>
+  {% elif threads is not none %}
+    <p class="learn-lede">You have not asked the tutor anything yet.</p>
+  {% endif %}
+</main>
+{% endblock content %}

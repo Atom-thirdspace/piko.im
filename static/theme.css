@@ -43,6 +43,8 @@
 
   --accent:       #6c5ce7;
 
+  --titcolor:     #77431d;
+
   /* Code stays dark in both modes - a light code block in a dark page is
      the thing people complain about most. */
   --code-bg:      #2a1a10;
@@ -141,6 +143,8 @@
 
   --code-bg:      #0f0c0a;
   --code-ink:     #e9dccf;
+
+  --titcolor:     #ffffff;
 
   --shadow:       rgba(0, 0, 0, .45);
 

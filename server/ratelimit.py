@@ -60,3 +60,9 @@ def run_block_reason(user):
         return ("You have used this hour's runs. Pro lifts the cap, or wait "
                 "for the hour to roll over.")
     return None
+
+def run_headroom(user):
+    now = _utcnow()
+    caps = _limits(user)
+    return max(0, min(caps["run_min"] - runs_since(user, now - timedelta(minutes=1)),
+                      caps["run_hour"] - runs_since(user, now - timedelta(hours=1))))

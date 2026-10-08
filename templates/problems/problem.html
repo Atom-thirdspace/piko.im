@@ -11,6 +11,13 @@
       data-result-url="{{ url_for('problems.result', slug=problem.slug, sub_id=0)[:-1] }}"
       data-run-url="{{ url_for('problems.run', slug=problem.slug) }}"
       data-run-result-url="{{ url_for('problems.run_result', slug=problem.slug, run_id=0)[:-1] }}"
+      data-explain-url="{{ url_for('tutor.tutor_explain') }}"
+      data-tests-url="{{ url_for('problems.tests_save', slug=problem.slug) }}"
+      data-tests-run-url="{{ url_for('problems.tests_run', slug=problem.slug) }}"
+      data-tests-results-url="{{ url_for('problems.tests_results', slug=problem.slug) }}"
+      data-tests-delete-url="{{ url_for('problems.tests_delete', slug=problem.slug, test_id=0)[:-1] }}"
+      data-pricing-url="{{ url_for('billing.pricing') }}"
+      data-pro="{{ 'yes' if pro else '' }}"
       data-slug="{{ problem.slug }}"
       data-language="{{ default_language or 'python' }}">
   <header class="learn-head">
@@ -137,6 +144,38 @@
                   <button type="button" class="io__fill"
                           data-fill="{{ test.stdin }}">Use sample {{ loop.index }}</button>
                 {% endfor %}
+              </div>
+            {% endif %}
+
+            {% if pro %}
+              <div class="cases" data-cases>
+                <div class="cases__head">
+                  <h4>Your test cases</h4>
+                  <span class="cases__count" data-case-count>{{ saved_tests|length }}</span>
+                  <span class="ws__spacer"></span>
+                  <button type="button" class="io__fill" data-case-save>Save this input</button>
+                  <button type="button" class="ws__run" data-case-run
+                          {{ 'disabled' if not saved_tests }}>Run all</button>
+                </div>
+                <p class="io__hint">
+                  Saved cases keep their own expected output, so Run all tells
+                  you which ones match. Up to {{ max_saved_tests }}.
+                </p>
+                <ul class="cases__list" data-case-list>
+                  {% for case in saved_tests %}
+                    <li class="cases__row" data-case="{{ case.id }}">
+                      <span class="cases__name">{{ case.name }}</span>
+                      <span class="cases__mark" data-case-mark></span>
+                      <button type="button" class="io__fill" data-case-use
+                              data-stdin="{{ case.stdin }}">Load</button>
+                      <button type="button" class="io__fill" data-case-del>Delete</button>
+                    </li>
+                  {% endfor %}
+                </ul>
+                <p class="io__hint" data-case-empty
+                   {{ 'hidden' if saved_tests }}>
+                  Nothing saved yet. Type an input above, then save it.
+                </p>
               </div>
             {% endif %}
           </div>
@@ -425,6 +464,11 @@
     }
 
     if (data.tests && data.tests.length) { out.appendChild(testRows(data.tests)); }
+
+    // Offered on a failure only - there is nothing to diagnose on a pass.
+    if (!ok && data.submission_id) {
+      out.appendChild(explainButton(data.submission_id));
+    }
     mark(ok);
   }
 
@@ -464,6 +508,201 @@
 
   runBtn.addEventListener('click', doRun);
   subBtn.addEventListener('click', doSubmit);
+
+  /* --------------------------------------------- explain a failed attempt */
+
+  var isPro = page.dataset.pro === 'yes';
+
+  function explainButton(submissionId) {
+    var wrap = el('div', 'explain');
+    var btn = el('button', 'io__fill', isPro
+      ? 'Why did this fail?'
+      : 'Why did this fail? (Pro)');
+    btn.type = 'button';
+    var body = el('div', 'explain__body');
+    body.hidden = true;
+    wrap.appendChild(btn);
+    wrap.appendChild(body);
+
+    btn.addEventListener('click', async function () {
+      if (!isPro) {
+        location.href = page.dataset.pricingUrl;
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Reading your code…';
+      body.hidden = false;
+      body.textContent = '';
+      try {
+        var res = await post(page.dataset.explainUrl,
+                             { submission_id: submissionId });
+        var data = await res.json();
+        if (!res.ok) {
+          body.textContent = data.error || 'That did not work.';
+          btn.disabled = false;
+          btn.textContent = 'Try again';
+          return;
+        }
+        body.innerHTML = data.answer_html;
+        btn.remove();
+      } catch (err) {
+        body.textContent = 'Could not reach the tutor.';
+        btn.disabled = false;
+        btn.textContent = 'Try again';
+      }
+    });
+    return wrap;
+  }
+
+  /* ------------------------------------------------------- saved cases */
+
+  var cases = document.querySelector('[data-cases]');
+
+  if (cases) {
+    var caseList = cases.querySelector('[data-case-list]');
+    var caseEmpty = cases.querySelector('[data-case-empty]');
+    var caseCount = cases.querySelector('[data-case-count]');
+    var runAllBtn = cases.querySelector('[data-case-run]');
+
+    function refreshCaseChrome() {
+      var rows = caseList.querySelectorAll('[data-case]');
+      caseCount.textContent = rows.length;
+      caseEmpty.hidden = rows.length > 0;
+      runAllBtn.disabled = rows.length === 0;
+    }
+
+    function caseRow(id, name, stdin) {
+      var li = el('li', 'cases__row');
+      li.dataset.case = id;
+      li.appendChild(el('span', 'cases__name', name));
+      var mark = el('span', 'cases__mark');
+      mark.dataset.caseMark = '';
+      li.appendChild(mark);
+
+      var use = el('button', 'io__fill', 'Load');
+      use.type = 'button';
+      use.dataset.caseUse = '';
+      use.dataset.stdin = stdin;
+      li.appendChild(use);
+
+      var del = el('button', 'io__fill', 'Delete');
+      del.type = 'button';
+      del.dataset.caseDel = '';
+      li.appendChild(del);
+      return li;
+    }
+
+    cases.querySelector('[data-case-save]').addEventListener(
+      'click', async function (ev) {
+        var btn = ev.currentTarget;
+        var input = stdinBox.value;
+        if (!input.trim()) {
+          stdinBox.focus();
+          return;
+        }
+        var expected = window.prompt(
+          'Expected output for this input? Leave blank to just run it.') || '';
+        var name = window.prompt('Call it what?') || '';
+
+        btn.disabled = true;
+        try {
+          var res = await post(page.dataset.testsUrl,
+                               { name: name, stdin: input, expected: expected });
+          var data = await res.json();
+          if (!res.ok) {
+            window.alert(data.error || 'Could not save that.');
+            return;
+          }
+          caseList.appendChild(caseRow(data.id, data.name, input));
+          refreshCaseChrome();
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+    caseList.addEventListener('click', async function (ev) {
+      var row = ev.target.closest('[data-case]');
+      if (!row) { return; }
+
+      if (ev.target.matches('[data-case-use]')) {
+        stdinBox.value = ev.target.dataset.stdin;
+        stdinBox.focus();
+        return;
+      }
+
+      if (ev.target.matches('[data-case-del]')) {
+        ev.target.disabled = true;
+        var res = await fetch(
+          page.dataset.testsDeleteUrl + row.dataset.case + '/delete',
+          { method: 'POST', headers: { 'X-CSRF-Token': token() } });
+        if (res.ok) {
+          row.remove();
+          refreshCaseChrome();
+        } else {
+          ev.target.disabled = false;
+        }
+      }
+    });
+
+    runAllBtn.addEventListener('click', async function () {
+      runAllBtn.disabled = true;
+      runAllBtn.textContent = 'Running…';
+      cases.querySelectorAll('[data-case-mark]').forEach(function (m) {
+        m.textContent = '…';
+        m.className = 'cases__mark';
+      });
+
+      try {
+        var res = await post(page.dataset.testsRunUrl,
+                             { language: lang, source: editor.getValue() });
+        var data = await res.json();
+        if (!res.ok) {
+          window.alert(data.error || 'Could not run those.');
+          return;
+        }
+
+        var ids = data.runs.map(function (r) { return r.run_id; }).join(',');
+        var byRun = {};
+        data.runs.forEach(function (r) { byRun[r.run_id] = r.test_id; });
+
+        for (var tick = 0; tick < 60; tick++) {
+          await new Promise(function (done) { setTimeout(done, 700); });
+          var poll_ = await fetch(page.dataset.testsResultsUrl + '?ids=' + ids);
+          if (!poll_.ok) { break; }
+          var body = await poll_.json();
+
+          var pending = 0;
+          body.runs.forEach(function (r) {
+            var row = caseList.querySelector(
+              '[data-case="' + byRun[r.run_id] + '"]');
+            var mark = row && row.querySelector('[data-case-mark]');
+            if (!mark) { return; }
+            if (r.status === 'pending') {
+              pending += 1;
+              mark.textContent = '…';
+              return;
+            }
+            if (r.matched === null) {
+              mark.textContent = (r.time_ms || 0) + ' ms';
+              mark.className = 'cases__mark';
+            } else {
+              mark.textContent = (r.matched ? '✓ ' : '✗ ')
+                + (r.time_ms || 0) + ' ms';
+              mark.className = 'cases__mark '
+                + (r.matched ? 'is-ok' : 'is-fail');
+              if (!r.matched) { mark.title = r.stdout || r.stderr || ''; }
+            }
+          });
+          if (!pending) { break; }
+        }
+      } finally {
+        runAllBtn.disabled = false;
+        runAllBtn.textContent = 'Run all';
+      }
+    });
+
+    refreshCaseChrome();
+  }
 
   /* ------------------------------------------------------------- hints */
 

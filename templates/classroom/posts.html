@@ -1,0 +1,59 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.detail', class_id=room.id) }}">{{ room.name or 'Your classroom' }}</a>
+    </p>
+    <h1>Announcements</h1>
+  </header>
+
+  <section class="room-card">
+    <h2>Post to the class</h2>
+    <form method="post"
+          action="{{ url_for('classroom.post_new', class_id=room.id) }}">
+      {{ csrf_field() }}
+      <p><input type="text" name="title" maxlength="200" required
+                placeholder="What is this about?" aria-label="Title"></p>
+      <p><textarea name="body_md" rows="4"
+                   placeholder="Markdown is fine." aria-label="Body"></textarea></p>
+      <p class="room-hint">
+        <label><input type="checkbox" name="pinned"> Pin to the top</label>
+        &nbsp;
+        <label><input type="checkbox" name="email"> Email it as well</label>
+      </p>
+      <button type="submit" class="btn btn-primary">Post</button>
+    </form>
+  </section>
+
+  {% if not rows %}
+    <p class="learn-lede">Nothing posted yet.</p>
+  {% else %}
+    {% for p in rows %}
+      <article class="room-card {{ 'room-card--member' if p.pinned }}">
+        <h2>{{ p.title }}</h2>
+        <p class="search-meta">
+          {{ p.author.username if p.author else 'Someone' }} &middot;
+          {{ p.created_at.strftime('%d %b %H:%M') }} UTC
+          {%- if p.pinned %} &middot; pinned{% endif %}
+        </p>
+        <div class="prose">{{ bodies[p.id] }}</div>
+        {% if is_owner %}
+          <form method="post"
+                action="{{ url_for('classroom.post_delete', class_id=room.id,
+                                   post_id=p.id) }}">
+            {{ csrf_field() }}
+            <button type="submit" class="btn btn-danger">Delete</button>
+          </form>
+        {% endif %}
+      </article>
+    {% endfor %}
+  {% endif %}
+</main>
+{% endblock content %}

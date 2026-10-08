@@ -6,13 +6,14 @@ from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
 from .content import visible
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
-from .models import (JudgeJob, Lesson, Problem, ProblemHint, ScratchRun,
-                     StreakFreezeUse, Submission, User, attempts_on, db,
-                     reveal_hint, revealed_hint_ids, solve_percentile,
-                     used_hints, may_read_editorial)
+from .models import (JudgeJob, Lesson, Problem, ProblemHint, SavedTest,
+                     ScratchRun, StreakFreezeUse, Submission, User,
+                     attempts_on, db, may_read_editorial, reveal_hint,
+                     revealed_hint_ids, saved_tests_for, solve_percentile,
+                     used_hints)
+from .ratelimit import run_block_reason, run_headroom, submit_block_reason
 from .progress import streak_state, user_today
 from .xp_rules import solve_award, summarise, total
-from .ratelimit import run_block_reason, submit_block_reason
 from .session import current_user, login_required
 from .content import may_see
 
@@ -28,6 +29,9 @@ def _projected(user, problem):
 
 MAX_SOURCE_BYTES = 64 * 1024
 MAX_STDIN_BYTES = 16 * 1024
+
+MAX_SAVED_TESTS = 20
+MAX_BATCH_RUN = 10
 
 
 def _problem_or_404(slug):
@@ -59,8 +63,10 @@ def today():
 @problems_bp.route("/problems/<slug>/")
 @login_required
 def page(slug):
+    from .billing.service import is_pro
     problem = _problem_or_404(slug)
     user = current_user()
+    pro = is_pro(user)
 
     solved = db.session.execute(
         db.select(Submission.id).filter_by(
@@ -99,6 +105,9 @@ def page(slug):
         hint_bodies={h.id: render_md(h.body_md) for h in problem.hints
                      if h.id in revealed},
         award=_projected(user, problem),
+        pro=pro,
+        saved_tests=saved_tests_for(user, problem) if pro else [],
+        max_saved_tests=MAX_SAVED_TESTS,
     )
 
 
@@ -189,7 +198,6 @@ def submit(slug):
     from .billing.service import is_pro
     problem = _problem_or_404(slug)
     user = current_user()
-    job = JudgeJob(submission_id=sub.id, priority=1 if is_pro(user) else 0)
 
     payload = request.get_json(silent=True) or {}
     language = payload.get("language", "")
@@ -222,7 +230,8 @@ def submit(slug):
     )
     db.session.add(sub)
     db.session.flush()
-    db.session.add(JudgeJob(submission_id=sub.id))
+    db.session.add(JudgeJob(submission_id=sub.id,
+                            priority=1 if is_pro(user) else 0))
     db.session.commit()
 
     return jsonify(submission_id=sub.id, status="queued"), 202
@@ -371,3 +380,162 @@ def reveal(slug, hint_id):
     award = _projected(user, problem)
     return jsonify(body=str(render_md(hint.body_md)),
                    award_now=award["total"], award_note=award["summary"])
+
+def _pro_gate(user):
+    from .billing.service import is_pro
+    if is_pro(user):
+        return None
+    return jsonify(error="Saved test cases are a Pro feature.",
+                   upgrade=True), 402
+
+
+def _normalise(text):
+    return "\n".join(line.rstrip()
+                     for line in (text or "").strip().splitlines())
+
+
+@problems_bp.route("/problems/<slug>/tests", methods=["GET"])
+@login_required
+def tests_list(slug):
+    problem = _problem_or_404(slug)
+    user = current_user()
+    gate = _pro_gate(user)
+    if gate:
+        return gate
+    return jsonify(tests=[{"id": t.id, "name": t.name, "stdin": t.stdin,
+                           "expected": t.expected}
+                          for t in saved_tests_for(user, problem)])
+
+@problems_bp.route("/problems/<slug>/tests", methods=["POST"])
+@login_required
+def tests_save(slug):
+    problem = _problem_or_404(slug)
+    user = current_user()
+    gate = _pro_gate(user)
+    if gate:
+        return gate
+    
+    payload = request.get_json(silent=True) or {}
+    stdin = payload.get("stdin") or ""
+    expected = payload.get("expected") or ""
+
+    if len(stdin.encode("utf-8")) > MAX_STDIN_BYTES:
+        return jsonify(error="That input is too large."), 413
+    if len(expected.encode("utf-8")) > MAX_STDIN_BYTES:
+        return jsonify(error="That expected output is too large."), 413
+
+    held = db.session.execute(
+        db.select(db.func.count()).select_from(SavedTest)
+        .where(SavedTest.user_id == user.id,
+               SavedTest.problem_id == problem.id)).scalar() or 0
+    if held >= MAX_SAVED_TESTS:
+        return jsonify(error="You have %d saved cases on this problem, which "
+                             "is the limit. Delete one first."
+                             % MAX_SAVED_TESTS), 409
+
+    row = SavedTest(user_id=user.id, problem_id=problem.id,
+                    name=(payload.get("name") or "Case %d" % (held + 1))[:80],
+                    stdin=stdin, expected=expected)
+    db.session.add(row)
+    db.session.commit()
+    return jsonify(id=row.id, name=row.name), 201
+
+@problems_bp.route("/problems/<slug>/tests/<int:test_id>/delete",
+                   methods=["POST"])
+@login_required
+def tests_delete(slug, test_id):
+    problem = _problem_or_404(slug)
+    user = current_user()
+    gate = _pro_gate(user)
+    if gate:
+        return gate
+
+    row = db.session.get(SavedTest, test_id)
+    if row is None or row.user_id != user.id or row.problem_id != problem.id:
+        abort(404)
+    db.session.delete(row)
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@problems_bp.route("/problems/<slug>/tests/run", methods=["POST"])
+@login_required
+def tests_run(slug):
+    problem = _problem_or_404(slug)
+    user = current_user()
+    gate = _pro_gate(user)
+    if gate:
+        return gate
+
+    payload = request.get_json(silent=True) or {}
+    language = payload.get("language", "")
+    source = payload.get("source", "")
+
+    if language not in LANGUAGES:
+        return jsonify(error="Unsupported language."), 400
+    if not source.strip():
+        return jsonify(error="There is nothing to run yet."), 400
+    if len(source.encode("utf-8")) > MAX_SOURCE_BYTES:
+        return jsonify(error="Your code is too large to run."), 413
+
+    blocked = run_block_reason(user)
+    if blocked:
+        return jsonify(error=blocked), 429
+
+    cases = saved_tests_for(user, problem)[:MAX_BATCH_RUN]
+    if not cases:
+        return jsonify(error="Save a test case first."), 400
+
+    # The per-request check above only fires once, so a batch is trimmed to the
+    # headroom left rather than being allowed to blow straight past it.
+    room = run_headroom(user)
+    if room <= 0:
+        return jsonify(error="You have no runs left this minute."), 429
+    cases = cases[:room]
+
+    queued = []
+    for case in cases:
+        row = ScratchRun(user_id=user.id, problem_id=problem.id,
+                         language=language, source=source, stdin=case.stdin,
+                         saved_test_id=case.id)
+        db.session.add(row)
+        db.session.flush()
+        queued.append({"run_id": row.id, "test_id": case.id,
+                       "name": case.name})
+    db.session.commit()
+    return jsonify(runs=queued, skipped=len(saved_tests_for(user, problem))
+                   - len(cases)), 202
+
+
+@problems_bp.route("/problems/<slug>/tests/results")
+@login_required
+def tests_results(slug):
+    problem = _problem_or_404(slug)
+    user = current_user()
+    gate = _pro_gate(user)
+    if gate:
+        return gate
+    wanted = [int(x) for x in (request.args.get("ids") or "").split(",")
+              if x.strip().isdigit()][:MAX_BATCH_RUN]
+    if not wanted:
+        return jsonify(runs=[])
+
+    rows = db.session.execute(
+        db.select(ScratchRun).where(ScratchRun.id.in_(wanted),
+                                    ScratchRun.user_id == user.id,
+                                    ScratchRun.problem_id == problem.id)
+    ).scalars().all()
+
+    expected = {t.id: t.expected for t in saved_tests_for(user, problem)}
+    
+    out = []
+    for row in rows:
+        body = _run_payload(row)
+        want = expected.get(row.saved_test_id)
+        if row.status != "done" or want is None or not want.strip():
+            body["matched"] = None
+        else:
+            body["matched"] = _normalise(row.stdout) == _normalise(want)
+        body["test_id"] = row.saved_test_id
+        out.append(body)
+    return jsonify(runs=out)

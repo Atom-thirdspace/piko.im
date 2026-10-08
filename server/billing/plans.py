@@ -61,6 +61,10 @@ PERKS = [
     "The AI tutor without the hourly cap",
     "Full solutions and editorials on every problem",
     "Priority in the judge queue",
+    "Ask the tutor why a failed submission failed",
+    "Save your own test cases and run them all at once",
+    "Re-read every tutor conversation you have had",
+    "Two streak freezes a month instead of one",
 ]
 
 def product_id(plan_key):
