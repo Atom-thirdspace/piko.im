@@ -12,7 +12,7 @@
       <a class="cm__cta" href="{{ url_for('community.teams') }}">Browse teams</a>
     </header>
 
-        <form class="cm__filters" method="get" action="{{ url_for('community.index') }}"
+        <form autocomplete="off" class="cm__filters" method="get" action="{{ url_for('community.index') }}"
           hx-get="{{ url_for('community.index') }}"
           hx-trigger="input changed delay:300ms, change from:select, submit"
           hx-target="#community-results" hx-swap="outerHTML" hx-push-url="true">

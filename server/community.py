@@ -164,6 +164,13 @@ def follow(username):
     db.session.commit()
 
     back = request.form.get("next") or ""
+    if request.headers.get("HX-Request") == "true":
+        return render_template(
+            "community/_follow.html",
+            p=_card(target, following_ids(viewer), follower_ids(viewer)),
+            next_url=back,
+        )
+
     return redirect(back if is_safe_next(back) else url_for("community.index"))
 
 
