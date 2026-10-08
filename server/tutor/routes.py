@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, abort
 
 from ..learning.markdown import render as render_md
 from ..models import (PUBLISHED, Lesson, Problem, Submission, _utcnow, db,
@@ -74,5 +74,63 @@ def tutor_ask():
     return jsonify(
         mode=mode,
         answer_html=render_md(answer),
-        remaining=max(0, guard.hourly_limit() - used),
+        remaining=max(0, guard.hourly_limit(user) - used),
     )
+
+@tutor_bp.route("/explain", methods=["POST"])
+@login_required
+def tutor_explain():
+    from ..billing.service import is_pro
+    from ..judge import verdicts as V
+
+    user = current_user()
+    if not is_configured():
+        return jsonify(error="The tutor isn't switched on yet."), 503
+    if not is_pro(user):
+        return jsonify(error="Diagnosing a failed submission is a Pro feature.",
+                       upgrade=True), 402
+
+    payload = request.get_json(silent=True) or {}
+    sub = db.session.get(Submission, int(payload.get("submission_id") or 0))
+    if sub is None or sub.user_id != user.id:
+        abort(404)
+    if sub.verdict in (V.QUEUED, V.RUNNING):
+        return jsonify(error="That submission is still being judged."), 409
+    if sub.verdict == V.AC:
+        return jsonify(error="That one passed - there is nothing to "
+                             "diagnose."), 400
+
+    problem = sub.problem
+    if problem is None or problem.status != PUBLISHED:
+        abort(404)
+
+    error, status = guard.over_cap(user)
+    if error:
+        return jsonify(error=error), status
+
+    case = None
+    failure = sub.first_failure
+    if failure is not None and failure.is_sample:
+        ordered = list(problem.tests)
+        if failure.position < len(ordered):
+            source = ordered[failure.position]
+            case = {"stdin": source.stdin, "expected": source.expected_stdout,
+                    "actual": failure.stdout, "stderr": failure.stderr}
+
+    question = ("My submission got %s. Why does my code fail?"
+                % V.LABELS.get(sub.verdict, sub.verdict))
+    system, user_prompt = build("failure", problem=problem, question=question,
+                                submission=sub, case=case)
+
+    try:
+        answer, model = ask(system, user_prompt)
+    except TutorError as exc:
+        log_tutor_message(user, None, problem, "failure", question, str(exc),
+                          model="", ok=False)
+        return jsonify(error=str(exc)), 502
+
+    log_tutor_message(user, None, problem, "failure", question, answer, model)
+
+    used = tutor_calls_since(user, _utcnow() - timedelta(hours=1))
+    return jsonify(mode="failure", answer_html=render_md(answer),
+                   remaining=max(0, guard.hourly_limit(user) - used))

@@ -351,3 +351,52 @@
 @media (prefers-reduced-motion: no-preference) {
   .ws__go, .ws__run, .io__tab { transition: background-color .12s ease; }
 }
+
+/* ---------- saved test cases (Pro) ---------- */
+.cases {
+    margin-top: .9rem;
+    padding-top: .75rem;
+    border-top: 1px solid var(--line);
+}
+.cases__head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+.cases__head h4 { margin: 0; font-size: .9rem; }
+.cases__count {
+    font-size: .75rem;
+    padding: .05rem .4rem;
+    border-radius: 1rem;
+    background: var(--surface-3);
+    color: var(--ink-2);
+}
+.cases__list { list-style: none; padding: 0; margin: .5rem 0 0; }
+.cases__row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .3rem 0;
+    font-size: .85rem;
+}
+.cases__name { flex: 1 1 auto; min-width: 6rem; }
+.cases__mark {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    font-size: .8rem;
+}
+.cases__mark.is-ok { color: var(--good); font-weight: 600; }
+.cases__mark.is-fail { color: var(--bad); font-weight: 600; }
+
+/* ---------- explain a failure (Pro) ---------- */
+.explain { margin-top: .9rem; }
+.explain__body {
+    margin-top: .6rem;
+    padding: .7rem .85rem;
+    border-left: 3px solid var(--brand);
+    background: var(--surface-2, var(--page));
+    font-size: .88rem;
+}
+.explain__body p:first-child { margin-top: 0; }
+.explain__body p:last-child { margin-bottom: 0; }

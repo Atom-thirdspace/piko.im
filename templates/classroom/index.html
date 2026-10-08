@@ -60,6 +60,28 @@
     </section>
   {% endif %}
 
+  {% if assisting %}
+    <section>
+      <h2>Classrooms you assist</h2>
+      <ul class="room-list">
+        {% for cls in assisting %}
+          <li class="room-row">
+            <a class="room-name"
+               href="{{ url_for('classroom.assignments', class_id=cls.id) }}">
+              {{ cls.name or 'Untitled classroom' }}
+            </a>
+            <span class="room-seats">
+              {{ cls.seats_used }} / {{ cls.seats }} seats
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="room-hint">
+        As an assistant you can read the gradebook and post announcements.
+      </p>
+    </section>
+  {% endif %}
+
   {% if not seat %}
     <section>
       <h2>Join a class</h2>

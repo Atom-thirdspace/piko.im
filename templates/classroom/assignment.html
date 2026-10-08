@@ -22,17 +22,25 @@
       {% endif %}
       {% if grid.possible %}
         &middot; {{ grid.done }} of {{ grid.possible }} done
+        {% if grid.late %}&middot; {{ grid.late }} late{% endif %}
       {% endif %}
     </p>
     {% if assignment.note_md %}
       <p class="learn-lede">{{ assignment.note_md }}</p>
     {% endif %}
+    {% if grid.rows %}
+      <p class="learn-lede">
+        <a class="btn"
+           href="{{ url_for('classroom.assignment_csv', class_id=room.id,
+                            assignment_id=assignment.id) }}">Download CSV</a>
+      </p>
+    {% endif %}
   </header>
 
   {% if not grid.work %}
-    <p class="learn-lede">Nothing assigned yet. Add a problem below.</p>
+    <p class="learn-lede">Nothing assigned yet. Add some work below.</p>
   {% elif not grid.rows %}
-    <p class="learn-lede">Nobody has joined this classroom yet.</p>
+    <p class="learn-lede">No students have joined this classroom yet.</p>
   {% else %}
     <table class="admin-table gradebook">
       <tr>
@@ -46,14 +54,31 @@
         <tr class="{{ 'is-complete' if row.complete }}">
           <td>{{ row.student.username or row.student.name or 'someone' }}</td>
           {% for item in grid.work %}
-            <td class="cell {{ 'is-done' if row.cells[item.id] }}">
-              {{ '&#10003;' | safe if row.cells[item.id] else '' }}
+            {% set cell = row.cells[item.id] %}
+            <td class="cell cell--{{ cell.state }}"
+                title="{{ cell.at.strftime('%d %b %H:%M') if cell.at else 'not done' }}">
+              {% if item.problem_id %}
+                <a href="{{ url_for('classroom.student_attempts',
+                                    class_id=room.id, user_id=row.student.id,
+                                    problem_id=item.problem_id) }}">{{ cell.state[0]|upper }}</a>
+              {% else %}
+                {{ cell.state[0]|upper }}
+              {% endif %}
             </td>
           {% endfor %}
-          <td>{{ row.done }} / {{ row.total }}</td>
+          <td>
+            {{ row.done }} / {{ row.total }}
+            {%- if row.late %} <span class="cell--late">({{ row.late }} late)</span>{% endif %}
+          </td>
         </tr>
       {% endfor %}
     </table>
+
+    <p class="room-hint">
+      <b>D</b> done on time &middot; <b>L</b> done late &middot;
+      <b>M</b> missing and past due &middot; <b>O</b> still open.
+      Click a cell to see that student's attempts.
+    </p>
 
     <ol class="gradebook__key">
       {% for item in grid.work %}
@@ -62,25 +87,66 @@
     </ol>
   {% endif %}
 
-  <section class="room-card">
-    <h2>Assign a problem</h2>
-    {% if not problems %}
-      <p class="room-hint">
-        There are no published problems to assign yet.
-      </p>
-    {% else %}
-      <form class="room-join" method="post"
-            action="{{ url_for('classroom.assignment_add_item',
-                               class_id=room.id, assignment_id=assignment.id) }}">
-        {{ csrf_field() }}
-        <select name="problem_id" aria-label="Problem">
-          {% for p in problems %}
-            <option value="{{ p.id }}">{{ p.slug }} ({{ p.difficulty }})</option>
-          {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-primary">Add</button>
-      </form>
+  {% if is_owner %}
+    <section class="room-card">
+      <h2>Assign a problem</h2>
+      {% if not problems %}
+        <p class="room-hint">There are no published problems to assign yet.</p>
+      {% else %}
+        <form class="room-join" method="post"
+              action="{{ url_for('classroom.assignment_add_item',
+                                 class_id=room.id, assignment_id=assignment.id) }}">
+          {{ csrf_field() }}
+          <select name="problem_id" aria-label="Problem">
+            {% for p in problems %}
+              <option value="{{ p.id }}">{{ p.slug }} ({{ p.difficulty }})</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>
+      {% endif %}
+    </section>
+
+    <section class="room-card">
+      <h2>Assign a whole unit</h2>
+      {% if not units %}
+        <p class="room-hint">No published units yet.</p>
+      {% else %}
+        <form class="room-join" method="post"
+              action="{{ url_for('classroom.assignment_add_unit',
+                                 class_id=room.id, assignment_id=assignment.id) }}">
+          {{ csrf_field() }}
+          <select name="unit_id" aria-label="Unit">
+            {% for u in units %}
+              <option value="{{ u.id }}">{{ u.title }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-primary">Add unit</button>
+        </form>
+        <p class="room-hint">
+          A lesson that wraps a problem contributes the problem. Anything
+          already on the list is skipped.
+        </p>
+      {% endif %}
+    </section>
+
+    {% if targets %}
+      <section class="room-card">
+        <h2>Copy to another class</h2>
+        <form class="room-join" method="post"
+              action="{{ url_for('classroom.assignment_clone',
+                                 class_id=room.id, assignment_id=assignment.id) }}">
+          {{ csrf_field() }}
+          <select name="to_class_id" aria-label="Classroom">
+            {% for c in targets %}
+              <option value="{{ c.id }}">{{ c.name or 'Classroom %d'|format(c.id) }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn">Copy</button>
+        </form>
+        <p class="room-hint">The copy has no due date - set one afterwards.</p>
+      </section>
     {% endif %}
-  </section>
+  {% endif %}
 </main>
 {% endblock content %}

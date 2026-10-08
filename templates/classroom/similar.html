@@ -1,0 +1,58 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.detail', class_id=room.id) }}">{{ room.name or 'Your classroom' }}</a>
+    </p>
+    <h1>Similar submissions</h1>
+    <p class="learn-lede">
+      Pairs inside this class whose code matched after variable names,
+      comments and whitespace were stripped. A high score is a reason to
+      look, not a verdict - two people following the same lesson write
+      similar code.
+    </p>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">Nothing matched in this class.</p>
+  {% else %}S
+    <table class="admin-table">
+      <tr>
+        <th>Score</th><th>Problem</th><th>Student</th><th>Student</th><th>When</th>
+      </tr>
+      {% for r in rows %}
+        <tr>
+          <td><b>{{ '%.0f'|format(r.score * 100) }}%</b></td>
+          <td>
+            {% if r.problem %}
+              <a href="{{ url_for('problems.page', slug=r.problem.slug) }}">{{ r.problem.title }}</a>
+            {% else %}&mdash;{% endif %}
+          </td>
+          <td>
+            {% if r.a and r.problem %}
+              <a href="{{ url_for('classroom.student_attempts', class_id=room.id,
+                                  user_id=r.a.id, problem_id=r.problem.id) }}">
+                {{ r.a.username or r.a.name }}</a>
+            {% else %}&mdash;{% endif %}
+          </td>
+          <td>
+            {% if r.b and r.problem %}
+              <a href="{{ url_for('classroom.student_attempts', class_id=room.id,
+                                  user_id=r.b.id, problem_id=r.problem.id) }}">
+                {{ r.b.username or r.b.name }}</a>
+            {% else %}&mdash;{% endif %}
+          </td>
+          <td class="search-meta">{{ r.created_at.strftime('%d %b') }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}

@@ -41,6 +41,7 @@ from server.health import health_bp
 from server import notify as _notify
 from server.models import unread_count as _unread
 from server.memo import per_request
+from server.tutor.pages import tutor_pages_bp
 
 load_dotenv()
 
@@ -82,6 +83,7 @@ app.register_blueprint(notifications_bp)
 app.register_blueprint(search_bp)
 app.register_blueprint(contests_bp)
 app.register_blueprint(health_bp)
+app.register_blueprint(tutor_pages_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)

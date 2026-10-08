@@ -7,6 +7,8 @@ from .models import User, XpEvent, _utcnow, db
 XP_PER_LEVEL_STEP = 50
 MAX_FREEZES = 3
 MAX_FROZEN_GAP = 2
+PRO_MAX_FREEZES = 5
+PRO_MONTHLY_GRANT = 2
 
 def level_for_xp(xp):
     return (isqrt(4 * (max(xp, 0) // XP_PER_LEVEL_STEP) + 1) + 1) // 2
@@ -47,18 +49,6 @@ def award_xp(user, amount, reason, ref):
             "leveled_up": level_for_xp(after) > level_for_xp(before),
             "streak": streak,
             **level_progress(after)}
-
-def grant_monthly_freeze(user, today):
-    granted = user.freezes_granted_on
-    if granted is not None and (granted.year, granted.month) == (today.year, today.month):
-        return 0
-
-    user.freezes_granted_on = today
-    if (user.streak_freezes or 0) >= MAX_FREEZES:
-        return 0
-    user.streak_freezes = (user.streak_freezes or 0) + 1
-    return 1
-
 
 def _missed_days(last, today):
     if last is None or today <= last:
@@ -143,3 +133,24 @@ def day_bounds(user, day):
     return (start.astimezone(timezone.utc),
             (start + timedelta(days=1)).astimezone(timezone.utc))
 
+def freeze_limits(user):
+    from .billing.service import is_pro
+    if is_pro(user):
+        return PRO_MONTHLY_GRANT, PRO_MAX_FREEZES
+    return 1, MAX_FREEZES
+
+def grant_monthly_freeze(user, today):
+    granted = user.freezes_granted_on
+    if granted is not None and (granted.year, granted.month) == (today.year,
+                                                                today.month):
+        return 0
+
+    user.freezes_granted_on = today
+    per_month, cap = freeze_limits(user)
+    have = user.streak_freezes or 0
+    if have >= cap:
+        return 0
+
+    give = min(per_month, cap - have)
+    user.streak_freezes = have + give
+    return give

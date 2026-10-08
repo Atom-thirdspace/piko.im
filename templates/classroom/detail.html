@@ -22,6 +22,12 @@
         &middot; until {{ cls.expires_at.strftime('%d %b %Y') }}
       {% endif %}
     </p>
+    <p class="room-nav">
+      <a href="{{ url_for('classroom.assignments', class_id=cls.id) }}">Assignments</a>
+      <a href="{{ url_for('classroom.stuck', class_id=cls.id) }}">Who is stuck</a>
+      <a href="{{ url_for('classroom.similar', class_id=cls.id) }}">Similar submissions</a>
+      <a href="{{ url_for('classroom.posts', class_id=cls.id) }}">Announcements</a>
+    </p>
   </header>
 
   {% if cls.over_capacity %}
@@ -76,11 +82,24 @@
       <p class="learn-lede">Nobody has joined yet. Give out the code above.</p>
     {% else %}
       <table class="room-table">
-        <tr><th>Student</th><th>Joined</th><th></th></tr>
+        <tr><th>Student</th><th>Joined</th><th>Role</th><th></th></tr>
         {% for m in cls.roster %}
           <tr>
             <td>{{ m.user.username or m.user.email if m.user else '—' }}</td>
             <td>{{ m.joined_at.strftime('%d %b %Y') }}</td>
+            <td>
+              <form method="post"
+                    action="{{ url_for('classroom.set_role', class_id=cls.id, user_id=m.user_id) }}">
+                {{ csrf_field() }}
+                {% if m.role == 'ta' %}
+                  <input type="hidden" name="role" value="student">
+                  <button type="submit" class="room-btn">Assistant &mdash; demote</button>
+                {% else %}
+                  <input type="hidden" name="role" value="ta">
+                  <button type="submit" class="room-btn">Student &mdash; make assistant</button>
+                {% endif %}
+              </form>
+            </td>
             <td>
               <form method="post"
                     action="{{ url_for('classroom.remove', class_id=cls.id, user_id=m.user_id) }}">
@@ -93,7 +112,9 @@
       </table>
       <p class="room-hint">
         Removing a student frees their seat and ends their Pro, unless they
-        pay for it themselves.
+        pay for it themselves. An assistant can read the gradebook and post
+        announcements, but cannot rotate the join code, invite, or remove
+        anybody.
       </p>
     {% endif %}
   </section>

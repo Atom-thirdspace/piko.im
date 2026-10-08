@@ -1,0 +1,62 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('classroom.detail', class_id=room.id) }}">{{ room.name or 'Your classroom' }}</a> &middot;
+      <a href="{{ url_for('classroom.assignments', class_id=room.id) }}">Assignments</a>
+    </p>
+    <h1>{{ student.username or student.name or 'Student' }} on {{ problem.title }}</h1>
+    <p class="learn-lede">
+      {{ rows|length }} submission{{ '' if rows|length == 1 else 's' }}.
+      <a href="{{ url_for('problems.page', slug=problem.slug) }}">Open the problem</a>
+    </p>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">They have not submitted anything on this problem.</p>
+  {% else %}
+    {% for sub in rows %}
+      <section class="attempt">
+        <header class="attempt__head">
+          <span class="pill pill-{{ 'done' if sub.verdict == 'accepted' else 'fail' }}">
+            {{ verdict_labels.get(sub.verdict, sub.verdict) }}
+          </span>
+          <span class="search-meta">
+            {{ sub.created_at.strftime('%d %b %H:%M') }} UTC &middot;
+            {{ sub.language }} &middot;
+            {{ sub.passed }}/{{ sub.total }} tests &middot;
+            {{ sub.max_time_ms }} ms
+          </span>
+        </header>
+
+        {% if sub.compile_output %}
+          <pre class="attempt__io">{{ sub.compile_output }}</pre>
+        {% endif %}
+
+        {% set fail = sub.first_failure %}
+        {% if fail %}
+          <p class="room-hint">
+            First failure: test {{ fail.position + 1 }}
+            ({{ verdict_labels.get(fail.verdict, fail.verdict) }}){% if not fail.is_sample %}, a hidden case{% endif %}.
+          </p>
+          {% if fail.stderr %}
+            <pre class="attempt__io">{{ fail.stderr }}</pre>
+          {% endif %}
+        {% endif %}
+
+        <details>
+          <summary>Their code</summary>
+          <pre class="attempt__code"><code>{{ sub.source }}</code></pre>
+        </details>
+      </section>
+    {% endfor %}
+  {% endif %}
+</main>
+{% endblock content %}

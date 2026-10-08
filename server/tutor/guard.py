@@ -40,16 +40,18 @@ def looks_suspicious(question):
     low = question.lower()
     return any(marker in low for marker in _SUSPICIOUS)
 
+def over_cap(user):
+    cap = hourly_limit(user)
+    used = tutor_calls_since(user, _utcnow() - timedelta(hours=1))
+    if used < cap:
+        return None, None
+    from ..billing.service import is_pro
+    tail = "" if is_pro(user) else " Pro raises this to %d." % PRO_HOURLY_LIMIT
+    return ("You've used your %d tutor questions for this hour. "
+            "It resets shortly.%s" % (cap, tail)), 429
+
+
 def check(user, question):
     if len(question) < MIN_QUESTION:
         return "Ask a fuller question than that.", 400
-
-    cap = hourly_limit(user)
-    used = tutor_calls_since(user, _utcnow() - timedelta(hours=1))
-    if used >= cap:
-        from ..billing.service import is_pro
-        tail = ("" if is_pro(user)
-                else " Pro raises this to %d." % PRO_HOURLY_LIMIT)
-        return ("You've used your %d tutor questions for this hour. "
-                "It resets shortly.%s" % (cap, tail)), 429
-    return None, None
+    return over_cap(user)

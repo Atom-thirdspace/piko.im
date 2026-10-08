@@ -128,3 +128,62 @@
 .gradebook tr.is-complete td { background: var(--good-bg); }
 .gradebook__key { font-size: .85rem; color: var(--ink-soft); }
 .gradebook__key li { padding: .1rem 0; }
+
+/* ---------- gradebook cell states ---------- */
+.gradebook .cell--done { color: var(--good); font-weight: 700; }
+.gradebook .cell--late { color: var(--brand-ink); font-weight: 700; }
+.gradebook .cell--missing { color: var(--bad); font-weight: 700; }
+.gradebook .cell--open { color: var(--ink-soft); }
+.gradebook .cell a { color: inherit; text-decoration: none; }
+.gradebook .cell a:hover { text-decoration: underline; }
+
+/* ---------- one student's attempts ---------- */
+.attempt {
+    margin: 1rem 0;
+    padding: .85rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: .6rem;
+    background: var(--page);
+}
+.attempt__head {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin-bottom: .5rem;
+}
+.attempt__io,
+.attempt__code {
+    margin: .5rem 0 0;
+    padding: .6rem .7rem;
+    background: var(--code-bg);
+    border-radius: .4rem;
+    font-size: .82rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+}
+.attempt__code { max-height: 22rem; overflow-y: auto; }
+
+/* ---------- tutor history ---------- */
+.history { display: grid; gap: 1.5rem; }
+.history__turn {
+    padding: .85rem 1rem;
+    margin: .75rem 0;
+    border-left: 3px solid var(--brand);
+    background: var(--page);
+}
+.history__q { font-weight: 600; margin: 0 0 .5rem; }
+
+@media (min-width: 60rem) {
+    .history { grid-template-columns: 16rem 1fr; align-items: start; }
+}
+
+/* ---------- in-room navigation ---------- */
+.room-nav {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: .75rem 0 0;
+    font-size: .9rem;
+}
+.room-nav a { color: var(--brand-ink); }
