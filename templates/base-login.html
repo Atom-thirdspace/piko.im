@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% block theme_attributes %} data-theme="light" data-theme-fixed{% endblock %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +8,11 @@
     <script>
       // Runs before paint: no white flash for a dark-mode viewer.
       try {
-        var saved = localStorage.getItem("piko-theme");
-        if (saved === "dark" || saved === "light") {
-          document.documentElement.setAttribute("data-theme", saved);
+        if (!document.documentElement.hasAttribute("data-theme-fixed")) {
+          var saved = localStorage.getItem("piko-theme");
+          if (saved === "dark" || saved === "light") {
+            document.documentElement.setAttribute("data-theme", saved);
+          }
         }
       } catch (e) { /* private mode: fall back to the OS setting */ }
     </script>

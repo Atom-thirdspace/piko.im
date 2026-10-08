@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 
+{% block theme_attributes %} data-theme="light" data-theme-fixed{% endblock %}
+{% block app_header %}{% endblock app_header %}
+
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
