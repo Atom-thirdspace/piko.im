@@ -94,9 +94,11 @@ app.jinja_env.globals["is_pro"] = lambda: _is_pro(current_user())
 app.jinja_env.globals["billing_state"] = lambda: _sub_state(current_user())
 app.jinja_env.globals["unread_notifications"] = lambda: _unread_cached(current_user())
 _notify.register_cli(app)
-@app.route("/error")
-def error():
-    return render_template("error.html")
+
+
+@app.errorhandler(404)
+def page_not_found(_error):
+    return render_template("error.html"), 404
 
 
 if base.startswith("https://"):
