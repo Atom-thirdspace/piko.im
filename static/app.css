@@ -221,7 +221,7 @@ html body * {
     box-sizing: border-box;
     object-fit: cover;
     border-radius: 50%;
-    border: 1.5px solid var(--brand-ink);
+    border: 1.5px solid #77431d;
 
     display: block;
 }
