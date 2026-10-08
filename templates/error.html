@@ -1,9 +1,59 @@
 {% extends "base.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='error.css') }}">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='error.css') }}">
 {% endblock head %}
 
 {% block content %}
-  <p>nccijedd iwuedh </p>
+
+    <div class="error-text" data-aos="zoom-in" data-aos-delay="500">
+        <h1 class="error-h1">Oops!</h1>
+        <h2 class="error-h2">Seems like this page does not exist...</h2>
+        
+        <a href="/" class="error-a">Back to Home</a>
+    </div>
+s
 {% endblock content %}
+
+{% block js %}
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+  const galleryTrack = document.querySelector("#companies .track");
+  if (galleryTrack && galleryTrack.children.length === 2) {
+    const thirdGallerySet = galleryTrack.children[0].cloneNode(true);
+    thirdGallerySet.setAttribute("aria-hidden", "true");
+    galleryTrack.appendChild(thirdGallerySet);
+  }
+
+  if (galleryTrack && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animationDuration = 18000;
+    let loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+    let offset = 0;
+    let previousTime;
+
+    const animateGallery = (time) => {
+      if (previousTime === undefined) previousTime = time;
+
+      const elapsed = Math.min(time - previousTime, 100);
+      previousTime = time;
+      loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+      offset -= elapsed * loopDistance / animationDuration;
+
+      if (offset <= -loopDistance) {
+        offset += loopDistance;
+        galleryTrack.appendChild(galleryTrack.firstElementChild);
+      }
+
+      galleryTrack.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(animateGallery);
+    };
+
+    requestAnimationFrame(animateGallery);
+  }
+
+  AOS.init({
+    once:true
+    });
+</script>
+{% endblock js %}
