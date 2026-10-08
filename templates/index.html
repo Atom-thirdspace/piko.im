@@ -1,5 +1,7 @@
 {% extends "base-login.html" %}
 
+{% block theme_attributes %} data-theme="light" data-theme-fixed{% endblock %}
+
 {% block head %}
    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
@@ -183,6 +185,7 @@
 </main>
 <section class="section 2" >
   <img style="width: 30vw;" src="https://cdn.hackclub.com/01a10a32-316a-7521-ba2b-e8a95582ccd1/mountain.avif" alt="">
+  
     
 </section>
 

@@ -107,6 +107,7 @@ def membership(team, user):
 @community_bp.route("/community/")
 def index():
     viewer = current_user()
+    is_htmx = request.headers.get("HX-Request") == "true"
     q = (request.args.get("q") or "").strip()
     interest = request.args.get("interest") or ""
     sort = request.args.get("sort") if request.args.get("sort") in SORTS else "active"
@@ -128,15 +129,17 @@ def index():
     people, pager = _paginate(stmt, _page())
     following, followers = following_ids(viewer), follower_ids(viewer)
 
-    teams = db.session.execute(
-        db.select(Team, _member_count_column().label("members"),
-                  _team_xp_column().label("xp"))
-        .where(Team.visibility != "closed")
-        .order_by(db.desc("xp")).limit(6)
-    ).all()
+    teams = []
+    if not is_htmx:
+        teams = db.session.execute(
+            db.select(Team, _member_count_column().label("members"),
+                      _team_xp_column().label("xp"))
+            .where(Team.visibility != "closed")
+            .order_by(db.desc("xp")).limit(6)
+        ).all()
 
     return render_template(
-        "community.html",
+        "community/_people.html" if is_htmx else "community.html",
         people=[_card(u, following, followers) for u in people],
         pager=pager, q=q, interest=interest, sort=sort, sorts=SORTS,
         interests=INTERESTS, teams=teams, viewer=viewer)
@@ -161,6 +164,13 @@ def follow(username):
     db.session.commit()
 
     back = request.form.get("next") or ""
+    if request.headers.get("HX-Request") == "true":
+        return render_template(
+            "community/_follow.html",
+            p=_card(target, following_ids(viewer), follower_ids(viewer)),
+            next_url=back,
+        )
+
     return redirect(back if is_safe_next(back) else url_for("community.index"))
 
 

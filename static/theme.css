@@ -43,6 +43,8 @@
 
   --accent:       #6c5ce7;
 
+  --titcolor:     #77431d;
+
   /* Code stays dark in both modes - a light code block in a dark page is
      the thing people complain about most. */
   --code-bg:      #2a1a10;
@@ -53,7 +55,8 @@
   /* Surfaces written as rgb(), which the first pass never saw. */
   --page-veil:    rgba(251, 246, 244, .92);
   --auth-panel:   rgb(255, 222, 169);
-  --doodle:       1;
+  --page-pattern: url("https://camo.githubusercontent.com/c42c83df2fd1e442ef1e0ed69cc20d21f65308fc2f0dca2a8035360738d49c8c/68747470733a2f2f7765622e77686174736170702e636f6d2f696d672f62672d636861742d74696c652d6461726b5f61346265353132653731393562366237333364393131306234303866303735642e706e67");
+  --page-pattern-tint: rgba(255, 253, 251, .4);
 }
 
 /* The OS preference, unless the viewer has stamped a light theme. */
@@ -99,7 +102,7 @@
 
     --page-veil:  rgba(21, 17, 14, .92);
     --auth-panel: #3d2c18;
-    --doodle:     .05;
+    --page-pattern-tint: rgba(21, 17, 14, .9);
   }
 }
 
@@ -141,11 +144,13 @@
   --code-bg:      #0f0c0a;
   --code-ink:     #e9dccf;
 
+  --titcolor:     #ffffff;
+
   --shadow:       rgba(0, 0, 0, .45);
 
   --page-veil:  rgba(21, 17, 14, .92);
   --auth-panel: #3d2c18;
-  --doodle:     .05;
+  --page-pattern-tint: rgba(21, 17, 14, .9);
 }
 
 
@@ -159,43 +164,88 @@
 }
 
 
-/* The doodle tile used as a page background is a light-on-transparent PNG,
-   so on a dark page it has to be knocked back. One rule here rather than a
-   copy in every stylesheet that uses the tile. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  background: var(--page);
-  opacity: calc(1 - var(--doodle));
-}
-
 /* ---------- the toggle ---------- */
 
 .theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: .3rem;
-  padding: .25rem .6rem;
+  position: relative;
+  flex: 0 0 3.35rem;
+  width: 3.35rem;
+  height: 1.8rem;
+  display: inline-block;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: .85rem;
+  background: var(--surface-3);
+  color: var(--ink);
+  font: 1rem/1 sans-serif;
   cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 .theme-toggle:hover { border-color: var(--line-strong); }
 
-/* One icon shows at a time; which one depends on the resolved theme. */
-.theme-toggle__dark { display: none; }
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) .theme-toggle__light { display: none; }
-  :root:where(:not([data-theme="light"])) .theme-toggle__dark { display: inline; }
+/* A warm, compact sliding switch with the supplied sun and moon artwork. */
+.theme-toggle__thumb {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  z-index: 1;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--on-brand);
+  box-shadow: 0 1px 4px var(--shadow);
+  transform: translateY(-50%);
+  transition: transform .55s cubic-bezier(.2,.8,.2,1), background-color .35s ease;
 }
-:root[data-theme="dark"] .theme-toggle__light { display: none; }
-:root[data-theme="dark"] .theme-toggle__dark { display: inline; }
-:root[data-theme="light"] .theme-toggle__light { display: inline; }
-:root[data-theme="light"] .theme-toggle__dark { display: none; }
+.theme-toggle__thumb svg {
+  position: absolute;
+  width: .95rem;
+  height: .95rem;
+  transition: opacity .28s ease, transform .4s cubic-bezier(.2,.8,.2,1);
+}
+.theme-toggle__light { opacity: 1; transform: rotate(0) scale(1); }
+.theme-toggle__dark { opacity: 0; transform: rotate(-65deg) scale(.5); }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .theme-toggle__thumb {
+    background: var(--brand-ink);
+    color: var(--page);
+    transform: translate(1.75rem, -50%);
+  }
+  :root:where(:not([data-theme="light"])) .theme-toggle__light { opacity: 0; transform: rotate(65deg) scale(.5); }
+  :root:where(:not([data-theme="light"])) .theme-toggle__dark { opacity: 1; transform: rotate(0) scale(1); }
+}
+:root[data-theme="dark"] .theme-toggle__thumb {
+  background: var(--brand-ink);
+  color: var(--page);
+  transform: translate(1.75rem, -50%);
+}
+:root[data-theme="dark"] .theme-toggle__light { opacity: 0; transform: rotate(65deg) scale(.5); }
+:root[data-theme="dark"] .theme-toggle__dark { opacity: 1; transform: rotate(0) scale(1); }
+:root[data-theme="light"] .theme-toggle__light { opacity: 1; transform: rotate(0) scale(1); }
+:root[data-theme="light"] .theme-toggle__dark { opacity: 0; transform: rotate(-65deg) scale(.5); }
+
+/* Use the View Transitions API for a circular theme reveal; older browsers
+  and reduced-motion users get an immediate, non-animated theme update. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) {
+  z-index: 2;
+  animation: theme-reveal .8s cubic-bezier(.2,.75,.25,1) both;
+}
+@keyframes theme-reveal {
+  from { clip-path: circle(0 at var(--theme-x, 50vw) var(--theme-y, 50vh)); }
+  to { clip-path: circle(150vmax at var(--theme-x, 50vw) var(--theme-y, 50vh)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root) { animation-duration: .01ms; }
+  .theme-toggle__thumb,
+  .theme-toggle__thumb svg { transition: none; }
+}

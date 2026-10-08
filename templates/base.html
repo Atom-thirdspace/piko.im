@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% block theme_attributes %}{% endblock %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +8,11 @@
     <script>
       // Runs before paint: no white flash for a dark-mode viewer.
       try {
-        var saved = localStorage.getItem("piko-theme");
-        if (saved === "dark" || saved === "light") {
-          document.documentElement.setAttribute("data-theme", saved);
+        if (!document.documentElement.hasAttribute("data-theme-fixed")) {
+          var saved = localStorage.getItem("piko-theme");
+          if (saved === "dark" || saved === "light") {
+            document.documentElement.setAttribute("data-theme", saved);
+          }
         }
       } catch (e) { /* private mode: fall back to the OS setting */ }
     </script>
@@ -42,10 +44,26 @@
           {% if is_admin(viewer) %}
             <a class="admin-link" href="{{ url_for('admin.overview') }}">Admin</a>
           {% endif %}
-          <button type="button" class="theme-toggle" data-theme-toggle
-                  aria-label="Switch between light and dark">
-            <span class="theme-toggle__light" aria-hidden="true">&#9790;</span>
-            <span class="theme-toggle__dark" aria-hidden="true">&#9728;</span>
+          <button type="button" class="theme-toggle" data-theme-toggle role="switch"
+                  aria-label="Dark mode" aria-checked="false">
+            <span class="theme-toggle__thumb" aria-hidden="true">
+              <svg class="theme-toggle__light" viewBox="0 0 64 64" focusable="false">
+                <g fill="currentColor">
+                  <circle cx="32.003" cy="32.005" r="16.001"/>
+                  <path d="M12.001 31.997c0-2.211-1.789-4-4-4H4c-2.211 0-4 1.789-4 4s1.789 4 4 4h4c2.212 0 3.999-1.789 3.999-4z"/>
+                  <path d="m12.204 46.139-2.832 2.833c-1.563 1.562-1.563 4.094 0 5.656 1.562 1.562 4.094 1.562 5.657 0l2.833-2.832c1.562-1.562 1.562-4.095 0-5.657-1.564-1.563-4.095-1.563-5.658 0z"/>
+                  <path d="M32.003 51.999c-2.211 0-4 1.789-4 4V60c0 2.211 1.789 4 4 4s4-1.789 4-4l-.004-4.001c0-2.211-1.789-4-3.996-4z"/>
+                  <path d="M51.798 46.143c-1.559-1.566-4.091-1.566-5.653-.004s-1.562 4.095 0 5.657l2.829 2.828c1.562 1.57 4.094 1.562 5.656 0s1.566-4.09 0-5.656l-2.832-2.825z"/>
+                  <path d="m60.006 27.997-4.009.008c-2.203-.008-3.992 1.781-3.992 3.992-.008 2.211 1.789 4 3.992 4h4.001c2.219.008 4-1.789 4-4 .004-2.207-1.781-4-3.992-4z"/>
+                  <path d="m51.798 17.859 2.828-2.829c1.574-1.566 1.562-4.094 0-5.657-1.559-1.567-4.09-1.567-5.652-.004l-2.829 2.836c-1.562 1.555-1.562 4.086 0 5.649 1.554 1.572 4.094 1.564 5.653.005z"/>
+                  <path d="M32.003 11.995c2.207.016 4-1.789 4-3.992v-4c0-2.219-1.789-4-4-4-2.211-.008-4 1.781-4 3.993l.008 4.008c-.008 2.202 1.781 3.991 3.992 3.991z"/>
+                  <path d="M12.212 17.855c1.555 1.562 4.079 1.562 5.646-.004 1.574-1.551 1.566-4.09.008-5.649l-2.829-2.828c-1.57-1.571-4.094-1.559-5.657 0-1.575 1.559-1.575 4.09-.012 5.653l2.844 2.828z"/>
+                </g>
+              </svg>
+              <svg class="theme-toggle__dark" viewBox="0 0 24 24" focusable="false">
+                <path fill="currentColor" d="M12.0557 3.59974C12.2752 3.2813 12.2913 2.86484 12.0972 2.53033C11.9031 2.19582 11.5335 2.00324 11.1481 2.03579C6.02351 2.46868 2 6.76392 2 12C2 17.5228 6.47715 22 12 22C17.236 22 21.5313 17.9764 21.9642 12.8518C21.9967 12.4664 21.8041 12.0968 21.4696 11.9027C21.1351 11.7086 20.7187 11.7248 20.4002 11.9443C19.4341 12.6102 18.2641 13 17 13C13.6863 13 11 10.3137 11 6.99996C11 5.73589 11.3898 4.56587 12.0557 3.59974Z"/>
+              </svg>
+            </span>
           </button>
           <form class="topnav__search" method="get" action="{{ url_for('search.page') }}">
             <input id="search" autocomplete="off" type="search" name="q" placeholder="Search" aria-label="Search"
@@ -119,12 +137,29 @@
     return window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark" : "light";
   }
+  function syncToggle() {
+    var btn = document.querySelector("[data-theme-toggle]");
+    if (btn) { btn.setAttribute("aria-checked", String(resolved() === "dark")); }
+  }
+  syncToggle();
   document.addEventListener("click", function (ev) {
     var btn = ev.target.closest("[data-theme-toggle]");
     if (!btn) { return; }
     var next = resolved() === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    try { localStorage.setItem(KEY, next); } catch (e) { /* private mode */ }
+    var root = document.documentElement;
+    var rect = btn.getBoundingClientRect();
+    root.style.setProperty("--theme-x", (rect.left + rect.width / 2) + "px");
+    root.style.setProperty("--theme-y", (rect.top + rect.height / 2) + "px");
+    function applyTheme() {
+      root.setAttribute("data-theme", next);
+      btn.setAttribute("aria-checked", String(next === "dark"));
+      try { localStorage.setItem(KEY, next); } catch (e) { /* private mode */ }
+    }
+    if (document.startViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.startViewTransition(applyTheme);
+    } else {
+      applyTheme();
+    }
   });
 })();
 </script>

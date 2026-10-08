@@ -11,7 +11,10 @@ body {
     font-family: face, sans-serif;
     margin-top: 0;
     margin: 0;
-    background: var(--page);
+    background-color: var(--page);
+    background-image: linear-gradient(var(--page-pattern-tint), var(--page-pattern-tint)), var(--page-pattern);
+    background-size: 100% 100%, 360px 650px;
+    background-repeat: repeat;
     color: var(--ink);
 }
 
@@ -97,7 +100,7 @@ html body * {
 .topnav a {
     position: relative;
     text-decoration: none;
-    color: black;
+    color: var(--ink);
 }
 
 .topnav a::after {
@@ -109,7 +112,7 @@ html body * {
     width: 0;
     height: 3px;
 
-    background-color: #703e18;
+    background-color: var(--brand-ink);
     border-radius: 999px;
 
     transition: width 0.3s ease;
@@ -187,11 +190,14 @@ html body * {
     padding-left: 1rem;
     padding-right: 1rem;
     width: 8rem;
-    border: 0.07rem solid black;
-    background-color: white;
-
+    border: 0.07rem solid var(--line-strong);
+    background-color: var(--surface);
+    color: var(--ink);
+    font: inherit;
 
 }
+
+#search::placeholder { color: var(--ink-muted); }
 
 #search:focus {
     outline: none;
@@ -215,7 +221,7 @@ html body * {
     box-sizing: border-box;
     object-fit: cover;
     border-radius: 50%;
-    border: 1.5px solid var(--brand-ink);
+    border: 1.5px solid #77431d;
 
     display: block;
 }

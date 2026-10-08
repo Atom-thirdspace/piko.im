@@ -1,0 +1,13 @@
+<form method="post"
+      action="{{ url_for('community.follow', username=p.username) }}"
+      hx-post="{{ url_for('community.follow', username=p.username) }}"
+      hx-target="this" hx-swap="outerHTML">
+  {{ csrf_field() }}
+  <input type="hidden" name="next" value="{{ next_url|default(request.full_path) }}">
+  <button type="submit" class="person__follow {{ 'is-on' if p.you_follow }}">
+    {% if p.you_follow and p.follows_you %}Connected
+    {% elif p.you_follow %}Following
+    {% elif p.follows_you %}Follow back
+    {% else %}Follow{% endif %}
+  </button>
+</form>

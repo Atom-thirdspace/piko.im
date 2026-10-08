@@ -1,0 +1,42 @@
+body {
+    font-family: face, sans-serif;
+    margin-top: 0;
+    margin: 0;
+    background-color: var(--page);
+    background-image: linear-gradient(var(--page-pattern-tint), var(--page-pattern-tint)), var(--page-pattern);
+    background-size: 100% 100%, 360px 650px;
+    background-repeat: repeat;
+    color: var(--ink);
+
+    height: 82vh;
+    margin: 0;
+}
+
+.error-text{
+    height: 82vh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.error-a{
+    color: var(--ink);
+    margin-top: 2.8vh;
+    
+}
+
+.error-h1{
+    margin-top: 0;
+    margin-bottom: 0.5vh;
+}
+
+.error-h2{
+    margin: 0;
+}
+
+.error-text a{
+    text-underline-offset: 4px;
+}
