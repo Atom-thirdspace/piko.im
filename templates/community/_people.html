@@ -1,0 +1,70 @@
+<section id="community-results" aria-live="polite">
+  <h2>People</h2>
+  {% if people %}
+    <ul class="cm__grid">
+      {% for p in people %}
+        <li class="card">
+          {% if p.avatar_url %}
+            <img class="person__avatar" src="{{ p.avatar_url }}" alt="" loading="lazy">
+          {% else %}
+            <span class="person__avatar person__avatar--blank" aria-hidden="true">
+              {{ p.name[:1] | upper }}
+            </span>
+          {% endif %}
+
+          <a class="person__name"
+             href="{{ url_for('profile.public_profile', username=p.username) }}">
+            {{ p.name }}<small>@{{ p.username }}</small>
+          </a>
+
+          <p class="person__meta">
+            Level {{ p.level }} &middot; {{ p.xp }} XP
+            {% if p.streak %} &middot; {{ p.streak }}-day streak{% endif %}
+          </p>
+
+          {% if p.bio %}<p class="person__bio">{{ p.bio }}</p>{% endif %}
+
+          {% if p.interests %}
+            <p class="person__tags">
+              {% for label in p.interests | interest_labels %}
+                <span>{{ label }}</span>
+              {% endfor %}
+            </p>
+          {% endif %}
+
+          {% if viewer %}
+            <form method="post"
+                  action="{{ url_for('community.follow', username=p.username) }}">
+              {{ csrf_field() }}
+              <input type="hidden" name="next" value="{{ request.full_path }}">
+              <button type="submit" class="person__follow {{ 'is-on' if p.you_follow }}">
+                {% if p.you_follow and p.follows_you %}Connected
+                {% elif p.you_follow %}Following
+                {% elif p.follows_you %}Follow back
+                {% else %}Follow{% endif %}
+              </button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+
+    {% if pager.pages > 1 %}
+      <p class="cm__pager">
+        {% if pager.page > 1 %}
+          <a href="{{ url_for('community.index', q=q, interest=interest, sort=sort, page=pager.page - 1) }}"
+             hx-get="{{ url_for('community.index', q=q, interest=interest, sort=sort, page=pager.page - 1) }}"
+             hx-target="#community-results" hx-swap="outerHTML" hx-push-url="true">&larr; Back</a>
+        {% endif %}
+        <span>Page {{ pager.page }} of {{ pager.pages }} &middot; {{ pager.total }} people</span>
+        {% if pager.page < pager.pages %}
+          <a href="{{ url_for('community.index', q=q, interest=interest, sort=sort, page=pager.page + 1) }}"
+             hx-get="{{ url_for('community.index', q=q, interest=interest, sort=sort, page=pager.page + 1) }}"
+             hx-target="#community-results" hx-swap="outerHTML" hx-push-url="true">More &rarr;</a>
+        {% endif %}
+      </p>
+    {% endif %}
+  {% else %}
+    <p class="cm__empty">Nobody matches that yet.</p>
+  {% endif %}
+</section>

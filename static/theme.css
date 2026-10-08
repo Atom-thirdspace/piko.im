@@ -100,7 +100,7 @@
 
     --page-veil:  rgba(21, 17, 14, .92);
     --auth-panel: #3d2c18;
-    --page-pattern-tint: rgba(21, 17, 14, .84);
+    --page-pattern-tint: rgba(21, 17, 14, .9);
   }
 }
 
@@ -146,7 +146,7 @@
 
   --page-veil:  rgba(21, 17, 14, .92);
   --auth-panel: #3d2c18;
-  --page-pattern-tint: rgba(21, 17, 14, .84);
+  --page-pattern-tint: rgba(21, 17, 14, .9);
 }
 
 
