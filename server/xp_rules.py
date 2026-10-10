@@ -5,6 +5,9 @@ BONUS_NO_HINTS = 20
 BONUS_FIRST_TRY = 10
 UNIT_COMPLETE = 100
 
+COMBO_STEP = 0.05
+COMBO_CAP = 6
+
 FALLBACK_LESSON_XP = 5
 FALLBACK_PROBLEM_XP = 30
 
@@ -20,6 +23,8 @@ LABELS = {
     "boss": "Boss fight",
     "admin": "Adjustment",
 }
+
+LABELS["combo"] = "Solve combo"
 
 BASE_REASON = "problem"
 
@@ -53,3 +58,19 @@ def summarise(parts):
     names = {BASE_REASON: "base", "no_hints": "no hints", "first_try": "first try"}
     return " + ".join("%d %s" % (amount, names.get(reason, reason))
                       for reason, amount in parts)
+
+def combo_bonus(base, combo):
+    steps = min(max(combo, 0), COMBO_CAP)
+    return int(round(base * COMBO_STEP * steps))
+
+def solve_award(problem, used_hints, attempt_number, combo=0):
+    base = problem_base(problem)
+    parts = [(BASE_REASON, base)]
+    if not used_hints:
+        parts.append(("no_hints", BONUS_NO_HINTS))
+    if attempt_number <= 1:
+        parts.append(("first_try", BONUS_FIRST_TRY))
+    extra = combo_bonus(base, combo)
+    if extra:
+        parts.append(("combo", extra))
+    return parts

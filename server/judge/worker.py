@@ -5,8 +5,9 @@ from flask import current_app
 from . import verdicts as V
 from .runner import TestCase, judge, run_once
 from ..models import (JudgeJob, Problem, ScratchRun, _utcnow, db,
-                      first_accepted, replace_test_results)
-from ..progress import award_xp
+                      first_accepted, replace_test_results, attempts_on)
+from ..progress import award_xp, bump_combo
+from .. import economy, mastery, speedrun
 
 # Someone is watching a spinner while a run executes, so poll tighter than we
 # would for scored submissions.
@@ -100,21 +101,29 @@ def run_job(job):
         from .. import potd, quests
         from ..achievements import evaluate
         from ..learning.routes import complete_lessons_for_problem
-        from ..models import attempts_on, record_solve, used_hints
+        from ..models import record_solve, used_hints
         from ..xp_rules import solve_award
         user = sub.user
         if user is not None:
             # Counting reveals *now* is exactly "reveals before the solve":
             # the award happens once, here, at the moment of first accept.
             # attempts_on includes this submission, so 1 means first try.
+            attempts = attempts_on(user.id, problem.id)
+            # Read before the bump, so the award uses the combo this solve
+            # earned rather than the one it is about to set.
+            combo_before = user.solve_combo or 0
             parts = solve_award(problem,
                                 used_hints(user.id, problem.id),
-                                attempts_on(user.id, problem.id))
+                                attempts, combo=combo_before)
             for reason, amount in parts:
                 award_xp(user, amount, reason, str(problem.id))
             complete_lessons_for_problem(user, problem.id)
             potd.award_if_today(user, problem)
             db.session.commit()
+            bump_combo(user, attempts <= 1)
+            mastery.record_solve(user, problem)
+            economy.earn(user, economy.solve_coins(problem), "solve",
+                         str(problem.id))
             # record_solve writes the row the solve quests count, so it has
             # to land before sync looks.
             record_solve(sub)
@@ -123,6 +132,15 @@ def run_job(job):
             # Badges are evaluated off the request thread, where a handful of
             # aggregate queries costs nobody a page load.
             evaluate(user)
+
+    # Races are only open on problems already solved, so a speedrun settles
+    # on any accept, not just the first.
+    if result.verdict == V.AC and sub.user is not None:
+        speedrun.settle(sub.user, sub)
+    # A judge failure is our fault, so it leaves the combo alone. Re-solves
+    # leave it alone too: the combo counts new problems cleared cleanly.
+    elif result.verdict not in (V.AC, V.IE) and sub.user is not None:
+        bump_combo(sub.user, False)
 
     if result.verdict == V.AC:
         from ..similarity import check_submission, index_submission

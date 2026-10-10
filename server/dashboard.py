@@ -128,6 +128,14 @@ def _dashboard_data(user):
         "quests": board,
         "potd": potd.card(user),
         "goal_choices": DAILY_GOAL_CHOICES,
+                "companion": companion.state(user, today_xp, user.streak_days or 0),
+        "coins": economy.balance(user),
+        "mastery": mastery.for_user(user)[:6],
+        "rusty": mastery.rusty(user),
+        "combo": {"now": user.solve_combo or 0, "best": user.combo_best or 0},
+        "season": seasons.card(user),
+        "rival": rivals.card(user),
+
     }
 
 

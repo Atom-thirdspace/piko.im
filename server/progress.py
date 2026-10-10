@@ -154,3 +154,12 @@ def grant_monthly_freeze(user, today):
     give = min(per_month, cap - have)
     user.streak_freezes = have + give
     return give
+
+def bump_combo(user, clean):
+    if clean:
+        user.solve_combo = (user.solve_combo or 0) + 1
+        user.combo_best = max(user.combo_best or 0, user.solve_combo)
+    else:
+        user.solve_combo = 0
+    db.session.commit()
+    return user.solve_combo
