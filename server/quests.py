@@ -88,6 +88,44 @@ def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
         stmt = stmt.where(Unit.track_id.in_(tracks))
     return db.session.execute(stmt.limit(1)).scalar() is not None
 
+def _boss_wins(user, lo, hi):
+    """Wins only.
+
+    Deliberately not the XP ledger: the arena also pays a consolation for a
+    good loss, and "win a fight" has to mean winning.
+    """
+    from .models import BossRun
+    return db.session.execute(
+        db.select(db.func.count()).select_from(BossRun)
+        .where(BossRun.user_id == user.id, BossRun.status == "won",
+               BossRun.ended_at >= lo, BossRun.ended_at < hi)).scalar() or 0
+
+
+def _boss_fightable():
+    """Is any live boss backed by a pool big enough to fight?
+
+    Grouped in one query rather than counted per boss - this runs inside the
+    dashboard's request, where every round trip shows.
+
+    A boss that also filters by topic is treated optimistically here: the
+    worst case is a quest that is harder to clear than it looks, not a
+    crash.
+    """
+    from .arena.rules import MIN_POOL
+    from .models import Boss, BossQuestion
+
+    counts = dict(db.session.execute(
+        db.select(BossQuestion.difficulty, db.func.count())
+        .where(BossQuestion.status == PUBLISHED)
+        .group_by(BossQuestion.difficulty)).all())
+    if not counts:
+        return False
+
+    tiers = db.session.execute(
+        db.select(Boss.difficulty).where(Boss.is_live.is_(True))).scalars()
+    return any(counts.get(tier, 0) >= MIN_POOL for tier in tiers)
+
+
 def _capability(user):
     return {
         "unsolved": _unsolved_exists(user),
@@ -96,6 +134,7 @@ def _capability(user):
         "lesson_enrolled": _unfinished_lesson_exists(user, enrolled_only=True),
         "quiz": _unfinished_lesson_exists(user, kind="quiz"),
         "goal": (user.daily_goal_xp or 0) > 0,
+        "boss": _boss_fightable(),
     }
 
 
@@ -150,6 +189,9 @@ REGISTRY = (
     Quest("goal", "Hit your daily XP goal", 1, 15,
           _goal_hit,
           lambda c: c["goal"]),
+    Quest("boss", "Win a fight in the arena", 1, 25,
+          _boss_wins,
+          lambda c: c["boss"]),
 )
 
 BY_KEY = {q.key: q for q in REGISTRY}

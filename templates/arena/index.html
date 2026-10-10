@@ -1,0 +1,100 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='arena.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>The arena</h1>
+    <p class="learn-lede">
+      Rapid-fire questions against a clock. A right answer hits the boss, and
+      answering fast hits harder. Miss, and it hits you. Consecutive hits
+      build a combo that doubles your damage &mdash; so a single slip costs
+      more than the health you lose.
+    </p>
+    {% if paid_left %}
+      <p class="room-hint">
+        {{ paid_left }} more {{ 'fight' if paid_left == 1 else 'fights' }}
+        pay XP today. After that you can keep playing for the practice.
+      </p>
+    {% else %}
+      <p class="room-hint">
+        You have taken today's XP from the arena. Fights still work &mdash;
+        they just stop paying until tomorrow.
+      </p>
+    {% endif %}
+  </header>
+
+  {% if active %}
+    <section class="room-card room-card--member">
+      <h2>You are mid-fight</h2>
+      <p class="room-hint">
+        {{ active.boss.name }} is still standing on
+        {{ active.boss_hp }} HP, and you are on {{ active.player_hp }}.
+      </p>
+      <p>
+        <a class="btn btn-primary"
+           href="{{ url_for('arena.fight', run_id=active.id) }}">Back to it</a>
+      </p>
+    </section>
+  {% endif %}
+
+  <section class="bosses">
+    {% for boss in bosses %}
+      <article class="boss boss--t{{ boss.tier }}">
+        <span class="boss__sigil" aria-hidden="true">{{ boss.sigil or '☗' }}</span>
+        <div class="boss__body">
+          <h2>{{ boss.name }}</h2>
+          <p class="boss__meta">
+            Tier {{ boss.tier }} &middot; {{ boss.hp }} HP &middot;
+            hits for {{ boss.attack }}
+            <span class="pill pill-{{ boss.difficulty }}">{{ boss.difficulty }}</span>
+            {% if boss.topic %}<span class="search-meta">{{ boss.topic }}</span>{% endif %}
+          </p>
+          {% if boss.blurb %}<p class="boss__blurb">{{ boss.blurb }}</p>{% endif %}
+        </div>
+        <form method="post"
+              action="{{ url_for('arena.start', slug=boss.slug) }}">
+          {{ csrf_field() }}
+          <button type="submit" class="btn btn-primary"
+                  {{ 'disabled' if active }}>Fight</button>
+        </form>
+      </article>
+    {% else %}
+      <p class="learn-lede">No bosses are live yet.</p>
+    {% endfor %}
+  </section>
+
+  {% if recent %}
+    <section>
+      <h2>Your last fights</h2>
+      <table class="admin-table">
+        <tr>
+          <th>Boss</th><th>Result</th><th>Hits</th>
+          <th>Best combo</th><th>XP</th><th>When</th>
+        </tr>
+        {% for run in recent %}
+          <tr>
+            <td>
+              <a href="{{ url_for('arena.result', run_id=run.id) }}">
+                {{ run.boss.name }}</a>
+            </td>
+            <td>
+              <span class="pill pill-{{ 'done' if run.status == 'won' else 'fail' }}">
+                {{ run.status }}
+              </span>
+            </td>
+            <td>{{ run.correct }} / {{ run.asked }}</td>
+            <td>{{ run.best_combo }}</td>
+            <td>{{ run.xp_awarded or '—' }}</td>
+            <td class="search-meta">{{ run.started_at.strftime('%d %b %H:%M') }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </section>
+  {% endif %}
+</main>
+{% endblock content %}

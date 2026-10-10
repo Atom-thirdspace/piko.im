@@ -2089,3 +2089,110 @@ def saved_tests_for(user, problem):
     return db.session.execute(
         db.select(SavedTest).filter_by(user_id=user.id, problem_id=problem.id)
         .order_by(SavedTest.id)).scalars().all()
+
+class BossQuestion(Authored, db.Model):
+    __tablename__ = "boss_questions"
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(16), nullable=False, default="choice")
+    prompt = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.String(200), nullable=False)
+    alternates = db.Column(ARRAY(db.Text), nullable=False, default=list,
+                           server_default="{}")
+    choices = db.Column(JSONB, nullable=False, default=list,
+                        server_default="[]")
+    explain_md = db.Column(db.Text, nullable=False, default="",
+                           server_default="")
+    topic = db.Column(db.String(64))
+    difficulty = db.Column(db.String(16), nullable=False, default="easy")
+    seconds = db.Column(db.Integer, nullable=False, default=20)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+class Boss(db.Model):
+    __tablename__ = "bosses"
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    blurb = db.Column(db.Text, nullable=False, default="", server_default="")
+    sigil = db.Column(db.String(16), nullable=False, default="",
+                      server_default="")
+    tier = db.Column(db.Integer, nullable=False, default=1)
+    hp = db.Column(db.Integer, nullable=False, default=240)
+    attack = db.Column(db.Integer, nullable=False, default=14)
+    topic = db.Column(db.String(64))
+    difficulty = db.Column(db.String(16), nullable=False, default="easy")
+    position = db.Column(db.Integer, nullable=False, default=0)
+    is_live = db.Column(db.Boolean, nullable=False, default=True,
+                        server_default="true")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+class BossRun(db.Model):
+    __tablename__ = "boss_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    boss_id = db.Column(db.Integer, db.ForeignKey("bosses.id", ondelete="CASCADE"),
+                        nullable=False)
+    seed = db.Column(db.BigInteger, nullable=False)
+    plan = db.Column(JSONB, nullable=False, default=list, server_default="[]")
+    cursor = db.Column(db.Integer, nullable=False, default=0)
+    boss_hp = db.Column(db.Integer, nullable=False)
+    player_hp = db.Column(db.Integer, nullable=False)
+    combo = db.Column(db.Integer, nullable=False, default=0)
+    best_combo = db.Column(db.Integer, nullable=False, default=0)
+    asked = db.Column(db.Integer, nullable=False, default=0)
+    correct = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(16), nullable=False, default="active",
+                       index=True)
+    xp_awarded = db.Column(db.Integer, nullable=False, default=0)
+    started_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    ended_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+    boss = db.relationship("Boss")
+    asked_rows = db.relationship("BossRunQuestion", back_populates="run",
+                                 cascade="all, delete-orphan",
+                                 order_by="BossRunQuestion.position")
+
+    @property
+    def accuracy(self):
+        return (self.correct / self.asked) if self.asked else 0.0
+
+    @property
+    def perfect(self):
+        return self.status == "won" and self.correct == self.asked
+
+class BossRunQuestion(db.Model):
+    __tablename__ = "boss_run_questions"
+    __table_args__ = (
+        UniqueConstraint("run_id", "position", name="uq_brq_position"),
+        UniqueConstraint("run_id", "question_id", name="uq_brq_question"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey("boss_runs.id", ondelete="CASCADE"),
+                       nullable=False, index=True)
+    question_id = db.Column(db.Integer,
+                            db.ForeignKey("boss_questions.id", ondelete="CASCADE"),
+                            nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    served_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                          nullable=False)
+    deadline_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    answered_at = db.Column(db.DateTime(timezone=True))
+    given = db.Column(db.String(200), nullable=False, default="",
+                      server_default="")
+    correct = db.Column(db.Boolean, nullable=False, default=False)
+    damage = db.Column(db.Integer, nullable=False, default=0)
+
+    run = db.relationship("BossRun", back_populates="asked_rows")
+    question = db.relationship("BossQuestion")
+
+def active_boss_run(user):
+    return db.session.execute(
+        db.select(BossRun).filter_by(user_id=user.id, status="active")
+    ).scalar_one_or_none()
+

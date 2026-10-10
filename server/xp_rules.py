@@ -17,6 +17,7 @@ LABELS = {
     "streak": "Streak bonus",
     "daily": "Daily quest",
     "potd": "Problem of the day",
+    "boss": "Boss fight",
     "admin": "Adjustment",
 }
 

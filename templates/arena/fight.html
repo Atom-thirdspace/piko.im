@@ -1,0 +1,74 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='arena.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="arena"
+      data-question-url="{{ url_for('arena.question', run_id=run.id) }}"
+      data-answer-url="{{ url_for('arena.answer', run_id=run.id) }}"
+      data-result-url="{{ url_for('arena.result', run_id=run.id) }}"
+      data-boss-hp-max="{{ state.boss_hp_max }}"
+      data-player-hp-max="{{ state.player_hp_max }}">
+
+  <header class="arena__top">
+    <div class="arena__boss">
+      <span class="arena__sigil" data-sigil aria-hidden="true">{{ boss.sigil or '☗' }}</span>
+      <div class="arena__bossinfo">
+        <h1>{{ boss.name }}</h1>
+        <div class="bar bar--boss">
+          <span class="bar__fill" data-boss-bar
+                style="width: {{ (100 * state.boss_hp / state.boss_hp_max)|round(1) }}%"></span>
+        </div>
+        <p class="bar__label"><span data-boss-hp>{{ state.boss_hp }}</span> /
+          {{ state.boss_hp_max }}</p>
+      </div>
+    </div>
+
+    <div class="arena__you">
+      <div class="bar bar--you">
+        <span class="bar__fill" data-player-bar
+              style="width: {{ (100 * state.player_hp / state.player_hp_max)|round(1) }}%"></span>
+      </div>
+      <p class="bar__label">You <span data-player-hp>{{ state.player_hp }}</span> /
+        {{ state.player_hp_max }}</p>
+      <p class="arena__combo" data-combo hidden></p>
+    </div>
+  </header>
+
+  <section class="arena__stage">
+    <div class="arena__timer"><span class="arena__timer-fill" data-timer></span></div>
+
+    <p class="arena__meta">
+      <span data-position></span>
+      <span class="pill" data-difficulty></span>
+    </p>
+
+    <p class="arena__prompt" data-prompt>Readying…</p>
+
+    <div class="arena__choices" data-choices hidden></div>
+
+    <form class="arena__short" data-short hidden autocomplete="off">
+      <input type="text" data-input maxlength="120" spellcheck="false"
+             placeholder="Type your answer" aria-label="Your answer">
+      <button type="submit" class="btn btn-primary">Strike</button>
+    </form>
+
+    <div class="arena__verdict" data-verdict hidden></div>
+  </section>
+
+  <footer class="arena__foot">
+    <form method="post" action="{{ url_for('arena.forfeit', run_id=run.id) }}"
+          onsubmit="return confirm('Flee the fight? It counts as a loss.')">
+      {{ csrf_field() }}
+      <button type="submit" class="btn">Flee</button>
+    </form>
+  </footer>
+</main>
+{% endblock content %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='arena.js') }}"></script>
+{% endblock js %}

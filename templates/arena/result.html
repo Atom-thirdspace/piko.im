@@ -1,0 +1,96 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='arena.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('arena.index') }}">The arena</a>
+    </p>
+    <h1 class="result__title result__title--{{ run.status }}">
+      {% if run.status == 'won' %}
+        {{ boss.name }} falls
+      {% elif run.status == 'lost' %}
+        {{ boss.name }} wins
+      {% elif run.status == 'draw' %}
+        A stalemate
+      {% else %}
+        Fight abandoned
+      {% endif %}
+    </h1>
+    <p class="learn-lede">
+      {% if run.status == 'won' and run.perfect %}
+        Not a single miss. That is the clean sheet.
+      {% elif run.status == 'won' %}
+        {{ run.correct }} of {{ run.asked }} landed, and it was enough.
+      {% elif run.status == 'lost' %}
+        It got through {{ run.asked - run.correct }} times. Read the ones you
+        missed and go again.
+      {% elif run.status == 'draw' %}
+        The question pool ran out before either of you dropped.
+      {% else %}
+        You walked away from this one.
+      {% endif %}
+    </p>
+  </header>
+
+  <section class="scoreline">
+    <div class="score">
+      <span class="score__n">{{ run.correct }}/{{ run.asked }}</span>
+      <span class="score__k">landed</span>
+    </div>
+    <div class="score">
+      <span class="score__n">{{ (100 * run.accuracy)|round|int }}%</span>
+      <span class="score__k">accuracy</span>
+    </div>
+    <div class="score">
+      <span class="score__n">{{ run.best_combo }}</span>
+      <span class="score__k">best combo</span>
+    </div>
+    <div class="score">
+      <span class="score__n">{{ boss.hp - run.boss_hp }}</span>
+      <span class="score__k">damage dealt</span>
+    </div>
+    <div class="score {{ 'score--paid' if run.xp_awarded }}">
+      <span class="score__n">{{ run.xp_awarded or 0 }}</span>
+      <span class="score__k">XP</span>
+    </div>
+  </section>
+
+  {% if run.status != 'abandoned' and not run.xp_awarded %}
+    <p class="room-hint">
+      No XP from this one &mdash; either the day's arena XP is already spent,
+      or the fight ended too early to count.
+    </p>
+  {% endif %}
+
+  <section>
+    <h2>What you were asked</h2>
+    <table class="admin-table recap">
+      <tr><th></th><th>Question</th><th>Your answer</th><th>Right answer</th><th>Hit</th></tr>
+      {% for row in run.asked_rows %}
+        <tr class="{{ 'is-hit' if row.correct else 'is-miss' }}">
+          <td class="search-meta">{{ loop.index }}</td>
+          <td>{{ row.question.prompt }}</td>
+          <td>
+            {%- if row.given %}{{ row.given }}{% else %}<i>no answer</i>{% endif -%}
+          </td>
+          <td>{{ row.question.answer }}</td>
+          <td class="recap__dmg">
+            {%- if row.correct %}+{{ row.damage }}{% else %}&mdash;{% endif -%}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </section>
+
+  <p class="result__again">
+    <a class="btn btn-primary" href="{{ url_for('arena.index') }}">
+      Back to the arena</a>
+  </p>
+</main>
+{% endblock content %}

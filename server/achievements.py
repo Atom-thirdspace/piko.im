@@ -3,8 +3,8 @@ from typing import Callable
 
 from sqlalchemy.exc import IntegrityError
 
-from .models import (LessonProgress, Problem, Submission, UserAchievement,
-                     XpEvent, db, earned_keys)
+from .models import (BossRun, LessonProgress, Problem, Submission,
+                     UserAchievement, XpEvent, db, earned_keys)
 from .progress import level_for_xp
 
 
@@ -54,6 +54,12 @@ def snapshot(user):
         "shared": count(
             db.select(db.func.count()).select_from(Submission)
             .where(Submission.user_id == user.id, Submission.is_public.is_(True))),
+        "boss_wins": count(
+            db.select(db.func.count()).select_from(BossRun)
+            .where(BossRun.user_id == user.id, BossRun.status == "won")),
+        "best_combo": count(
+            db.select(db.func.coalesce(db.func.max(BossRun.best_combo), 0))
+            .where(BossRun.user_id == user.id)),
     }
 
 
@@ -100,6 +106,15 @@ REGISTRY = (
                 _at_least("level", 10)),
     Achievement("level_25", "Level 25", "Reach level 25", "level",
                 _at_least("level", 25)),
+
+    Achievement("boss_first", "First blood", "Win a fight in the arena",
+                "arena", _at_least("boss_wins", 1)),
+    Achievement("boss_10", "Boss hunter", "Win 10 fights in the arena",
+                "arena", _at_least("boss_wins", 10)),
+    # A combo cannot be ground out the way a win count can - it has to be
+    # earned in one unbroken run.
+    Achievement("combo_15", "Unbroken", "Land a 15-hit combo",
+                "arena", _at_least("best_combo", 15)),
 )
 
 BY_KEY = {a.key: a for a in REGISTRY}

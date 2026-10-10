@@ -41,6 +41,8 @@ from server.health import health_bp
 from server import notify as _notify
 from server.models import unread_count as _unread
 from server.memo import per_request
+from server.arena import arena_bp
+from server.arena.seed import register_cli as register_arena_cli
 from server.tutor.pages import tutor_pages_bp
 
 load_dotenv()
@@ -84,9 +86,11 @@ app.register_blueprint(search_bp)
 app.register_blueprint(contests_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(tutor_pages_bp)
+app.register_blueprint(arena_bp)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)
+register_arena_cli(app)
 register_similarity_cli(app)
 register_generation_cli(app)
 app.jinja_env.globals["current_user"] = current_user
