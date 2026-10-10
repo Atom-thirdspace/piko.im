@@ -135,7 +135,6 @@ def _dashboard_data(user):
         "combo": {"now": user.solve_combo or 0, "best": user.combo_best or 0},
         "season": seasons.card(user),
         "rival": rivals.card(user),
-
     }
 
 

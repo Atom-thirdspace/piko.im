@@ -63,6 +63,7 @@ def today():
 @problems_bp.route("/problems/<slug>/")
 @login_required
 def page(slug):
+    from . import economy, speedrun
     from .billing.service import is_pro
     problem = _problem_or_404(slug)
     user = current_user()
@@ -108,6 +109,10 @@ def page(slug):
         pro=pro,
         saved_tests=saved_tests_for(user, problem) if pro else [],
         max_saved_tests=MAX_SAVED_TESTS,
+        coins=economy.balance(user),
+        hint_cost=economy.HINT_COST,
+        speed_best=speedrun.best(user, problem),
+        can_race=bool(speedrun.eligible(user, problem)),
     )
 
 
@@ -376,10 +381,19 @@ def reveal(slug, hint_id):
     if hint is None or hint.problem_id != problem.id:
         abort(404)
 
+    from . import economy
+    already = hint.id in revealed_hint_ids(user, problem)
+    if not already and hint.cost_xp:
+        if not economy.spend(user, economy.HINT_COST, "hint", str(hint.id)):
+            return jsonify(error="That hint costs %d coins and you have %d."
+                                 % (economy.HINT_COST, economy.balance(user)),
+                           coins=economy.balance(user)), 402
+
     reveal_hint(user, hint)
     award = _projected(user, problem)
     return jsonify(body=str(render_md(hint.body_md)),
-                   award_now=award["total"], award_note=award["summary"])
+                   award_now=award["total"], award_note=award["summary"],
+                   coins=economy.balance(user))
 
 def _pro_gate(user):
     from .billing.service import is_pro

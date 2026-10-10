@@ -44,6 +44,10 @@ from server.memo import per_request
 from server.arena import arena_bp
 from server.arena.seed import register_cli as register_arena_cli
 from server.tutor.pages import tutor_pages_bp
+from server.gamify_routes import gamify_bp
+from server.seasons import register_cli as register_season_cli
+from server.rivals import register_cli as register_rivals_cli
+from server.raids import register_cli as register_raids_cli
 
 load_dotenv()
 
@@ -87,6 +91,10 @@ app.register_blueprint(contests_bp)
 app.register_blueprint(health_bp)
 app.register_blueprint(tutor_pages_bp)
 app.register_blueprint(arena_bp)
+app.register_blueprint(gamify_bp)
+register_season_cli(app)
+register_rivals_cli(app)
+register_raids_cli(app)
 register_cli(app)
 register_judge_cli(app)
 register_achievement_cli(app)

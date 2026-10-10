@@ -4,6 +4,7 @@
 {% block head %}
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
 {% endblock head %}
 
 {% block content %}
@@ -216,6 +217,115 @@
   </div>
 
   
+
+  <div class="dash__gamify">
+    {% if companion %}
+      <section class="pet" aria-label="Your companion">
+        <span class="pet__art is-{{ companion.mood }}">{{ companion.art }}</span>
+        <div>
+          <p class="pet__name">
+            {{ companion.species }} &middot; {{ companion.stage }}
+          </p>
+          <p class="pet__line">{{ companion.line }}</p>
+          {% if companion.levels_to_go %}
+            <p class="pet__line">
+              {{ companion.levels_to_go }} more
+              {{ 'level' if companion.levels_to_go == 1 else 'levels' }}
+              to grow again.
+            </p>
+          {% endif %}
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="card cardstyle" aria-label="Coins">
+      <div class="card__head">
+        <h2 class="card__title">Coins</h2>
+        <span class="card__meta">
+          <a href="{{ url_for('gamify.wardrobe') }}">Wardrobe</a>
+        </span>
+      </div>
+      <p><b class="coin coin--big">{{ coins }}</b></p>
+      {% if combo.now > 1 %}
+        <p class="pet__line">{{ combo.now }} clean solves in a row.</p>
+      {% elif combo.best %}
+        <p class="pet__line">Best clean run: {{ combo.best }}.</p>
+      {% endif %}
+    </section>
+
+    {% if season %}
+      <section class="card cardstyle" aria-label="Season">
+        <div class="card__head">
+          <h2 class="card__title">{{ season.season.name }}</h2>
+          <span class="card__meta">{{ season.days_left }}d left</span>
+        </div>
+        <p>
+          <span class="season__tier tier-{{ season.tier.key }}">
+            {{ season.tier.label }}
+          </span>
+          <b class="coin">{{ season.score }}</b> XP
+        </p>
+        {% if season.next %}
+          <p class="pet__line">
+            {{ season.next.needed }} more for {{ season.next.label }}.
+          </p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {% if rival %}
+      <section class="card cardstyle" aria-label="Rival">
+        <div class="card__head">
+          <h2 class="card__title">This week's rival</h2>
+        </div>
+        {% if rival.waiting %}
+          <p class="pet__line">Waiting for Monday's pairing.</p>
+        {% else %}
+          <div class="versus">
+            <span class="versus__side {{ 'is-ahead' if rival.leading }}">
+              <b>{{ rival.yours }}</b>you
+            </span>
+            <span class="versus__vs">vs</span>
+            <span class="versus__side {{ 'is-ahead' if not rival.leading }}">
+              <b>{{ rival.theirs }}</b>
+              {% if rival.ghost %}your last week
+              {% else %}{{ rival.opponent.username or 'them' }}{% endif %}
+            </span>
+          </div>
+        {% endif %}
+      </section>
+    {% endif %}
+
+    {% if mastery %}
+      <section class="card cardstyle" aria-label="Mastery">
+        <div class="card__head">
+          <h2 class="card__title">Mastery</h2>
+          <span class="card__meta">
+            <a href="{{ url_for('gamify.mastery_page') }}">All topics</a>
+          </span>
+        </div>
+        <div class="bars">
+          {% for row in mastery[:4] %}
+            <article class="bar-row">
+              <div class="bar-row__top">
+                <b>{{ row.topic }}</b>
+                <span class="bar-row__num">{{ row.value }}</span>
+              </div>
+              <div class="track">
+                <span class="track__fill"
+                      style="width: {{ (100 * row.fraction) | round(1) }}%"></span>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+        {% if rusty %}
+          <p class="pet__line">
+            Fading: {{ rusty | map(attribute='topic') | join(', ') }}
+          </p>
+        {% endif %}
+      </section>
+    {% endif %}
+  </div>
 
   <section class="dash__stats" aria-label="Your totals">
     {% set tiles = [

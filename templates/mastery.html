@@ -1,0 +1,67 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Mastery</h1>
+    <p class="learn-lede">
+      One bar per topic, and they fade. A topic you have not touched loses
+      half its value every {{ half_life }} days, so these are what you can do
+      now rather than what you once did.
+    </p>
+  </header>
+
+  {% if rusty %}
+    <section class="room-card">
+      <h2>Worth revisiting</h2>
+      <p class="room-hint">
+        You were stronger at these. A problem or two each would bring them back.
+      </p>
+      <ul class="room-list">
+        {% for row in rusty %}
+          <li class="room-row">
+            <b>{{ row.topic }}</b>
+            <span class="room-seats">
+              {{ row.value }} now, peaked at {{ row.peak }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if not rows %}
+    <p class="learn-lede">
+      Nothing tracked yet. Solving a problem or finishing a lesson starts a
+      topic off.
+    </p>
+  {% else %}
+    <section class="bars">
+      {% for row in rows %}
+        <article class="bar-row">
+          <div class="bar-row__top">
+            <b>{{ row.topic }}</b>
+            <span class="pill pill-{{ row.band }}">{{ row.band }}</span>
+            <span class="bar-row__num">{{ row.value }}</span>
+          </div>
+          <div class="track">
+            <span class="track__peak"
+                  style="width: {{ (100 * (row.peak / 300.0)) | round(1) }}%"></span>
+            <span class="track__fill"
+                  style="width: {{ (100 * row.fraction) | round(1) }}%"></span>
+          </div>
+          <p class="bar-row__foot search-meta">
+            {%- if row.faded %}faded from {{ row.peak }} &middot; {% endif -%}
+            last practised {{ row.updated_at.strftime('%d %b') }}
+          </p>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
+</main>
+{% endblock content %}

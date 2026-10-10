@@ -42,7 +42,8 @@ def index():
 @login_required
 def start(slug):
     boss = _boss_or_404(slug)
-    run, error = engine.start(current_user(), boss)
+    run, error = engine.start(current_user(), boss,
+                              stake=request.form.get("stake", "safe"))
     if error:
         flash(error, "error")
         return redirect(url_for("arena.index"))
@@ -97,7 +98,37 @@ def forfeit(run_id):
 @arena_bp.route("/run/<int:run_id>/result")
 @login_required
 def result(run_id):
+    from .. import economy
     run = _run_or_404(run_id)
     if run.status == "active":
         return redirect(url_for("arena.fight", run_id=run.id))
-    return render_template("arena/result.html", run=run, boss=run.boss)
+    return render_template("arena/result.html", run=run, boss=run.boss,
+                           retry_cost=economy.ARENA_RETRY_COST,
+                           coins=economy.balance(current_user()))
+
+@arena_bp.route("/endless/start", methods=["POST"])
+@login_required
+def endless_start():
+    boss = _boss_or_404(request.form.get("slug") or "big-o-wyrm")
+    run, error = engine.start(current_user(), boss, mode="endless",
+                              stake=request.form.get("stake", "safe"))
+    if error:
+        flash(error, "error")
+        return redirect(url_for("arena.index"))
+    return redirect(url_for("arena.fight", run_id=run.id))
+
+
+@arena_bp.route("/endless/")
+@login_required
+def endless_board():
+    return render_template("arena/endless.html", rows=engine.endless_board())
+
+
+@arena_bp.route("/run/<int:run_id>/retry", methods=["POST"])
+@login_required
+def retry(run_id):
+    ok, message = engine.retry(_run_or_404(run_id))
+    flash(message, "success" if ok else "error")
+    if ok:
+        return redirect(url_for("arena.fight", run_id=run_id))
+    return redirect(url_for("arena.result", run_id=run_id))

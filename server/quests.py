@@ -126,6 +126,31 @@ def _boss_fightable():
     return any(counts.get(tier, 0) >= MIN_POOL for tier in tiers)
 
 
+def _endless_scores(user, lo, hi, target=150):
+    from .models import BossRun
+    return db.session.execute(
+        db.select(db.func.count()).select_from(BossRun)
+        .where(BossRun.user_id == user.id, BossRun.mode == "endless",
+               BossRun.score >= target, BossRun.ended_at >= lo,
+               BossRun.ended_at < hi)).scalar() or 0
+
+
+def _records_set(user, lo, hi):
+    from .models import SpeedRecord
+    return db.session.execute(
+        db.select(db.func.count()).select_from(SpeedRecord)
+        .where(SpeedRecord.user_id == user.id,
+               SpeedRecord.set_at >= lo, SpeedRecord.set_at < hi)).scalar() or 0
+
+
+def _has_solved_something(user):
+    """You can only race a problem you have already solved."""
+    from .models import ProblemSolve
+    return db.session.execute(
+        db.select(ProblemSolve.id).where(ProblemSolve.user_id == user.id)
+        .limit(1)).scalar() is not None
+
+
 def _capability(user):
     return {
         "unsolved": _unsolved_exists(user),
@@ -135,6 +160,7 @@ def _capability(user):
         "quiz": _unfinished_lesson_exists(user, kind="quiz"),
         "goal": (user.daily_goal_xp or 0) > 0,
         "boss": _boss_fightable(),
+        "speed": _has_solved_something(user),
     }
 
 
@@ -192,6 +218,12 @@ REGISTRY = (
     Quest("boss", "Win a fight in the arena", 1, 25,
           _boss_wins,
           lambda c: c["boss"]),
+    Quest("endless", "Score 150 in endless mode", 1, 25,
+          _endless_scores,
+          lambda c: c["boss"]),
+    Quest("speed", "Beat one of your own times", 1, 25,
+          _records_set,
+          lambda c: c["speed"]),
 )
 
 BY_KEY = {q.key: q for q in REGISTRY}
@@ -261,6 +293,8 @@ def sync_board(user, day=None):
     day = day or user_today(user)
     state = board(user, day)
 
+    from . import economy
+
     gained = 0
     for task in state["tasks"]:
         if task["complete"] and not task["paid"]:
@@ -268,6 +302,8 @@ def sync_board(user, day=None):
                            _ref(day, task["key"]))["awarded"]
             if got:
                 task["paid"] = True
+                economy.earn(user, economy.QUEST_COINS, "quest",
+                             _ref(day, task["key"]))
             gained += got
 
     if state["all_done"] and not state["bonus_paid"]:
@@ -275,6 +311,8 @@ def sync_board(user, day=None):
                        _ref(day, "all"))["awarded"]
         if got:
             state["bonus_paid"] = True
+            economy.earn(user, economy.ALL_QUESTS_COINS, "quest_all",
+                         _ref(day, "all"))
         gained += got
     return gained, state
 

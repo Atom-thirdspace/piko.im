@@ -216,6 +216,9 @@ def _complete(user, track, lesson):
     result["unit_bonus"] = _award_unit(user, lesson, done_ids)
     result["awarded"] += result["unit_bonus"]
 
+    from .. import mastery
+    mastery.record_lesson(user, lesson)
+
     _enroll(user, track, lesson)
     _advance(user, track, done_ids)
     result["quest_xp"] = quests.sync(user)

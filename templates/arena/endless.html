@@ -1,0 +1,52 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='arena.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('arena.index') }}">The arena</a>
+    </p>
+    <h1>Endless</h1>
+    <p class="learn-lede">
+      No boss, no HP. Three lives, questions until they run out, and the
+      combo keeps multiplying as long as you keep hitting.
+    </p>
+    <form class="room-join" method="post"
+          action="{{ url_for('arena.endless_start') }}">
+      {{ csrf_field() }}
+      <select name="slug" aria-label="Question pool">
+        <option value="big-o-wyrm">Easy pool</option>
+        <option value="hash-hydra">Medium pool</option>
+        <option value="graph-titan">Hard pool</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Begin</button>
+    </form>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">No runs recorded yet. Set the first score.</p>
+  {% else %}
+    <table class="admin-table">
+      <tr><th>#</th><th>Who</th><th>Score</th><th>Hits</th><th>Combo</th><th>When</th></tr>
+      {% for row in rows %}
+        <tr>
+          <td class="search-meta">{{ row.rank }}</td>
+          <td>{{ row.user.username or row.user.name }}</td>
+          <td><b>{{ row.score }}</b></td>
+          <td>{{ row.hits }}</td>
+          <td>{{ row.combo }}</td>
+          <td class="search-meta">
+            {{ row.at.strftime('%d %b') if row.at else '—' }}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}

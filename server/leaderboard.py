@@ -3,11 +3,13 @@ from datetime import timedelta
 from flask import Blueprint, jsonify, render_template, request
 from .models import User, XpEvent, _utcnow, db
 from .progress import level_for_xp
+from . import seasons
 from .session import current_user
 
 leaderboard_bp = Blueprint("leaderboard", __name__)
 
-SCOPES = {"week": "This week", "all": "All time", "streak": "Streaks"}
+SCOPES = {"week": "This week", "season": "Season", "all": "All time",
+          "streak": "Streaks"}
 BOARD_SIZE = 50
 CACHE_TTL = 60         
 
@@ -34,6 +36,15 @@ _COLUMNS = (User.id, User.username, User.name, User.avatar_url,
             User.xp_total, User.streak_days)
 
 def _fetch(scope, limit):
+    if scope == "season":
+        season = seasons.current()
+        if season is None:
+            return []
+        # ladder hands back User objects; flatten them to the shape every
+        # other scope uses so the template and the JSON API need no special case.
+        return [dict(_row(p["rank"], p["user"], p["score"]), tier=p["tier"])
+                for p in seasons.ladder(season, limit)]
+
     if scope == "week":
         earned = _week_totals()
         rows = db.session.execute(
@@ -81,6 +92,19 @@ def standing(scope, user):
         earned = _week_totals()
         score = db.session.execute(
             db.select(earned.c.xp).where(earned.c.uid == user.id)).scalar() or 0
+        ahead = (db.select(db.func.count()).select_from(User)
+                 .join(earned, earned.c.uid == User.id)
+                 .where(*_eligible(), earned.c.xp > score))
+    elif scope == "season":
+        season = seasons.current()
+        if season is None:
+            return None
+        score = seasons.score_for(user, season)
+        earned = (db.select(XpEvent.user_id.label("uid"),
+                            db.func.sum(XpEvent.amount).label("xp"))
+                  .where(XpEvent.created_at >= season.starts_at,
+                         XpEvent.created_at < season.ends_at)
+                  .group_by(XpEvent.user_id).subquery())
         ahead = (db.select(db.func.count()).select_from(User)
                  .join(earned, earned.c.uid == User.id)
                  .where(*_eligible(), earned.c.xp > score))

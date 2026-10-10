@@ -42,6 +42,10 @@
     </section>
   {% endif %}
 
+  <p class="learn-lede">
+    <a class="btn" href="{{ url_for('arena.endless_board') }}">Endless mode</a>
+  </p>
+
   <section class="bosses">
     {% for boss in bosses %}
       <article class="boss boss--t{{ boss.tier }}">
@@ -56,9 +60,14 @@
           </p>
           {% if boss.blurb %}<p class="boss__blurb">{{ boss.blurb }}</p>{% endif %}
         </div>
-        <form method="post"
+        <form class="boss__go" method="post"
               action="{{ url_for('arena.start', slug=boss.slug) }}">
           {{ csrf_field() }}
+          <select name="stake" aria-label="Stake">
+            <option value="safe">Measured</option>
+            <option value="bold">Bold &times;1.5</option>
+            <option value="reckless">Reckless &times;2</option>
+          </select>
           <button type="submit" class="btn btn-primary"
                   {{ 'disabled' if active }}>Fight</button>
         </form>

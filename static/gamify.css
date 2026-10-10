@@ -1,0 +1,181 @@
+/* Coins, wardrobe, mastery, records, raids. Sits on learn.css. */
+
+.coin { color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+.coin--big { font-size: 1.6rem; }
+.mono { font-family: ui-monospace, Consolas, monospace; }
+
+/* ---------- coin ledger ---------- */
+.ledger__amt {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    width: 5rem;
+}
+.ledger__amt.is-in { color: var(--good); }
+.ledger__amt.is-out { color: var(--bad); }
+
+/* ---------- wardrobe ---------- */
+.shelf { margin: 1.75rem 0; }
+.shelf h2 { font-size: 1.05rem; margin-bottom: .6rem; }
+.shelf__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: .75rem;
+}
+
+.kit {
+    padding: .85rem .7rem;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: .6rem;
+    background: var(--page);
+}
+.kit.is-owned { border-color: var(--brand); }
+.kit.is-on { border-color: var(--good); background: var(--good-bg); }
+.kit h3 { margin: .5rem 0 .4rem; font-size: .9rem; }
+.kit__note { margin: .35rem 0 0; font-size: .75rem; color: var(--ink-soft); }
+.kit__note--locked { font-style: italic; }
+.kit form { margin: 0; }
+
+.kit__preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    font-size: 1.8rem;
+}
+.kit__preview--title { font-size: .95rem; font-weight: 600; }
+
+.swatch {
+    display: block;
+    width: 2.6rem;
+    height: 1.7rem;
+    border-radius: .3rem;
+    border: 1px solid var(--line);
+    background: var(--surface-3);
+}
+.swatch.theme-paper { background: linear-gradient(135deg, #f7f3e8, #e4ddc9); }
+.swatch.theme-dusk { background: linear-gradient(135deg, #3b4252, #5e81ac); }
+.swatch.theme-ember { background: linear-gradient(135deg, #3a1c12, #c2572b); }
+.swatch.theme-abyss { background: linear-gradient(135deg, #0b1020, #1f3a5f); }
+
+/* ---------- avatar frames ---------- */
+.frame-brass { box-shadow: 0 0 0 3px #b08d57; border-radius: 50%; }
+.frame-jade { box-shadow: 0 0 0 3px #4a9e78; border-radius: 50%; }
+.frame-gold { box-shadow: 0 0 0 3px #d4af37, 0 0 10px rgba(212,175,55,.5);
+              border-radius: 50%; }
+
+/* ---------- mastery bars ---------- */
+.bars { display: grid; gap: 1.1rem; margin-top: 1rem; }
+.bar-row__top {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .35rem;
+}
+.bar-row__num {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+    font-size: .85rem;
+}
+.bar-row__foot { margin: .3rem 0 0; font-size: .75rem; }
+
+.track {
+    position: relative;
+    height: .65rem;
+    border-radius: 1rem;
+    background: var(--surface-3);
+    overflow: hidden;
+}
+.track__peak,
+.track__fill {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    border-radius: 1rem;
+}
+/* The peak sits behind the live value, so a faded topic shows the gap. */
+.track__peak { background: var(--surface-2); border: 1px dashed var(--line); }
+.track__fill { background: var(--brand); }
+
+.pill-touched { background: var(--surface-3); color: var(--ink-2); }
+.pill-learning { background: var(--surface-3); color: var(--brand-ink); }
+.pill-solid { background: var(--good-bg); color: var(--good); }
+.pill-strong { background: var(--good-bg); color: var(--good); font-weight: 700; }
+.pill-mastered { background: var(--good-solid); color: var(--on-brand); }
+
+/* ---------- companion ---------- */
+.pet {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: .9rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: .6rem;
+    background: var(--page);
+}
+.pet__art { font-size: 2.6rem; line-height: 1; }
+.pet__art.is-thriving { animation: bounce 1.8s ease-in-out infinite; }
+.pet__art.is-asleep { filter: grayscale(1); opacity: .6; }
+.pet__name { margin: 0; font-size: .95rem; font-weight: 600; }
+.pet__line { margin: .2rem 0 0; font-size: .82rem; color: var(--ink-soft); }
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-5px); }
+}
+
+/* ---------- season and rival cards ---------- */
+.season__tier {
+    display: inline-block;
+    padding: .15rem .55rem;
+    border-radius: 1rem;
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.tier-bronze { background: #7a4f29; color: #fff; }
+.tier-silver { background: #8d96a3; color: #fff; }
+.tier-gold { background: #c9a227; color: #2a1a10; }
+.tier-platinum { background: #5f8f8a; color: #fff; }
+.tier-diamond { background: #4a7fc1; color: #fff; }
+
+.versus {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .6rem;
+}
+.versus__side { text-align: center; }
+.versus__side b { display: block; font-size: 1.5rem; }
+.versus__side.is-ahead b { color: var(--good); }
+.versus__vs { color: var(--ink-soft); font-size: .8rem; }
+
+/* ---------- raids ---------- */
+.raid {
+    padding: 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: .7rem;
+    background: var(--page);
+    margin: 1.25rem 0;
+}
+.raid__head { display: flex; align-items: center; gap: 1rem; }
+.raid__info { flex: 1 1 auto; }
+.raid__info h2 { margin: 0 0 .4rem; font-size: 1.1rem; }
+
+tr.is-you td { background: var(--good-bg); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+    .pet__art.is-thriving { animation: none; }
+}
+
+.dash__gamify {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+    align-items: start;
+}

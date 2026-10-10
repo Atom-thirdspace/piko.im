@@ -20,6 +20,8 @@
     var bossHp = root.querySelector('[data-boss-hp]');
     var playerHp = root.querySelector('[data-player-hp]');
     var sigil = root.querySelector('[data-sigil]');
+    var scoreEl = root.querySelector('[data-score]');
+    var livesEl = root.querySelector('[data-lives]');
 
     var current = null;
     var ticking = null;
@@ -42,11 +44,18 @@
     }
 
     function paint(state) {
-        bossBar.style.width = (100 * state.boss_hp / state.boss_hp_max) + '%';
-        playerBar.style.width =
-            (100 * state.player_hp / state.player_hp_max) + '%';
-        bossHp.textContent = state.boss_hp;
-        playerHp.textContent = state.player_hp;
+        if (bossBar && state.boss_hp_max) {
+            bossBar.style.width =
+                (100 * state.boss_hp / state.boss_hp_max) + '%';
+        }
+        if (playerBar && state.player_hp_max) {
+            playerBar.style.width =
+                (100 * state.player_hp / state.player_hp_max) + '%';
+        }
+        if (bossHp) { bossHp.textContent = state.boss_hp; }
+        if (playerHp) { playerHp.textContent = state.player_hp; }
+        if (scoreEl) { scoreEl.textContent = state.score; }
+        if (livesEl) { livesEl.textContent = state.lives; }
 
         comboEl.hidden = state.combo < 2;
         comboEl.textContent = state.combo + ' hit combo';
@@ -125,7 +134,9 @@
 
         var line = document.createElement('p');
         line.className = 'arena__verdict-line';
-        if (data.correct) {
+        if (data.correct && data.gained) {
+            line.textContent = '+' + data.gained + ' points';
+        } else if (data.correct) {
             line.textContent = '⚔ ' + data.damage + ' damage';
         } else if (data.timed_out) {
             line.textContent = 'Too slow. The answer was ' + data.answer;

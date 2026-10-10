@@ -1,0 +1,72 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% set titles = {'theme': 'Editor themes', 'frame': 'Avatar frames',
+                 'title': 'Titles', 'sigil': 'Arena sigils',
+                 'pet': 'Companions'} %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Wardrobe</h1>
+    <p class="learn-lede">
+      Everything here is earned or bought with coins, never with money.
+      You have <b class="coin">{{ coins }}</b> coins
+      &middot; <a href="{{ url_for('gamify.coins') }}">where they came from</a>
+    </p>
+  </header>
+
+  {% for slot in slots %}
+    {% set items = wardrobe[slot] %}
+    {% if items %}
+      <section class="shelf">
+        <h2>{{ titles.get(slot, slot) }}</h2>
+        <div class="shelf__grid">
+          {% for item in items %}
+            <article class="kit {{ 'is-owned' if item.owned }}
+                               {{ 'is-on' if item.equipped }}">
+              <span class="kit__preview kit__preview--{{ slot }}">
+                {%- if slot in ('sigil', 'pet') %}{{ item.value or '·' }}
+                {%- elif slot == 'title' %}{{ item.value or '—' }}
+                {%- else %}<span class="swatch {{ item.value }}"></span>
+                {%- endif -%}
+              </span>
+              <h3>{{ item.label }}</h3>
+
+              {% if item.equipped %}
+                <p class="kit__note">Equipped</p>
+              {% elif item.owned %}
+                <form method="post"
+                      action="{{ url_for('gamify.equip', slot=slot, key=item.key) }}">
+                  {{ csrf_field() }}
+                  <button type="submit" class="btn">Equip</button>
+                </form>
+              {% elif item.earn %}
+                <p class="kit__note kit__note--locked">
+                  Earned with the <b>{{ item.earn }}</b> badge
+                </p>
+              {% else %}
+                <form method="post"
+                      action="{{ url_for('gamify.buy', key=item.key) }}">
+                  {{ csrf_field() }}
+                  <button type="submit" class="btn btn-primary"
+                          {{ 'disabled' if not item.affordable }}>
+                    {{ item.cost }} coins
+                  </button>
+                </form>
+                {% if not item.affordable %}
+                  <p class="kit__note">{{ item.cost - coins }} more to go</p>
+                {% endif %}
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  {% endfor %}
+</main>
+{% endblock content %}

@@ -1,0 +1,118 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='arena.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('community.team_detail', slug=team.slug) }}">{{ team.name }}</a>
+    </p>
+    <h1>Raid</h1>
+  </header>
+
+  {% if raid %}
+    <section class="raid">
+      <div class="raid__head">
+        <span class="arena__sigil">{{ raid.boss.sigil or '☗' }}</span>
+        <div class="raid__info">
+          <h2>{{ raid.boss.name }}</h2>
+          <div class="bar bar--boss">
+            <span class="bar__fill"
+                  style="width: {{ (100 * raid.hp_left / raid.hp_total) | round(1) }}%"></span>
+          </div>
+          <p class="bar__label">
+            {{ raid.hp_left }} / {{ raid.hp_total }} left
+            &middot; ends {{ raid.ends_at.strftime('%d %b %H:%M') }} UTC
+          </p>
+        </div>
+      </div>
+
+      <form class="room-join" method="post"
+            action="{{ url_for('community.raid_fight', slug=team.slug) }}">
+        {{ csrf_field() }}
+        <select name="stake" aria-label="Stake">
+          <option value="safe">Measured</option>
+          <option value="bold">Bold — more damage, more taken</option>
+          <option value="reckless">Reckless — double both</option>
+        </select>
+        <button type="submit" class="btn btn-primary">Take a swing</button>
+      </form>
+      <p class="room-hint">
+        Every fight you win against this boss takes its damage off the raid.
+        A bolder stake hits harder, so it is worth more to the team.
+      </p>
+    </section>
+
+    {% if board %}
+      <section>
+        <h2>Who is doing the work</h2>
+        <table class="admin-table">
+          <tr><th>#</th><th>Who</th><th>Damage</th><th>Share</th><th>Fights</th></tr>
+          {% for row in board %}
+            <tr>
+              <td class="search-meta">{{ row.rank }}</td>
+              <td>{{ row.user.username or row.user.name }}</td>
+              <td>{{ row.damage }}</td>
+              <td>{{ (100 * row.share) | round | int }}%</td>
+              <td>{{ row.fights }}</td>
+            </tr>
+          {% endfor %}
+        </table>
+      </section>
+    {% else %}
+      <p class="learn-lede">Nobody has landed a hit yet.</p>
+    {% endif %}
+
+  {% elif is_owner %}
+    <section class="room-card">
+      <h2>Call a raid</h2>
+      <p class="room-hint">
+        One week, one boss, {{ hp_preview }} HP for a team of
+        {{ team.members | length }}.
+      </p>
+      <form class="room-join" method="post"
+            action="{{ url_for('community.raid_start', slug=team.slug) }}">
+        {{ csrf_field() }}
+        <select name="boss_id" aria-label="Boss">
+          {% for boss in bosses %}
+            <option value="{{ boss.id }}">
+              {{ boss.name }} (tier {{ boss.tier }})
+            </option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">Start it</button>
+      </form>
+    </section>
+  {% else %}
+    <p class="learn-lede">
+      No raid is running. Whoever owns this team can call one.
+    </p>
+  {% endif %}
+
+  {% if recent %}
+    <section>
+      <h2>Past raids</h2>
+      <table class="admin-table">
+        <tr><th>Boss</th><th>Result</th><th>Dealt</th><th>When</th></tr>
+        {% for row in recent %}
+          <tr>
+            <td>{{ row.boss.name }}</td>
+            <td>
+              <span class="pill pill-{{ 'done' if row.status == 'won' else 'fail' }}">
+                {{ row.status }}
+              </span>
+            </td>
+            <td>{{ row.hp_total - row.hp_left }} / {{ row.hp_total }}</td>
+            <td class="search-meta">{{ row.started_at.strftime('%d %b') }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    </section>
+  {% endif %}
+</main>
+{% endblock content %}

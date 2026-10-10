@@ -39,6 +39,12 @@
   </header>
 
   <section class="scoreline">
+    {% if run.mode == 'endless' %}
+      <div class="score score--paid">
+        <span class="score__n">{{ run.score }}</span>
+        <span class="score__k">score</span>
+      </div>
+    {% endif %}
     <div class="score">
       <span class="score__n">{{ run.correct }}/{{ run.asked }}</span>
       <span class="score__k">landed</span>
@@ -91,6 +97,25 @@
   <p class="result__again">
     <a class="btn btn-primary" href="{{ url_for('arena.index') }}">
       Back to the arena</a>
+    {% if run.mode == 'endless' %}
+      <a class="btn" href="{{ url_for('arena.endless_board') }}">High scores</a>
+    {% endif %}
   </p>
+
+  {% if run.status in ('lost', 'draw') %}
+    <form method="post" action="{{ url_for('arena.retry', run_id=run.id) }}">
+      {{ csrf_field() }}
+      <button type="submit" class="btn">
+        Buy a second wind &mdash; {{ retry_cost }} coins
+      </button>
+    </form>
+    <p class="room-hint">
+      {% if run.mode == 'endless' %}
+        One more life, keeping your score.
+      {% else %}
+        Back in at half health, with the boss as you left it.
+      {% endif %}
+    </p>
+  {% endif %}
 </main>
 {% endblock content %}

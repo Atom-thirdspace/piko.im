@@ -17,23 +17,35 @@
     <div class="arena__boss">
       <span class="arena__sigil" data-sigil aria-hidden="true">{{ boss.sigil or '☗' }}</span>
       <div class="arena__bossinfo">
-        <h1>{{ boss.name }}</h1>
-        <div class="bar bar--boss">
-          <span class="bar__fill" data-boss-bar
-                style="width: {{ (100 * state.boss_hp / state.boss_hp_max)|round(1) }}%"></span>
-        </div>
-        <p class="bar__label"><span data-boss-hp>{{ state.boss_hp }}</span> /
-          {{ state.boss_hp_max }}</p>
+        <h1>{% if state.mode == 'endless' %}Endless{% else %}{{ boss.name }}{% endif %}</h1>
+        {% if state.mode != 'endless' %}
+          <div class="bar bar--boss">
+            <span class="bar__fill" data-boss-bar
+                  style="width: {{ (100 * state.boss_hp / state.boss_hp_max)|round(1) }}%"></span>
+          </div>
+          <p class="bar__label"><span data-boss-hp>{{ state.boss_hp }}</span> /
+            {{ state.boss_hp_max }}</p>
+        {% else %}
+          <p class="bar__label">{{ boss.name }} pool &middot; three lives</p>
+        {% endif %}
       </div>
     </div>
 
     <div class="arena__you">
-      <div class="bar bar--you">
-        <span class="bar__fill" data-player-bar
-              style="width: {{ (100 * state.player_hp / state.player_hp_max)|round(1) }}%"></span>
-      </div>
-      <p class="bar__label">You <span data-player-hp>{{ state.player_hp }}</span> /
-        {{ state.player_hp_max }}</p>
+      {% if state.mode == 'endless' %}
+        <p class="bar__label">Score <b data-score>{{ state.score }}</b></p>
+        <p class="bar__label">Lives <b data-lives>{{ state.lives }}</b></p>
+      {% else %}
+        <div class="bar bar--you">
+          <span class="bar__fill" data-player-bar
+                style="width: {{ (100 * state.player_hp / state.player_hp_max)|round(1) }}%"></span>
+        </div>
+        <p class="bar__label">You <span data-player-hp>{{ state.player_hp }}</span> /
+          {{ state.player_hp_max }}</p>
+      {% endif %}
+      {% if state.stake != 'safe' %}
+        <p class="bar__label">Stake: {{ state.stake }}</p>
+      {% endif %}
       <p class="arena__combo" data-combo hidden></p>
     </div>
   </header>

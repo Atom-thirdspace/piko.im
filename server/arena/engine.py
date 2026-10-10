@@ -156,7 +156,7 @@ def answer(run, question_id, given, choice_key=None):
             run.player_hp = max(0, run.player_hp
                                 - rules.staked_hit(run.boss.attack, run.stake))
 
-        outcome = {
+    outcome = {
         "stale": False,
         "correct": hit,
         "timed_out": late,
@@ -210,7 +210,7 @@ def finish(run, status):
     if _paid_today(run.user) < rules.PAID_RUNS_PER_DAY:
         if run.mode == "endless":
             amount = run.score // 10
-            coins = (run.score // 10) * economy.ENDLESS_COINS_PER_10 // 3
+            coins = (run.score // 100) * economy.ENDLESS_COINS_PER_100
         elif status == "won":
             amount = rules.staked_xp(
                 rules.win_xp(run.boss.tier, run.correct == run.asked),
@@ -235,8 +235,7 @@ def finish(run, status):
     quests.sync(run.user)
 
     from ..achievements import evaluate
-    from .. import cosmetics
-    cosmetics.grant_for_achievements(run.user, evaluate(run.user) or [])
+    evaluate(run.user)
     return run
 
 def retry(run):

@@ -1,0 +1,36 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Coins</h1>
+    <p class="learn-lede">
+      <b class="coin coin--big">{{ balance }}</b> to spend.
+      Coins come from solving, quests and the arena, and go on hints,
+      streak freezes and the <a href="{{ url_for('gamify.wardrobe') }}">wardrobe</a>.
+    </p>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">Nothing yet. Solve something.</p>
+  {% else %}
+    <table class="admin-table ledger">
+      <tr><th></th><th>What</th><th>When</th></tr>
+      {% for row in rows %}
+        <tr>
+          <td class="ledger__amt {{ 'is-in' if row.amount > 0 else 'is-out' }}">
+            {{ '+' if row.amount > 0 }}{{ row.amount }}
+          </td>
+          <td>{{ labels.get(row.reason, row.reason) }}</td>
+          <td class="search-meta">{{ row.created_at.strftime('%d %b %H:%M') }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}

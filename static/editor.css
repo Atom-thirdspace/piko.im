@@ -400,3 +400,10 @@
 }
 .explain__body p:first-child { margin-top: 0; }
 .explain__body p:last-child { margin-bottom: 0; }
+
+.ws__ghost.is-racing {
+    color: var(--on-brand);
+    background: var(--brand);
+    border-color: var(--brand);
+    font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,48 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% macro clock(seconds) -%}
+  {{ '%d:%02d' | format(seconds // 60, seconds % 60) }}
+{%- endmacro %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <h1>Your records</h1>
+    <p class="learn-lede">
+      Your fastest time on each problem you have raced. Open a problem you
+      have already solved and press Race to try to beat one.
+    </p>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">
+      No times yet. You can only race something you have already solved.
+    </p>
+  {% else %}
+    <table class="admin-table">
+      <tr><th>Problem</th><th>Best</th><th>Set</th><th></th></tr>
+      {% for row in rows %}
+        <tr>
+          <td>
+            <a href="{{ url_for('problems.page', slug=row.problem.slug) }}">
+              {{ row.problem.title }}</a>
+            <span class="pill pill-{{ row.problem.difficulty }}">
+              {{ row.problem.difficulty }}</span>
+          </td>
+          <td class="mono">{{ clock(row.seconds) }}</td>
+          <td class="search-meta">{{ row.at.strftime('%d %b %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('gamify.times', slug=row.problem.slug) }}">
+              everyone</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}

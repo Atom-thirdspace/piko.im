@@ -1,0 +1,45 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='gamify.css') }}">
+{% endblock head %}
+
+{% macro clock(seconds) -%}
+  {{ '%d:%02d' | format(seconds // 60, seconds % 60) }}
+{%- endmacro %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs">
+      <a href="{{ url_for('problems.page', slug=problem.slug) }}">{{ problem.title }}</a>
+    </p>
+    <h1>Fastest solves</h1>
+    <p class="learn-lede">
+      Timed from pressing Race to an accepted submission.
+      {% if mine %}
+        Your best is <b class="mono">{{ clock(mine.seconds) }}</b>.
+      {% else %}
+        You have not set a time here yet.
+      {% endif %}
+    </p>
+  </header>
+
+  {% if not rows %}
+    <p class="learn-lede">Nobody has raced this one yet.</p>
+  {% else %}
+    <table class="admin-table">
+      <tr><th>#</th><th>Who</th><th>Time</th><th>Set</th></tr>
+      {% for row in rows %}
+        <tr class="{{ 'is-you' if mine and row.user.id == mine.user_id }}">
+          <td class="search-meta">{{ row.rank }}</td>
+          <td>{{ row.user.username or row.user.name }}</td>
+          <td class="mono">{{ clock(row.seconds) }}</td>
+          <td class="search-meta">{{ row.at.strftime('%d %b') }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</main>
+{% endblock content %}
