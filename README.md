@@ -82,4 +82,4 @@ python app.py or Flask run #depends on your OS
 
 Made with love, bad decisions, and way too much free time.
 
-© [The MIT LIcense](LICENSE) - Aryan Brite & Adhyys
+© 2026 [Business Source License 1.1](LICENSE) - Aryan Brite, Adhdhyan Jain & Pranjal

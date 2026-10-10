@@ -5,55 +5,52 @@
 {% block app_header %}{% endblock app_header %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='signup.css') }}">
   <script defer src="{{ url_for('static', filename='choices.js') }}"></script>
 {% endblock head %}
 
 {% block content %}
 <main class="auth">
-  <h1>Create your Piko account</h1>
 
-  <form class="auth-form" method="post" action="{{ url_for('accounts.signup') }}">
-      {{ csrf_field() }}
-    <input type="hidden" name="next" value="{{ next }}">
+  <div class="signup-content">
 
-    <label for="name">Name</label>
-    <input id="name" name="name" type="text" autocomplete="name"
-           value="{{ form.get('name', '') }}" required>
-    {% if errors.name %}<p class="field-error">{{ errors.name }}</p>{% endif %}
+    <h1>Create your Piko account</h1>
+    <form class="auth-form" method="post" action="{{ url_for('accounts.signup') }}">
+        {{ csrf_field() }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" autocomplete="name"
+             value="{{ form.get('name', '') }}" required>
+      {% if errors.name %}<p class="field-error">{{ errors.name }}</p>{% endif %}
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autocomplete="username"
+             value="{{ form.get('username', '') }}" required>
+      {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email"
+             value="{{ form.get('email', '') }}" required>
+      {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
+      {{ interest_picker(interests, form.getlist('interest'), error=errors.interest) }}
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password"
+             autocomplete="new-password" minlength="8" required>
+      {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
+      <button type="submit">Sign up</button>
+    </form>
+    {% if providers %}
+      <div class="auth-divider"><span>or sign up with</span></div>
+      {% for name, label in providers %}
+        <a class="oauth-btn oauth-{{ name }}"
+           href="{{ url_for('auth.login', provider=name, next=next) }}">
+          Sign up with {{ label }}
+        </a>
+      {% endfor %}
+    {% endif %}
+    <p class="auth-alt">
+      Already have an account? <a href="{{ url_for('auth.login_page', next=next) }}">Log in</a>
+    </p>
+    
+  </div>
 
-    <label for="username">Username</label>
-    <input id="username" name="username" type="text" autocomplete="username"
-           value="{{ form.get('username', '') }}" required>
-    {% if errors.username %}<p class="field-error">{{ errors.username }}</p>{% endif %}
-
-    <label for="email">Email</label>
-    <input id="email" name="email" type="email" autocomplete="email"
-           value="{{ form.get('email', '') }}" required>
-    {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
-
-    {{ interest_picker(interests, form.getlist('interest'), error=errors.interest) }}
-
-    <label for="password">Password</label>
-    <input id="password" name="password" type="password"
-           autocomplete="new-password" minlength="8" required>
-    {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
-
-    <button type="submit">Sign up</button>
-  </form>
-
-  {% if providers %}
-    <div class="auth-divider"><span>or sign up with</span></div>
-    {% for name, label in providers %}
-      <a class="oauth-btn oauth-{{ name }}"
-         href="{{ url_for('auth.login', provider=name, next=next) }}">
-        Sign up with {{ label }}
-      </a>
-    {% endfor %}
-  {% endif %}
-
-  <p class="auth-alt">
-    Already have an account? <a href="{{ url_for('auth.login_page', next=next) }}">Log in</a>
-  </p>
 </main>
 {% endblock content %}
