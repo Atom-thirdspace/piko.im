@@ -10,6 +10,29 @@
                   if daily_goal.target_xp else 0 %}
 
 <main class="dash" data-api-url="{{ url_for('dashboard.api') }}">
+
+  <div class="dash__who">
+      <h1 data-aos="fade-down" class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
+      <p data-aos="fade-down" data-aos-delay="150" class="dash__handle">
+        @{{ user.username }}
+        {%- set focus = user.interest_keys | interest_labels %}
+        {%- if focus %} · {{ focus | join(', ') }}{% endif %}
+      </p>
+    </div>
+  
+  <div class="dash__streak" title="Current streak">
+<img class="fire" src="https://cdn.pixabay.com/animation/2025/06/26/05/26/05-26-59-506_512.gif" alt="">
+
+      <div data-aos="fade-in" data-aos-delay="200" >
+        <span class="dash__streak-num">{{ user.streak_days or 0 }}</span>
+        <span class="dash__streak-label">day streak</span>
+        {% if user.streak_best %}
+          <span class="dash__streak-best">best {{ user.streak_best }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+
   <div class="map" >
     <div class="lvl1" >
       <h3 class="lvl11" >DSA 1</h3>
@@ -19,6 +42,8 @@
     </div>
   
   </div>
+
+  
 
   
 
