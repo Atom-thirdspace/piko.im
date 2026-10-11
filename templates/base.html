@@ -22,6 +22,7 @@
     {% block head %}
     
     {% endblock head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
 </head>
 <body>
   <img id="custom-cursor" src="https://cdn.hackclub.com/01a0b45b-38fa-7ae4-b0a0-f903879286aa/Untitled%20design%20(70).png" alt="" aria-hidden="true">
@@ -31,6 +32,13 @@
         <nav class="topnav">
             <img draggable="false" class="logo" src="https://user-cdn.hackclub-assets.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
 
+          <button type="button" class="navtoggle" data-nav-toggle
+                  aria-expanded="false" aria-controls="topnav-links"
+                  aria-label="Menu">
+            <span></span><span></span><span></span>
+          </button>
+
+          <div class="topnav__links" id="topnav-links" data-nav-panel>
           <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
           <a href="{{ url_for('arena.index') }}">Arena</a>
           <a href="{{ url_for('gamify.wardrobe') }}">Wardrobe</a>
@@ -46,6 +54,9 @@
           {% if is_admin(viewer) %}
             <a class="admin-link" href="{{ url_for('admin.overview') }}">Admin</a>
           {% endif %}
+          </div>
+
+          <div class="topnav__tools">
           <button type="button" class="theme-toggle" data-theme-toggle role="switch"
                   aria-label="Dark mode" aria-checked="false">
             <span class="theme-toggle__thumb" aria-hidden="true">
@@ -91,6 +102,7 @@
               </form>
             </div>
           </details>
+          </div>
           <script>
             const account = document.querySelector(".topnav__account");
             document.addEventListener("click", (event) => {
@@ -130,6 +142,8 @@
     
     {% endblock js %}
     <script defer src="{{ url_for('static', filename='cursor.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='nav.js') }}"></script>
+    <script defer src="{{ url_for('static', filename='tablescroll.js') }}"></script>
 <script>
 (function () {
   var KEY = "piko-theme";
