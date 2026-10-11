@@ -70,8 +70,9 @@ def for_user(user):
     out.sort(key=lambda r: -r["value"])
     return out
 
-def rusty(user, limit = 3):
-    return [r for r in for_user(user) if r["faded"] and r["peak"] >= 25][:limit]
+def rusty(user, limit=3, rows=None):
+    rows = rows if rows is not None else for_user(user)
+    return [r for r in rows if r["faded"] and r["peak"] >= 25][:limit]
 
 def record_solve(user, problem):
     if problem.topic:

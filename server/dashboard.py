@@ -1,6 +1,4 @@
 from flask import Blueprint, jsonify, redirect, render_template, url_for
-
-from . import potd, quests
 from .achievements import describe
 from sqlalchemy.orm import joinedload
 
@@ -10,17 +8,12 @@ from .progress import level_progress, user_today, MAX_FREEZES, streak_state
 from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
 from .activity import heatmap
-from . import recommend
+from . import companion, economy, mastery, potd, quests, rivals, seasons, recommend
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
 def _stats(user):
-    """One round trip instead of three.
-
-    Correlated subqueries keep each count independent - a join would fan
-    the rows out and inflate two of the three.
-    """
     row = db.session.execute(db.select(
         db.select(db.func.count()).select_from(LessonProgress)
           .where(LessonProgress.user_id == user.id).scalar_subquery(),
@@ -108,6 +101,7 @@ def _dashboard_data(user):
     today_xp = grid["today_xp"]
 
     progress = level_progress(user.xp_total or 0)
+    topics = mastery.for_user(user)
     return {
         "user": user,
         "progress": progress,
@@ -128,10 +122,10 @@ def _dashboard_data(user):
         "quests": board,
         "potd": potd.card(user),
         "goal_choices": DAILY_GOAL_CHOICES,
-                "companion": companion.state(user, today_xp, user.streak_days or 0),
+        "companion": companion.state(user, today_xp, user.streak_days or 0),
         "coins": economy.balance(user),
-        "mastery": mastery.for_user(user)[:6],
-        "rusty": mastery.rusty(user),
+        "mastery": topics[:6],
+        "rusty": mastery.rusty(user, rows=topics),
         "combo": {"now": user.solve_combo or 0, "best": user.combo_best or 0},
         "season": seasons.card(user),
         "rival": rivals.card(user),
@@ -157,7 +151,7 @@ def _json_data(data):
                 if current["started_at"] else None
             ),
         }
-    return {
+    out = {
         "user": {
             "id": data["user"].id,
             "name": data["user"].name,
@@ -177,6 +171,40 @@ def _json_data(data):
         "quests": {**data["quests"], "day": data["quests"]["day"].isoformat()},
         "potd": _json_potd(data["potd"]),
     }
+
+    out["companion"] = data["companion"]
+    out["coins"] = data["coins"]
+    out["combo"] = data["combo"]
+    out["mastery"] = [
+        {"topic": m["topic"], "value": m["value"], "band": m["band"],
+         "fraction": m["fraction"], "faded": m["faded"]}
+        for m in data["mastery"]
+    ]
+    out["rusty"] = [r["topic"] for r in data["rusty"]]
+
+    season = data.get("season")
+    out["season"] = None if season is None else {
+        "name": season["season"].name,
+        "score": season["score"],
+        "tier": season["tier"],
+        "next": season["next"],
+        "days_left": season["days_left"],
+    }
+
+    rival = data.get("rival")
+    if rival is None or rival.get("waiting"):
+        out["rival"] = {"waiting": True} if rival else None
+    else:
+        out["rival"] = {
+            "waiting": False,
+            "ghost": rival["ghost"],
+            "yours": rival["yours"],
+            "theirs": rival["theirs"],
+            "leading": rival["leading"],
+            "opponent": (rival["opponent"].username
+                         if rival["opponent"] else None),
+        }
+    return out
 
 
 @dashboard_bp.route("/")

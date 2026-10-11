@@ -1,6 +1,8 @@
 from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    url_for)
+from sqlalchemy.orm import selectinload
 
+from .. import contentcache
 from ..models import (Enrollment, Lesson, LessonProgress, Problem, Submission,
                       Track, Unit, db, PUBLISHED)
 from ..progress import award_xp, level_progress
@@ -57,10 +59,27 @@ def _lesson_or_404(track, unit_slug, lesson_slug):
     return unit, lesson
 
 
+def _build_units_by_track():
+    stmt = (db.select(Unit)
+            .options(selectinload(Unit.lessons))
+            .order_by(Unit.track_id, Unit.position))
+    out = {}
+    for unit in db.session.execute(
+            _visible(stmt, Unit)).scalars().unique():
+        out.setdefault(unit.track_id, []).append(unit)
+    return out
+
+
+@per_request(lambda: "units")
+def _units_by_track():
+    return contentcache.cached("learn:units", _build_units_by_track,
+                               user=current_user())
+
+
 @per_request(lambda track: track.id)
 def _visible_units(track):
-    """track.units is an unfiltered relationship - drafts would show through."""
-    return [u for u in track.units if u.status == PUBLISHED or _may_preview(u)]
+    return [u for u in _units_by_track().get(track.id, [])
+            if u.status == PUBLISHED or _may_preview(u)]
 
 
 def _visible_lessons(unit):
@@ -74,12 +93,10 @@ def _ordered_lessons(track):
     Memoised per request: _track_summary, _next_lesson and the path map all
     want the same list, and each call was its own round trip.
     """
-    stmt = (db.select(Lesson)
-            .join(Unit, Lesson.unit_id == Unit.id)
-            .where(Unit.track_id == track.id)
-            .order_by(Unit.position, Lesson.position))
-    stmt = _visible(_visible(stmt, Lesson), Unit)
-    return db.session.execute(stmt).scalars().all()
+    out = []
+    for unit in _visible_units(track):
+        out.extend(sorted(_visible_lessons(unit), key=lambda l: l.position))
+    return out
 
 
 def _completed_ids(user):
@@ -236,9 +253,12 @@ def index():
     user = current_user()
     done_ids = _completed_ids(user)
     enrollments = _enrollments_by_track(user)
-    tracks = db.session.execute(
-        _visible(db.select(Track).order_by(Track.position), Track)
-    ).scalars().all()
+    tracks = contentcache.cached(
+        "learn:tracks",
+        lambda: db.session.execute(
+            _visible(db.select(Track).order_by(Track.position), Track)
+        ).scalars().all(),
+        user=user)
 
     summaries = []
     for track in tracks:
@@ -266,7 +286,7 @@ def track(track_slug):
     units = []
     for unit in _visible_units(track):
         rows = []
-        for lesson in _visible_lessons(unit):
+        for lesson in sorted(_visible_lessons(unit), key=lambda l: l.position):
             rows.append({
                 "lesson": lesson,
                 "done": lesson.id in done_ids,

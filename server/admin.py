@@ -17,7 +17,7 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      _utcnow, replace_test_results, Report, REPORT_REASON_LABELS,
                      Team, open_report_count, SimilarityFlag,
                      GeneratedProblem, publish_generated, Contest, ContestEntry, ContestProblem)
-from . import notify
+from . import contentcache, notify
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -1285,6 +1285,7 @@ def review_publish(kind, row_id):
     row.published_at = _utcnow()
     row.review_note = ""
     db.session.commit()
+    contentcache.drop("learn:")
     if row.created_by is not None:
         notify.send(row.created_by, "published",
                     "%s is live" % row.title,
@@ -1305,6 +1306,7 @@ def review_reject(kind, row_id):
     row.submitted_at = None
     row.review_note = (request.form.get("note") or "").strip()[:2000]
     db.session.commit()
+    contentcache.drop("learn:")
     if row.created_by is not None:
         notify.send(row.created_by, "rejected",
                     "%s was sent back" % row.title,
@@ -1323,6 +1325,7 @@ def review_unpublish(kind, row_id):
     row = _get_or_404(model, row_id)
     row.status = DRAFT
     db.session.commit()
+    contentcache.drop("learn:")
     log_action("unpublish_%s" % kind, row.id, row.slug)
     flash("Taken down.", "success")
     return redirect(url_for("admin.review"))

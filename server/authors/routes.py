@@ -7,6 +7,7 @@ from ..admin_gate import is_admin
 from ..learning import quiz
 from ..learning.markdown import render as render_md
 from ..content import visible
+from .. import contentcache
 from ..judge import LANGUAGES
 from ..models import (DRAFT, PUBLISHED, REVIEW, Lesson, LessonChoice,
                       LessonQuestion, Problem, ProblemHint, ProblemTest, Track,
@@ -279,6 +280,7 @@ def lesson_form(lesson_id=None):
     lesson.position = int(form.get("position") or 0)
     lesson.problem_id = int(problem_id) if problem_id else None
     db.session.commit()
+    contentcache.drop("learn:")
 
     flash("Lesson saved as a draft.", "success")
     return redirect(url_for("authors.lesson_form", lesson_id=lesson.id))
@@ -371,6 +373,7 @@ def delete(kind, row_id):
     slug = row.slug
     db.session.delete(row)
     db.session.commit()
+    contentcache.drop("learn:")
     flash("Deleted %s." % slug, "success")
     return redirect(url_for("authors.index"))
 

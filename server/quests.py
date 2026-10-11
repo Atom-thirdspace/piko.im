@@ -66,15 +66,21 @@ def _goal_hit(user, lo, hi):
                XpEvent.created_at >= lo, XpEvent.created_at < hi)).scalar() or 0
     return 1 if earned >= target else 0
 
-def _unsolved_exists(user, difficulties=None):
+def _unsolved_stmt(user, difficulties=None):
     solved = (db.select(ProblemSolve.problem_id)
               .where(ProblemSolve.user_id == user.id))
     stmt = db.select(Problem.id).where(Problem.id.notin_(solved))
     if difficulties:
         stmt = stmt.where(Problem.difficulty.in_(difficulties))
-    return db.session.execute(stmt.limit(1)).scalar() is not None 
+    return stmt
 
-def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
+
+def _unsolved_exists(user, difficulties=None):
+    return db.session.execute(
+        _unsolved_stmt(user, difficulties).limit(1)).scalar() is not None
+
+
+def _lesson_stmt(user, kind=None, enrolled_only=False):
     done = (db.select(LessonProgress.lesson_id)
             .where(LessonProgress.user_id == user.id))
     stmt = (db.select(Lesson.id).join(Unit, Unit.id == Lesson.unit_id)
@@ -86,7 +92,17 @@ def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
         tracks = (db.select(Enrollment.track_id)
                   .where(Enrollment.user_id == user.id))
         stmt = stmt.where(Unit.track_id.in_(tracks))
-    return db.session.execute(stmt.limit(1)).scalar() is not None
+    return stmt
+
+
+def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
+    return db.session.execute(
+        _lesson_stmt(user, kind, enrolled_only).limit(1)).scalar() is not None
+
+
+def _solved_stmt(user):
+    return (db.select(ProblemSolve.id)
+            .where(ProblemSolve.user_id == user.id))
 
 def _boss_wins(user, lo, hi):
     """Wins only.
@@ -111,6 +127,12 @@ def _boss_fightable():
     worst case is a quest that is harder to clear than it looks, not a
     crash.
     """
+    from . import contentcache
+    return contentcache.cached("quests:boss_fightable", _compute_fightable,
+                               ttl=300.0)
+
+
+def _compute_fightable():
     from .arena.rules import MIN_POOL
     from .models import Boss, BossQuestion
 
@@ -152,15 +174,24 @@ def _has_solved_something(user):
 
 
 def _capability(user):
+    row = db.session.execute(db.select(
+        db.exists(_unsolved_stmt(user)).label("unsolved"),
+        db.exists(_unsolved_stmt(user, ("medium", "hard"))).label("hard"),
+        db.exists(_lesson_stmt(user)).label("lesson"),
+        db.exists(_lesson_stmt(user, enrolled_only=True)).label("enrolled"),
+        db.exists(_lesson_stmt(user, kind="quiz")).label("quiz"),
+        db.exists(_solved_stmt(user)).label("speed"),
+    )).one()
+
     return {
-        "unsolved": _unsolved_exists(user),
-        "unsolved_hard": _unsolved_exists(user, ("medium", "hard")),
-        "lesson": _unfinished_lesson_exists(user),
-        "lesson_enrolled": _unfinished_lesson_exists(user, enrolled_only=True),
-        "quiz": _unfinished_lesson_exists(user, kind="quiz"),
+        "unsolved": bool(row.unsolved),
+        "unsolved_hard": bool(row.hard),
+        "lesson": bool(row.lesson),
+        "lesson_enrolled": bool(row.enrolled),
+        "quiz": bool(row.quiz),
         "goal": (user.daily_goal_xp or 0) > 0,
         "boss": _boss_fightable(),
-        "speed": _has_solved_something(user),
+        "speed": bool(row.speed),
     }
 
 
@@ -252,6 +283,15 @@ def _paid_keys(user, day):
     return {r.split(":", 1)[1] for r in _paid_refs(user, day)} - {"all"}
 
 
+def _forget_paid_refs(user, day):
+    if not has_request_context():
+        return
+    cache = getattr(g, "_memo", None)
+    if cache is not None:
+        cache.pop(("_paid_refs", (user.id, day)), None)
+
+
+@per_request(lambda user, day: (user.id, day))
 def _paid_refs(user, day):
     return set(db.session.execute(
         db.select(XpEvent.ref).where(XpEvent.user_id == user.id,
@@ -314,6 +354,9 @@ def sync_board(user, day=None):
             economy.earn(user, economy.ALL_QUESTS_COINS, "quest_all",
                          _ref(day, "all"))
         gained += got
+
+    if gained:
+        _forget_paid_refs(user, day)
     return gained, state
 
 
