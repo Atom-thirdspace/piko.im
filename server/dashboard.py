@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify, redirect, render_template, url_for
 from .achievements import describe
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
-from .models import (Enrollment, Lesson, LessonProgress, Submission, XpEvent,
+from .models import (Enrollment, Lesson, LessonProgress, Submission, Track, XpEvent,
                      db, earned_rows, recent_freeze_uses)
+from .content import may_see
 from .progress import level_progress, user_today, MAX_FREEZES, streak_state
 from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
@@ -31,11 +32,11 @@ def _stats(user):
 
 
 def _primary_enrollment(user):
-    # track, current_lesson and that lesson's unit were four separate lazy
-    # loads; one join fetches the lot.
+    # Eagerly fetch the track's units and the current lesson's unit for the
+    # dashboard's current/upcoming unit labels.
     enrollment = db.session.execute(
         db.select(Enrollment)
-        .options(joinedload(Enrollment.track),
+        .options(selectinload(Enrollment.track).selectinload(Track.units),
                  joinedload(Enrollment.current_lesson).joinedload(Lesson.unit))
         .where(
             Enrollment.user_id == user.id,
@@ -46,6 +47,16 @@ def _primary_enrollment(user):
         return None
 
     lesson = enrollment.current_lesson
+    unit = lesson.unit if lesson is not None else None
+    upcoming_unit = None
+    if unit is not None:
+        visible_units = [candidate for candidate in enrollment.track.units
+                         if may_see(candidate, user)]
+        for index, candidate in enumerate(visible_units):
+            if candidate.id == unit.id and index + 1 < len(visible_units):
+                upcoming_unit = visible_units[index + 1]
+                break
+
     return {
         "track": {
             "slug": enrollment.track.slug,
@@ -53,8 +64,12 @@ def _primary_enrollment(user):
             "description": enrollment.track.description,
         },
         "unit": (
-            {"slug": lesson.unit.slug, "title": lesson.unit.title}
-            if lesson is not None else None
+            {"slug": unit.slug, "title": unit.title}
+            if unit is not None else None
+        ),
+        "upcoming_unit": (
+            {"slug": upcoming_unit.slug, "title": upcoming_unit.title}
+            if upcoming_unit is not None else None
         ),
         "lesson": (
             {

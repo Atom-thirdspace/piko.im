@@ -9,6 +9,8 @@
 {% block content %}
 {% set goal_pct = (daily_goal.earned_xp / daily_goal.target_xp * 100) | round | int
                   if daily_goal.target_xp else 0 %}
+{% set level_pct = (progress.into_level / progress.level_span * 100) | round | int
+                   if progress.level_span else 0 %}
 
 <main class="dash" data-api-url="{{ url_for('dashboard.api') }}">
 
@@ -36,10 +38,10 @@
 
   <div class="map" >
     <div class="lvl1" >
-      <h3 class="lvl11" >DSA 1</h3>
+      <h3 class="lvl11">{{ current.unit.title if current and current.unit else 'No active unit' }}</h3>
     </div>
     <div class="lvl2">
-      <h3 class="lvl22" >DSA 2</h3>
+      <h3 class="lvl22">{{ current.upcoming_unit.title if current and current.upcoming_unit else 'No upcoming unit' }}</h3>
     </div>
   
   </div>
@@ -54,7 +56,7 @@
       </div>
       <div class="meter" role="img"
            aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
-        <span class="meter__fill" style="width: {{ level_pct }}%"></span>
+        <span class="meter__fill" style="width: {{ [level_pct, 100] | min }}%"></span>
       </div>
       <p class="card__foot">
         {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
@@ -105,16 +107,18 @@
         {% if current.lesson %}
           <article data-lesson-id="{{ current.lesson.id }}">
             <h3>{{ current.lesson.title }}</h3>
-            <p>
-              <span>{{ current.lesson.kind }}</span>
-              <span>+{{ current.lesson.xp }} XP</span>
-            </p>
-            <a href="{{ url_for('learn.lesson',
-                                track_slug=current.track.slug,
-                                unit_slug=current.unit.slug,
-                                lesson_slug=current.lesson.slug) }}">
-              Start lesson
-            </a>
+            <div class="flexa">
+              <p>
+                <span>{{ current.lesson.kind }}</span>
+                <span>+{{ current.lesson.xp }} XP</span>
+              </p>
+              <a class="buto" href="{{ url_for('learn.lesson',
+                                  track_slug=current.track.slug,
+                                  unit_slug=current.unit.slug,
+                                  lesson_slug=current.lesson.slug) }}">
+                Start lesson
+              </a>
+            </div>
           </article>
         {% else %}
           <p>You've finished every lesson on this path.</p>

@@ -266,6 +266,9 @@
 .contu {
     grid-row-start:12;
     grid-column: 2 / 12;
+    position: relative;
+    z-index: 1;
+    user-select: text;
 }
 
 .contu h2 {
@@ -282,6 +285,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+    z-index: 1;
+    user-select: text;
 }
 
 .str a, .str h2 {
@@ -289,6 +295,13 @@
     margin-left: 1rem;
     margin-right: 1rem;
     margin-bottom: 0.8rem;
+    user-select: text;
+}
+
+.str a {
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
 }
 
 .card p {
@@ -347,3 +360,17 @@
 }
 
 
+.buto {
+    border: 1px solid var(--brand);
+    padding: 0.7rem;
+    background-color: var(--brand);
+    border-radius: 0.85rem;
+    color: #e6d9cd;
+    text-decoration: none;
+}
+
+.flexa {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
