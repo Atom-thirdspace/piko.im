@@ -1,3 +1,11 @@
+@font-face {
+    font-family: game;
+    src: url("https://cdn.hackclub.com/01a12cba-200d-778f-b477-ef756427723a/LowresPixel-Regular.otf");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 .dash {
     margin-top: 1rem;
     display: grid;
@@ -286,3 +294,45 @@
 .card p {
     margin: 0;
 }
+
+.matflex {
+    display: flex;
+    gap: 7%;
+}
+
+.matext {
+    display: flex;
+    flex-direction: column;
+}
+
+
+
+.matimg {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-image: var(--timg);
+    background-size: contain;
+    height: 7.5rem;
+    width: 11.5rem;
+    background-repeat: no-repeat;
+    border-radius: 0.85rem;
+}
+
+.mat {
+    position: absolute;
+    top: 20%;
+    left: 13%;
+    font-family: "game", sans-serif;
+    font-size:large;
+}
+
+.matflex {
+    padding-top:2%;
+    padding-bottom:2%;
+    padding-left: 2.3% ;
+    background-color: var(--page) ;
+    padding-right: 2.3%;
+}
+
+
