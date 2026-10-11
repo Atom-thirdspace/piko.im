@@ -106,3 +106,153 @@
     width: 5rem;
     animation: fadeing 1s linear;
 }
+
+
+
+
+.one {
+    grid-column: 16 / 21;
+    grid-row: 5 / 9;
+    display: flex;
+    flex-direction: column;
+    gap: 1.38rem;
+    min-width: 0;
+}
+
+/* Level and daily goal cards */
+.dash__level,
+.dash__goal {
+    grid-column: span 5;
+}
+
+.card {
+    position: relative;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow:
+        0 3px 0 var(--line),
+        0 8px 20px rgba(42, 26, 16, 0.06);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease;
+}
+
+.cardstyle {
+    position: relative;
+}
+
+.cardstyle::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: 1.25rem;
+    width: 3rem;
+    height: 4px;
+    background: var(--brand);
+    border-radius: 0 0 4px 4px;
+}
+
+.card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: .85rem;
+}
+
+.card__title {
+    font-family: face, Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.card__meta {
+    font-size: .85rem;
+    color: var(--ink-soft);
+}
+
+.card__foot {
+    margin: .6rem 0 0;
+    font-size: .85rem;
+    color: var(--ink-soft);
+}
+
+/* Progress meters */
+.meter {
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    border: 2px solid #3b2416;
+    border-radius: 999px;
+    background: var(--surface-3);
+    box-shadow: 0 2px 0 #3b2416;
+    overflow: hidden;
+}
+
+.meter__fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--brand) 80%, white),
+        var(--brand)
+    );
+    box-shadow:
+        0 0 6px color-mix(in srgb, var(--brand) 65%, transparent),
+        0 0 14px color-mix(in srgb, var(--brand) 35%, transparent);
+    position: relative;
+    overflow: hidden;
+    transition: width .4s cubic-bezier(.22, 1, .36, 1);
+}
+
+.meter__fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, .25),
+        transparent
+    );
+    animation: meter-shine 2.2s ease-in-out infinite;
+}
+
+.meter--goal .meter__fill {
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--good) 80%, white),
+        var(--good)
+    );
+    box-shadow:
+        0 0 6px color-mix(in srgb, var(--good) 65%, transparent),
+        0 0 14px color-mix(in srgb, var(--good) 35%, transparent);
+}
+
+@keyframes meter-shine {
+    from { transform: translateX(-150%); }
+    to { transform: translateX(400%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .meter__fill::after {
+        animation: none;
+    }
+}
+
+/* Responsive layout */
+@media (max-width: 60rem) {
+    .dash__overview {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
