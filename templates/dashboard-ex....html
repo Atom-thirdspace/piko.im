@@ -1,0 +1,233 @@
+{% extends "base-login.html" %}
+
+{% block theme_attributes %} data-theme="light" data-theme-fixed{% endblock %}
+
+{% block head %}
+   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+{% endblock head %}
+
+{% block content %}
+<main>
+    <a data-aos="fade-in" id="log" href="{{ url_for('auth.login_page') }}">
+        <img id="login" src="https://cdn.hackclub.com/01a0a001-634a-7f66-b2e9-3716df2d76b5/Untitled%20design%20(56).avif" alt="">
+        <p id="textl">Login</p>
+    </a>
+<header class="landing-header">
+    <img id="logo" src="https://cdn.hackclub.com/01a09f65-157b-791c-98f3-368a2b495e60/Untitled%20design%20(53).avif" alt="">
+
+<a data-aos="fade-down" data-aos-delay="200" id="feature" href="#">Features</a>
+<a data-aos="fade-down" data-aos-delay="300" id="privace" href="#">Privacy</a>
+<a data-aos="fade-down" data-aos-delay="400" id="Blog" href="#">Blog</a>
+<a data-aos="fade-down" data-aos-delay="500" id="help" href="#">Help Center</a>
+<a data-aos="fade-down" data-aos-delay="600" id="business" href="#">For Business</a>
+</header>
+<div class="hero">
+<section id="section2" aria-label="DSA learning gallery">
+  <div id="companies">
+    <div class="track">
+
+      <!-- First image set -->
+      <div class="masonry-set">
+
+        <!-- Left narrow, right wide -->
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://cdn.hackclub.com/01a0be61-b534-7ed0-a36d-71862d78648d/Untitled%20(1.1%20x%201%20in).png"
+              alt="Playful robot illustration"
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://cdn.hackclub.com/01a0be6b-2fab-72e6-8073-a4714a1dd3f0/Untitled%20design%20(75).png"
+              alt="Colorful science experiment"
+            >
+          </div>
+        </div>
+
+        <!-- Left wide, right narrow -->
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://cdn.hackclub.com/01a0be6f-246a-789f-982a-0ad1df0bb87c/Gemini_Generated_Image_vuc4e4vuc4e4vuc4.png"
+              alt="Students learning together"
+            >
+          </div>
+
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://cdn.hackclub.com/01a0be76-19c8-765b-aa72-a2828ba02246/Gemini_Generated_Image_rooqdcrooqdcrooq.png"
+              alt="Child studying"
+            >
+          </div>
+        </div>
+
+        <!-- Left narrow, right wide -->
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://cdn.hackclub.com/01a0be79-c472-78d8-a1b7-1c71c7163f1d/Gemini_Generated_Image_rs4njdrs4njdrs4n.png"
+              alt="Open book and glasses"
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://cdn.hackclub.com/01a0be77-d980-7497-a631-4ba1a8d88ab9/Gemini_Generated_Image_fulqqvfulqqvfulq.png"
+              alt="Laptop and digital learning"
+            >
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Duplicate set for seamless infinite scrolling -->
+      <div class="masonry-set" aria-hidden="true">
+
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://cdn.hackclub.com/01a0be61-b534-7ed0-a36d-71862d78648d/Untitled%20(1.1%20x%201%20in).png"
+              alt=""
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://cdn.hackclub.com/01a0be6b-2fab-72e6-8073-a4714a1dd3f0/Untitled%20design%20(75).png"
+              alt=""
+            >
+          </div>
+        </div>
+
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://cdn.hackclub.com/01a0be6f-246a-789f-982a-0ad1df0bb87c/Gemini_Generated_Image_vuc4e4vuc4e4vuc4.png"
+              alt=""
+            >
+          </div>
+
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://cdn.hackclub.com/01a0be76-19c8-765b-aa72-a2828ba02246/Gemini_Generated_Image_rooqdcrooqdcrooq.png"
+              alt=""
+            >
+          </div>
+        </div>
+
+        <div class="masonry-row">
+          <div class="gallery-tile gallery-tall">
+            <img
+              src="https://cdn.hackclub.com/01a0be79-c472-78d8-a1b7-1c71c7163f1d/Gemini_Generated_Image_rs4njdrs4njdrs4n.png"
+              alt=""
+            >
+          </div>
+
+          <div class="gallery-tile gallery-wide">
+            <img
+              src="https://cdn.hackclub.com/01a0be77-d980-7497-a631-4ba1a8d88ab9/Gemini_Generated_Image_fulqqvfulqqvfulq.png"
+              alt=""
+            >
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</section>
+
+    <h1>
+        <span data-aos="fade-up" data-aos-delay="200" class="highlight3">
+            Finally, DSA
+        </span>
+    </h1>
+    <h1 data-aos="fade-up" data-aos-delay="400" class="highlight1 line2">
+        <span>
+            that
+        </span>
+    </h1>
+
+    <h1>
+    <span data-aos="fade-up" data-aos-delay="600" class="highlight line3">
+        feels Gamified
+
+        <svg class="pencil-line" viewBox="0 0 1000 30" preserveAspectRatio="none">
+            <defs>
+                <filter id="rough">
+                    <feTurbulence
+                        type="fractalNoise"
+                        baseFrequency="0.03"
+                        numOctaves="2"
+                        seed="3"
+                        result="noise"
+                    />
+                    <feDisplacementMap
+                        in="SourceGraphic"
+                        in2="noise"
+                        scale="2"
+                    />
+                </filter>
+            </defs>
+
+            <path d="M 5 20
+                     C 180 8, 350 10, 520 9
+                     C 700 8, 860 10, 995 17" />
+        </svg>
+    </span>
+
+    <span class="highlight4">.</span>
+</h1>
+</div>
+</main>
+<section class="section 2" >
+  <img style="width: 30vw;" src="https://cdn.hackclub.com/01a10a32-316a-7521-ba2b-e8a95582ccd1/mountain.avif" alt="">
+  
+    
+</section>
+
+
+{% endblock content %}
+
+{% block js %}
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+  const galleryTrack = document.querySelector("#companies .track");
+  if (galleryTrack && galleryTrack.children.length === 2) {
+    const thirdGallerySet = galleryTrack.children[0].cloneNode(true);
+    thirdGallerySet.setAttribute("aria-hidden", "true");
+    galleryTrack.appendChild(thirdGallerySet);
+  }
+
+  if (galleryTrack && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animationDuration = 18000;
+    let loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+    let offset = 0;
+    let previousTime;
+
+    const animateGallery = (time) => {
+      if (previousTime === undefined) previousTime = time;
+
+      const elapsed = Math.min(time - previousTime, 100);
+      previousTime = time;
+      loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+      offset -= elapsed * loopDistance / animationDuration;
+
+      if (offset <= -loopDistance) {
+        offset += loopDistance;
+        galleryTrack.appendChild(galleryTrack.firstElementChild);
+      }
+
+      galleryTrack.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(animateGallery);
+    };
+
+    requestAnimationFrame(animateGallery);
+  }
+
+  AOS.init();
+</script>
+{% endblock js %}
