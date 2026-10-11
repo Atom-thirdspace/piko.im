@@ -37,7 +37,7 @@
 > 6) Tho we have a Pro Plan we also provide Student Plan which is free and give acess to all pro benifits. It works just like github education. Aproval goes manually from our admin dashbord
 > 7) Emails are well equiped for OTPs, Messages, Newsletters etc
 > 8) University/School teachers can also make a classroom. We have some dedicated pages for classrooms
-> 9) The engeneering is almost done except frontend for new pages. We are still polishing and out team is small with a very huge codebase so we still need time to polish our frontend. The infrastructure is done. We have dedicated Author dashboard. Right now we have some small cources which we will delete after we find some volunteers who will be willing to become the author. We have a dedicateed Author dashboard where they will write the some cool content.
+> 9) The engineering is almost done except frontend for new pages. We are still polishing and out team is small with a very huge codebase so we still need time to polish our frontend. The infrastructure is done. We have dedicated Author dashboard. Right now we have some small cources which we will delete after we find some volunteers who will be willing to become the author. We have a dedicateed Author dashboard where they will write the some cool content.
 
 ## Screenshot
 ![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
