@@ -263,13 +263,8 @@ def set_interests(user, keys):
     user.interests = list(keys)
     user.interest = keys[0] if keys else None
 
-def create_email_user(email,username,name,interests,password):
-    user = User(
-        email=email.lower(),
-        username=username.lower(),
-        name=name,
-    )
-    set_interests(user, interests)
+def create_email_user(email, name, password):
+    user = User(email=email.lower(), name=name)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
