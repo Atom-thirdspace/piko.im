@@ -2,6 +2,7 @@
 {% from "_heatmap.html" import heatmap as heatmap_grid %}
 
 {% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 {% endblock head %}
 
@@ -76,9 +77,51 @@
         {% endif %}
       </p>
     </section>
-
+</div>
+</div>
 
   
+<section class="contu" data-aos="fade-in" data-aos-delay="300" aria-labelledby="continue-h">
+
+    <div class="str" >
+      <h2 id="continue-h">Continue learning</h2>
+      {% if current %}
+        <a href="{{ url_for('learn.track', track_slug=current.track.slug) }}">
+          Whole path
+        </a>
+      {% endif %}
+    </div>
+      <div class="card cardstyle">
+    {% if current %}
+      <p>{{ current.track.title }}</p>
+      {% if current.unit %}
+        <p>{{ current.unit.title }}</p>
+      {% endif %}
+      {% if current.lesson %}
+        <article data-lesson-id="{{ current.lesson.id }}">
+          <h3>{{ current.lesson.title }}</h3>
+          <p>
+            <span>{{ current.lesson.kind }}</span>
+            <span>+{{ current.lesson.xp }} XP</span>
+          </p>
+          <a href="{{ url_for('learn.lesson',
+                              track_slug=current.track.slug,
+                              unit_slug=current.unit.slug,
+                              lesson_slug=current.lesson.slug) }}">
+            Start lesson
+          </a>
+        </article>
+      {% else %}
+        <p>You've finished every lesson on this path.</p>
+        <a href="{{ url_for('learn.index') }}">Pick another path</a>
+      {% endif %}
+    {% else %}
+      <p>You haven't joined a learning path yet.</p>
+      <a href="{{ url_for('learn.index') }}">Choose a path</a>
+    {% endif %}
+  </div>
+</section>
+
 
   
 
