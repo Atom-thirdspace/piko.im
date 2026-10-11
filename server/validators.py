@@ -158,7 +158,7 @@ def validate_password_change(new, confirm, user_email, username, current_ok):
     return errors
 
 
-def validate_signup(form, email_taken, username_taken):
+def validate_signup(form, email_taken):
     errors = {}
 
     email = (form.get("email") or "").strip().lower()
@@ -167,23 +167,15 @@ def validate_signup(form, email_taken, username_taken):
     elif email_taken(email):
         errors["email"] = "An account with that email already exists"
 
-    err = validate_username(form.get("username"), username_taken)
-    if err:
-        errors["username"] = err
-
     name = (form.get("name") or "").strip()
     if not (1 <= len(name) <= 80):
         errors["name"] = "Enter your name"
 
-    err = validate_interests(clean_interests(form.getlist("interest")))
-    if err:
-        errors["interest"] = err
-
     password = form.get("password") or ""
     if len(password) < 8:
         errors["password"] = "Use at least 8 characters."
-    elif password.lower() in (email, (form.get("username") or "").lower()):
-        errors["password"] = "Pick a password that isn't your email or username."
+    elif password.lower() == email:
+        errors["password"] = "Pick a password that isn't your email."
 
     return errors
 

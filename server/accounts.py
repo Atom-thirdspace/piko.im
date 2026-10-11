@@ -36,10 +36,6 @@ def _email_taken(email):
     return find_by_email(email) is not None
 
 
-def _username_taken(username):
-    return find_by_username(username) is not None
-
-
 def _age(dt):
     """SQLite hands back naive datetimes; treat those as UTC."""
     if dt is None:
@@ -66,17 +62,17 @@ def signup():
     if current_user():
         return redirect(url_for("dashboard.index"))
 
-    nxt = request.args.get("next", url_for("dashboard.index"))
+    nxt = (request.form.get("next") if request.method == "POST"
+           else request.args.get("next")) or url_for("dashboard.index")
 
     if request.method == "GET":
         return render_template(
-            "signup.html", interests=INTERESTS, errors={}, form=request.form,
-            next=nxt,
+            "signup.html", errors={}, form=request.form, next=nxt,
             providers=enabled_providers(),
         )
 
     form = request.form
-    errors = validate_signup(form, _email_taken, _username_taken)
+    errors = validate_signup(form, _email_taken)
 
     # An OAuth user setting a password for the first time isn't a duplicate.
     if errors.get("email"):
@@ -90,23 +86,22 @@ def signup():
 
     if errors:
         return render_template(
-            "signup.html", interests=INTERESTS, errors=errors, form=form, next=nxt,
+            "signup.html", errors=errors, form=form, next=nxt,
             providers=enabled_providers(),
         ), 400
 
     user = create_email_user(
         email=form["email"].strip(),
-        username=form["username"].strip(),
         name=form["name"].strip(),
-        interests=clean_interests(form.getlist("interest")),
         password=form["password"],
     )
 
     _send_verification(user, welcome=True)      # welcome and confirm in one email
     start_session(user)
 
+    after = nxt if is_safe_next(nxt) else url_for("dashboard.index")
     response = make_response(
-        redirect(nxt if is_safe_next(nxt) else url_for("dashboard.index"))
+        redirect(url_for("accounts.onboarding", next=after))
     )
     remember_device(response, user)             # signing up isn't a sign-in worth warning about
     return response
