@@ -321,10 +321,21 @@
 
 .mat {
     position: absolute;
-    top: 20%;
-    left: 13%;
+    top: 3%;
+    left: 3%;
+    height: 30%;
+    width: 94%;
     font-family: "game", sans-serif;
     font-size:large;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    box-sizing: border-box;
 }
 
 .matflex {
