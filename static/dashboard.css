@@ -111,18 +111,15 @@
 
 
 .one {
-    grid-column: 16 / 21;
-    grid-row: 5 / 9;
     display: flex;
     flex-direction: column;
     gap: 1.38rem;
     min-width: 0;
 }
 
-/* Level and daily goal cards */
-.dash__level,
-.dash__goal {
-    grid-column: span 5;
+.dash__overview {
+    grid-column: 16 / 21;
+    grid-row: 5 / 9;
 }
 
 .card {
