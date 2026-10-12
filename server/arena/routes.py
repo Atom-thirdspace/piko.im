@@ -8,6 +8,12 @@ from . import engine, rules
 
 arena_bp = Blueprint("arena", __name__, url_prefix="/arena")
 
+
+@arena_bp.before_request
+def _arena_unavailable():
+    abort(404)
+
+
 def _boss_or_404(slug):
     row = db.session.execute(
         db.select(Boss).filter_by(slug=slug, is_live=True)).scalar_one_or_none()
