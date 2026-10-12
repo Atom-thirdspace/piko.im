@@ -36,6 +36,7 @@
 > While the infrastructure is done we dont have good content right now. We have a author dashboard for that puspose
 > The dashboard is still under development so dont expect very good screen size responsiveness.
 > there is a bug in login page where my art is going very wrong it will be fixed by one of my friend soon.
+> there are still some frontend bugs that i intend to fix in the upcoming weeks.
 >
 > This is a very big project. We aim to make this project a very big SAAS.
 > 1) We have implemented features like google/hackclub/discord auth with 2 factor authentication which connects to 1Password/Google Authenticator/Microsoft Authenticator and many more
