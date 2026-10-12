@@ -48,40 +48,103 @@
 
   <div class="dash__overview">
     <div class="one">
-    <!-- ---------- level ---------- -->
-    <section data-aos="fade-in" data-aos-delay="200" class="dash__level" aria-labelledby="level-h">
-      <div class="card__head">
-        <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
-        <span class="card__meta">{{ progress.xp }} total XP</span>
-      </div>
-      <div class="meter" role="img"
-           aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
-        <span class="meter__fill" style="width: {{ [level_pct, 100] | min }}%"></span>
-      </div>
-      <p class="card__foot">
-        {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
-      </p>
-    </section>
-    <section data-aos="fade-in" data-aos-delay="400" class="dash__goal ]" aria-labelledby="goal-h">
-      <div class="card__head">
-        <h2 class="card__title" id="goal-h">Today's goal</h2>
-        <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
-      </div>
-      <div class="meter meter--goal" role="img"
-           aria-label="{{ goal_pct }} percent of today's goal">
-        <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
-      </div>
-      <p class="card__foot">
-        {% if daily_goal.remaining_xp %}
-          {{ daily_goal.remaining_xp }} XP to go.
-        {% else %}
-          Goal hit. Anything more is a bonus.
-        {% endif %}
-      </p>
-    </section>
-</div>
-</div>
+      <!-- ---------- level ---------- -->
+      <section data-aos="fade-in" data-aos-delay="200" class="dash__level" aria-labelledby="level-h">
+        <div class="card__head">
+          <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
+          <span class="card__meta">{{ progress.xp }} total XP</span>
+        </div>
+        <div class="meter" role="img"
+             aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
+          <span class="meter__fill" style="width: {{ [level_pct, 100] | min }}%"></span>
+        </div>
+        <p class="card__foot">
+          {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
+        </p>
+      </section>
+      <section data-aos="fade-in" data-aos-delay="400" class="dash__goal" aria-labelledby="goal-h">
+        <div class="card__head">
+          <h2 class="card__title" id="goal-h">Today's goal</h2>
+          <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
+        </div>
+        <div class="meter meter--goal" role="img"
+             aria-label="{{ goal_pct }} percent of today's goal">
+          <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
+        </div>
+        <p class="card__foot">
+          {% if daily_goal.remaining_xp %}
+            {{ daily_goal.remaining_xp }} XP to go.
+          {% else %}
+            Goal hit. Anything more is a bonus.
+          {% endif %}
+        </p>
+      </section>
+    </div>
 
+    <div class="dash__problem-grid" aria-label="Recommended problems">
+        <!-- ---------- try this next ---------- -->
+        <section data-aos="fade-in" data-aos-delay="550"
+                 class="dash__next card cardstyle" aria-labelledby="next-h">
+          <div class="card__head">
+            <h2 class="card__title" id="next-h">Try this next</h2>
+            {% if next_up and next_up.problem %}
+              <span class="card__meta pill pill-{{ next_up.problem.difficulty }}">
+                {{ next_up.problem.difficulty }}
+              </span>
+            {% endif %}
+          </div>
+          {% if next_up and next_up.problem %}
+            <p class="potd__title">
+              <a class="tito" href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
+                {{ next_up.problem.title }}</a>
+            </p>
+            <p class="potd__meta">
+              {{ next_up.problem.xp }} XP &middot; because {{ next_up.reason }}.
+            </p>
+          {% else %}
+            <p class="card__foot">No recommended problem is available right now.</p>
+          {% endif %}
+        </section>
+        <!-- ---------- problem of the day ---------- -->
+        <section data-aos="fade-in" data-aos-delay="600"
+                 class="dash__potd card cardstyle" aria-labelledby="potd-h">
+          <div class="card__head">
+            <h2 class="card__title" id="potd-h">Problem of the day</h2>
+            {% if potd %}
+              <span class="card__meta pill pill-{{ potd.problem.difficulty }}">{{ potd.problem.difficulty }}</span>
+            {% endif %}
+          </div>
+          {% if potd %}
+            <p class="potd__title">
+              <a class="tito" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">{{ potd.problem.title }}</a>
+            </p>
+            <p class="potd__meta">
+              {{ potd.problem.xp }} XP{% if not potd.solved %} &middot; +{{ potd.bonus }} bonus today{% endif %}
+              &middot; {{ potd.solvers }} solved it today
+            </p>
+            {% if potd.fastest %}
+              <ol class="potd__fastest">
+                {% for s in potd.fastest %}
+                  <li>
+                    <a href="{{ url_for('profile.public_profile', username=s.username) }}">{{ s.username }}</a>
+                    <span>{{ s.seconds // 60 }}m {{ s.seconds % 60 }}s</span>
+                  </li>
+                {% endfor %}
+              </ol>
+            {% endif %}
+            <p class="card__foot">
+              {% if potd.solved %}
+                Done. A new one lands at midnight UTC.
+              {% else %}
+                <a class="btn btn--primary" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">Take it on</a>
+              {% endif %}
+            </p>
+          {% else %}
+            <p class="card__foot">No problem has been published for today yet.</p>
+          {% endif %}
+        </section>
+    </div>
+  </div>
 
 
   

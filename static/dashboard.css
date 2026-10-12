@@ -127,7 +127,20 @@
 
 .dash__overview {
     grid-column: 14 / 21;
-    grid-row: 5 / 9;
+    grid-row: 5 / 12;
+}
+
+/* Adjust this value to switch the recommendation cards between one or two columns. */
+.dash__problem-grid {
+    --dash-problem-columns: 1;
+    display: grid;
+    grid-template-columns: repeat(var(--dash-problem-columns), minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.dash__problem-grid > .card {
+    min-width: 0;
 }
 
 .card {
@@ -374,3 +387,125 @@
     justify-content: space-between;
     align-items: flex-end;
 }
+
+/* Card appearance */
+.card {
+    position: relative;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow:
+        0 3px 0 var(--line),
+        0 8px 20px rgba(42, 26, 16, 0.06);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease;
+}
+
+/* Decorative top line */
+.cardstyle {
+    position: relative;
+}
+
+.cardstyle::before {
+    content: "";
+    position: absolute;
+    top: -2px;
+    left: 1.25rem;
+    width: 3rem;
+    height: 4px;
+    background: var(--brand);
+    border-radius: 0 0 4px 4px;
+}
+
+/* Card heading */
+.card__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: .85rem;
+}
+
+.card__title {
+    font-family: face, Georgia, serif;
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.card__meta {
+    font-size: .85rem;
+    color: var(--ink-soft);
+}
+
+.card__foot {
+    margin: .6rem 0 0;
+    font-size: .85rem;
+    color: var(--ink-soft);
+}
+
+/* Problem title and metadata */
+.potd__title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: .3rem 0 .15rem;
+}
+
+.potd__meta {
+    opacity: .7;
+    font-size: .9rem;
+    margin: 0 0 .6rem;
+}
+
+.potd__fastest {
+    margin: 0 0 .6rem;
+    padding-left: 1.2rem;
+    font-size: .9rem;
+}
+
+.potd__fastest li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .15rem 0;
+}
+
+.potd__fastest span {
+    font-variant-numeric: tabular-nums;
+    opacity: .65;
+}
+
+/* Button */
+.btn {
+    display: inline-block;
+    padding: .55rem 1.1rem;
+    border-radius: .5rem;
+    border: 1px solid var(--brand);
+    background: none;
+    color: var(--brand);
+    font: inherit;
+    font-size: .92rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.btn--primary {
+    background: var(--brand);
+    color: var(--on-brand);
+}
+
+/* Problem links */
+.tito {
+    color: inherit;
+    text-decoration: none;
+}
+
+@media (max-width: 40rem) {
+    .dash__problem-grid {
+        --dash-problem-columns: 1;
+    }
+}
+
