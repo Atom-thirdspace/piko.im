@@ -21,13 +21,22 @@
 > [!IMPORTANT]
 > **AI Usage:** 
 
-> Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project.
+> Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project. I used AI to remove some old code safely and do some backend work for me as i am only a frontend engineer in this project so the AI helped me with the backend when my friend was not there. He reviewed and cleaned the vibe code later.
 
 > Adhdhyan: I used Claude Code for making email templates and helped me with some BASIC frontend for the sake of backend testing, it also suggested me options to how to implement compiler in website for DSA problems, also took suggestions for admin tools. Apart from that I ask Claude to fix bugs whichever existed in my code.
+
+> We did use AI but this product is our own imagination and effort. AI is only used to help us in development where er were not able to do that. Later those parts were cleaned by either ME or Adhdhyan based on our speciality.
 
 
 
 > [!NOTE]
+>
+> Aryan : My github copilot usage is 2 hours 24 min in hackatime but it shows around 5 hours of AI coding I suspect that either it is thinking that my terminal is AI or its thinking that me copy pasting is AI which is most of caase me copy passting old css to rewrite pages but i also agree that i used chatgpt at come places like the progress bar etc. 
+> The Landing page is still under development
+> While the infrastructure is done we dont have good content right now. We have a author dashboard for that puspose
+> The dashboard is still under development so dont expect very good screen size responsiveness.
+> there is a bug in login page where my art is going very wrong it will be fixed by one of my friend soon.
+>
 > This is a very big project. We aim to make this project a very big SAAS.
 > 1) We have implemented features like google/hackclub/discord auth with 2 factor authentication which connects to 1Password/Google Authenticator/Microsoft Authenticator and many more
 > 2) We have also implemented developers API for the users as this is a app for future developers. so that they can use our API to get real time data of their profile from their coding agent or community projects
@@ -54,6 +63,7 @@
 - Polar Payment gateway
 - openai v2 LLM compatable API
 - AWS EC2
+- Vanilla CSS and JS
 
 
 
