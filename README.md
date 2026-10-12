@@ -50,7 +50,7 @@
 > 9) The engineering is almost done except frontend for new pages. We are still polishing and out team is small with a very huge codebase so we still need time to polish our frontend. The infrastructure is done. We have dedicated Author dashboard. Right now we have some small cources which we will delete after we find some volunteers who will be willing to become the author. We have a dedicateed Author dashboard where they will write the some cool content.
 
 ## Screenshot
-![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
+![piko-ss-collage](https://user-cdn.hackclub-assets.com/01a12e21-ae54-7ec2-a671-c44b5fc3a63b/1-piko-all-five-readme-collage.png)
 
 ## Why we made this project
 
