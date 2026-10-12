@@ -52,6 +52,11 @@
 ## Screenshot
 ![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
 
+## Why we made this project
+
+there are already a lot of DSA platform but we computer science students still learn DSA the ols bookish way. We gave a reason to the potential developers to enjoy this amazing process of learning DSA.
+
+This project also helped us understand how good python is for making backend and complex systems. for ex we implemented our own server side python interpretor :3
 
 ## Tech Stack
 - Flask
