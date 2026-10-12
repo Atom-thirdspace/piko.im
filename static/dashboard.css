@@ -509,3 +509,7 @@
     }
 }
 
+.card {
+    background-color: var(--page)   !important;
+    border-radius: 0.85rem;
+}
