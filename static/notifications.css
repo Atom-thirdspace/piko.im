@@ -1,0 +1,101 @@
+.nt-head { display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; }
+.nt-head h1 { margin: 0 0 .3rem; }
+.nt-head .learn-lede { margin: 0; }
+
+.nt-day { margin: 0 0 1.4rem; }
+
+.nt-day__head {
+    position: sticky;
+    top: 4.2rem;
+    z-index: 1;
+    margin: 0 0 .4rem;
+    padding: .35rem 0;
+    background: var(--page);
+    color: var(--ink-soft);
+    font-size: .76rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.nt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+
+.nt {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    padding: .7rem .85rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    border-radius: 12px;
+}
+
+.nt.is-unread { background: var(--surface-2); border-left-color: var(--brand); }
+
+.nt__icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--surface-3);
+    font-size: .95rem;
+}
+
+.nt--rejected .nt__icon { background: var(--bad-solid); color: var(--on-brand); }
+.nt--published .nt__icon { background: var(--good-solid); color: var(--on-brand); }
+.nt--season .nt__icon,
+.nt--rival .nt__icon { background: var(--brand); color: var(--on-brand); }
+
+.nt__body { display: flex; flex-direction: column; gap: .12rem; min-width: 0; flex: 1; }
+
+.nt__meta { display: flex; align-items: center; gap: .45rem; }
+
+.nt__kind { color: var(--ink-soft); font-size: .7rem; letter-spacing: .06em;
+    text-transform: uppercase; }
+.nt__when { color: var(--ink-muted); font-size: .72rem; }
+
+.nt__dot { width: .4rem; height: .4rem; border-radius: 50%; background: var(--brand); }
+
+.nt__title { font-weight: 600; }
+.nt__text { color: var(--ink-2); font-size: .88rem; line-height: 1.45; }
+
+.nt form { margin: 0; flex: 0 0 auto; }
+
+.nt__go {
+    padding: .35rem .8rem;
+    font: inherit;
+    font-size: .82rem;
+    color: var(--ink);
+    background: var(--surface-3);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.nt__go:hover { background: var(--brand); color: var(--on-brand);
+    border-color: var(--brand); }
+
+.nt-empty {
+    display: grid;
+    justify-items: center;
+    gap: .5rem;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    border: 1px dashed var(--line-strong);
+    border-radius: 16px;
+    background: var(--surface-2);
+}
+
+.nt-empty__icon { font-size: 2rem; opacity: .7; }
+.nt-empty__head { margin: 0; font-weight: 600; font-size: 1.05rem; }
+.nt-empty__sub { margin: 0 0 .6rem; max-width: 26rem; color: var(--ink-soft);
+    font-size: .9rem; line-height: 1.6; }
+
+@media (max-width: 30rem) {
+    .nt { flex-wrap: wrap; }
+    .nt form { width: 100%; }
+    .nt__go { width: 100%; }
+}

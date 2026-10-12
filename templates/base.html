@@ -22,9 +22,10 @@
     {% block head %}
     
     {% endblock head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='palette.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='responsive.css') }}">
 </head>
-<body>
+<body data-search-api="{{ url_for('search.api') }}">
   <img id="custom-cursor" src="https://cdn.hackclub.com/01a0b45b-38fa-7ae4-b0a0-f903879286aa/Untitled%20design%20(70).png" alt="" aria-hidden="true">
     {% block app_header %}
       {% set viewer = current_user() %}
@@ -79,7 +80,9 @@
           </button>
           <form class="topnav__search" method="get" action="{{ url_for('search.page') }}">
             <input id="search" autocomplete="off" type="search" name="q" placeholder="Search" aria-label="Search"
+                   data-pal-open
                    value="{{ request.args.get('q', '') }}">
+            <kbd class="topnav__kbd">&#8984;K</kbd>
           </form>
           <details class="topnav__account">
             <summary class="topnav__account-trigger" aria-label="Open account menu">
@@ -143,6 +146,9 @@
     <script defer src="{{ url_for('static', filename='cursor.js') }}"></script>
     <script defer src="{{ url_for('static', filename='nav.js') }}"></script>
     <script defer src="{{ url_for('static', filename='tablescroll.js') }}"></script>
+    {% if current_user() %}
+      <script defer src="{{ url_for('static', filename='palette.js') }}"></script>
+    {% endif %}
 <script>
 (function () {
   var KEY = "piko-theme";

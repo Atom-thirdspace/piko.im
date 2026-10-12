@@ -4,53 +4,98 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='leaderboard.css') }}">
 {% endblock head %}
 
+{% macro face(row, size) -%}
+  {% if row.avatar_url %}
+    <img class="bd-face bd-face--{{ size }}" src="{{ row.avatar_url }}"
+         alt="" loading="lazy">
+  {% else %}
+    <span class="bd-face bd-face--{{ size }} bd-face--blank" aria-hidden="true">
+      {{ row.name[:1] | upper }}
+    </span>
+  {% endif %}
+{%- endmacro %}
+
+{% macro delta(row) -%}
+  {% if row.delta %}
+    <span class="bd-delta bd-delta--{{ 'up' if row.delta > 0 else 'down' }}">
+      {{ '&#9650;' | safe if row.delta > 0 else '&#9660;' | safe }}{{ row.delta | abs }}
+    </span>
+  {% endif %}
+{%- endmacro %}
+
 {% block content %}
-    <main class="board">
-        <h1>Leaderboard</h1>
+<main class="bd">
+  <h1 class="bd__title">Leaderboard</h1>
 
-        <nav class="board__tabs">
-      {% for key, label in scopes.items() %}
-        <a href="{{ url_for('leaderboard.index', scope=key) }}"
-           class="{{ 'is-active' if key == scope }}">{{ label }}</a>
-      {% endfor %}
-    </nav>
+  <nav class="bd__tabs">
+    {% for key, label in scopes.items() %}
+      <a href="{{ url_for('leaderboard.index', scope=key) }}"
+         class="{{ 'is-active' if key == scope }}"
+         {% if key == scope %}aria-current="page"{% endif %}>{{ label }}</a>
+    {% endfor %}
+  </nav>
 
-    {% set unit = 'day streak' if scope == 'streak' else 'XP' %}
-    {% if you and you.hidden %}
-      <p class="board__you board__you--off">
-        You're hidden from the leaderboard.
-        <a href="{{ url_for('profile.settings') }}">Change that in settings</a>.
-      </p>
-    {% elif you %}
-      <p class="board__you">
-        You're <b>#{{ you.rank }}</b> with {{ you.score }} {{ unit }}.
-      </p>
-    {% endif %}
+  {% set unit = 'day streak' if scope == 'streak' else 'XP' %}
+  {% set top = rows[:3] %}
+  {% set rest = rows[3:] %}
 
-     {% if rows %}
-      <ol class="board__list">
-        {% for row in rows %}
-          <li class="board__row {{ 'is-you' if viewer and row.user_id == viewer.id }}">
-            <span class="board__rank board__rank--{{ row.rank if row.rank <= 3 else 'n' }}">
-              {{ row.rank }}
+  {% if not rows %}
+    <section class="bd-empty">
+      <span class="bd-empty__icon" aria-hidden="true">&#127942;</span>
+      <p class="bd-empty__head">Nobody's on this board yet.</p>
+      <p class="bd-empty__sub">Finish a lesson and you'll be number one.</p>
+      <a class="btn btn-primary" href="{{ url_for('learn.index') }}">Go first</a>
+    </section>
+  {% else %}
+    {% if top | length == 3 %}
+      <section class="bd-podium" aria-label="Top three">
+        {% for slot in [top[1], top[0], top[2]] %}
+          <a class="bd-pod bd-pod--{{ slot.rank }}
+                    {{ 'is-you' if viewer and slot.user_id == viewer.id }}"
+             href="{{ url_for('profile.public_profile', username=slot.username) }}">
+            <span class="bd-pod__medal" aria-hidden="true">
+              {{ {1: '&#129351;', 2: '&#129352;', 3: '&#129353;'}[slot.rank] | safe }}
             </span>
-            {% if row.avatar_url %}
-              <img class="board__avatar" src="{{ row.avatar_url }}" alt="" loading="lazy">
-            {% else %}
-              <span class="board__avatar board__avatar--blank" aria-hidden="true">
-                {{ row.name[:1] | upper }}
-              </span>
-            {% endif %}
-            <a class="board__name" href="{{ url_for('profile.public_profile', username=row.username) }}">
-              {{ row.name }}
-              <small>@{{ row.username }} &middot; lvl {{ row.level }}</small>
-            </a>
-            <span class="board__score">{{ row.score }}<small>{{ unit }}</small></span>
-            </li>
-          {% endfor %}
-          </ol>
-     {% else %}
-         <p class="board__empty">Nobody's on this board yet. Go first.</p>
+            {{ face(slot, 'lg') }}
+            <span class="bd-pod__name">{{ slot.name }}</span>
+            <span class="bd-pod__score">{{ slot.score }}<small>{{ unit }}</small></span>
+            <span class="bd-pod__meta">lvl {{ slot.level }} {{ delta(slot) }}</span>
+            <span class="bd-pod__step" aria-hidden="true">{{ slot.rank }}</span>
+          </a>
+        {% endfor %}
+      </section>
     {% endif %}
-    </main>
- {% endblock content %}
+
+    <ol class="bd-list" start="{{ 4 if top | length == 3 else 1 }}">
+      {% for row in (rest if top | length == 3 else rows) %}
+        <li class="bd-row {{ 'is-you' if viewer and row.user_id == viewer.id }}">
+          <span class="bd-row__rank">{{ row.rank }}</span>
+          {{ face(row, 'sm') }}
+          <a class="bd-row__name"
+             href="{{ url_for('profile.public_profile', username=row.username) }}">
+            {{ row.name }}
+            <small>&#64;{{ row.username }} &middot; lvl {{ row.level }}</small>
+          </a>
+          {{ delta(row) }}
+          <span class="bd-row__score">{{ row.score }}<small>{{ unit }}</small></span>
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+
+  {% if you and you.hidden %}
+    <p class="bd-you bd-you--off">
+      You're hidden from the leaderboard.
+      <a href="{{ url_for('profile.settings') }}">Change that in settings</a>.
+    </p>
+  {% elif you %}
+    <div class="bd-you">
+      <span class="bd-you__rank">#{{ you.rank }}</span>
+      <span class="bd-you__text">
+        You, with <b>{{ you.score }}</b> {{ unit }}
+      </span>
+      <span class="bd-you__lvl">lvl {{ you.level }}</span>
+    </div>
+  {% endif %}
+</main>
+{% endblock content %}

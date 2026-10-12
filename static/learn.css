@@ -307,25 +307,6 @@
 
 .solve-stat { font-size: .85rem; color: var(--ink-2); margin: .3rem 0 0; }
 
-/* ---------- notifications ---------- */
-.notif-list { list-style: none; margin: 1rem 0 0; padding: 0; }
-
-.notif {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .7rem 0 .7rem .8rem;
-  border-bottom: 1px solid rgba(128, 128, 128, .18);
-  border-left: 3px solid transparent;
-}
-.notif:last-child { border-bottom: 0; }
-.notif.is-unread { border-left-color: currentColor; }
-
-.notif__text { min-width: 0; }
-.notif__text p { margin: .2rem 0 0; opacity: .8; }
-.notif__when { font-size: .8rem; opacity: .55; }
-
 .nav-badge {
   display: inline-block;
   min-width: 1.1em;
