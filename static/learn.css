@@ -127,7 +127,7 @@
 .lesson-nav a:hover { text-decoration: underline; }
 
 /* quiz */
-.quiz-q { border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; margin: 0 0 1rem; }
+.quiz-q { border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; margin: 0 0 1rem; background-color: var(--page); }
 .quiz-q.is-wrong { border-color: var(--bad); background: var(--bad-bg); }
 .quiz-q.is-right { border-color: var(--good); background: var(--good-bg); }
 .quiz-q legend { font-weight: 600; padding: 0 .35rem; }
@@ -190,7 +190,7 @@
 .tutor__form { display: flex; flex-direction: column; gap: .6rem; align-items: flex-start; }
 
 .tutor__form textarea {
-    width: 100%;
+    width: 97%;
     padding: .7rem;
     font: inherit;
     font-size: .95rem;
