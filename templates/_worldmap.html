@@ -1,0 +1,32 @@
+{#- One leg of the illustrated journey. The artwork carries the trail; the
+    two wooden signs carry where this stretch starts and where it ends. -#}
+{% macro map_panel(panel, track, compact=False) %}
+  {% set start = panel.regions[0] %}
+  {% set finish = panel.regions[-1] %}
+  <div class="mapart{{ ' mapart--mini' if compact }}{{ ' is-fogged' if not panel.open }}">
+    <div class="mapart__art" aria-hidden="true"></div>
+
+    <div class="mapsign mapsign--start">
+      <p class="mapsign__text">{{ start.title }}</p>
+    </div>
+
+    {% if finish.id != start.id %}
+      <div class="mapsign mapsign--end">
+        <p class="mapsign__text">{{ finish.title }}</p>
+      </div>
+    {% endif %}
+
+    {% if not panel.open %}
+      <span class="mapart__fog">Keep going to reach this area</span>
+    {% endif %}
+
+    <span class="sr-only">
+      {{ panel.title | safe }} &mdash;
+      {% if panel.open %}
+        {{ panel.done }} of {{ panel.total }} lessons done
+      {% else %}
+        locked
+      {% endif %}
+    </span>
+  </div>
+{% endmacro %}

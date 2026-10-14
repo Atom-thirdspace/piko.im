@@ -20,67 +20,42 @@
 .map {
     grid-column: 2 / 13;
     grid-row: 4 / 8;
-
-    width: 100%;
-    aspect-ratio: 16 / 9;
     align-self: start;
-
-    background-image: var(--map);
-    background-size: contain;
-    background-position: top left;
-    background-repeat: no-repeat;
-
     position: relative;
 }
 
+.map__link { display: block; position: relative; text-decoration: none; }
 
-
-.lvl1 {
-
-    height: 9%;
-    width: 11%;
+.map__chip {
     position: absolute;
-    top: 22%;
-    left: 4.5%;
-    transform: rotate(-5deg);
-
+    right: .9rem;
+    bottom: .8rem;
     display: flex;
-    justify-content: center;
     align-items: center;
-    overflow: hidden;
+    gap: .5rem;
+    padding: .3rem .7rem;
+    border-radius: 999px;
+    background: var(--page-veil);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: .76rem;
 }
 
-.lvl11 {
-    max-width: 100%;
-    font-size: clamp(6px, 1vw, 16px);
-    overflow-wrap: anywhere;
-    text-align: center;
-    margin: 0;
-    color: white;
-}
+.map__chip b { color: var(--brand-ink); font-weight: 600; }
 
-.lvl2 {
+.map__link:hover .map__chip { border-color: var(--brand); }
 
-    height: 9%;
-    width: 9.5%;
-    position: absolute;
-    top: 24%;
-    right:2.5%;
-    transform: rotate(-4deg);
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-}
-
-.lvl22 {
-    color: white;
-    margin: 0;
-    max-width: 100%;
-    font-size: clamp(6px,1vw,16px);
-    overflow-wrap: anywhere;
-    text-align: center;
+.map__empty {
+    display: grid;
+    place-items: center;
+    min-height: 9rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 16px;
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-size: .9rem;
+    text-decoration: none;
 }
 
 .dash__who {
@@ -512,36 +487,4 @@
 .card {
     background-color: var(--page)   !important;
     border-radius: 0.85rem;
-}
-
-.ribbon {
-    position: absolute;
-    right: -3vw;
-    height: 12vh;
-    transition: 0.3s;
-}
-
-.ribbon:hover {
-    right: 0vw;
-}
-
-
-.rb1 {
-    top: 10vh;
-}
-
-.rb2 {
-    top: 20vh;
-}
-
-.rb3 {
-    top: 30vh;
-}
-
-.rb4 {
-    top: 40vh;
-}
-
-.rb5{
-    top: 50vh;
 }

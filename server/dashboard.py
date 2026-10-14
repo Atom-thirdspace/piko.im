@@ -10,6 +10,7 @@ from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
 from .activity import heatmap
 from . import companion, economy, mastery, potd, quests, rivals, seasons, recommend
+from .learning import worldmap
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -58,6 +59,7 @@ def _primary_enrollment(user):
                 break
 
     return {
+        "track_row": enrollment.track,
         "track": {
             "slug": enrollment.track.slug,
             "title": enrollment.track.title,
@@ -105,6 +107,17 @@ def _activity(user, limit=8):
     ]
 
 
+def _world_for(user, track):
+    """The region minimap for the primary track. Structure is cached content,
+    so this costs one query for the learner's own progress."""
+    if track is None:
+        return None
+    done_ids = set(db.session.execute(
+        db.select(LessonProgress.lesson_id)
+        .where(LessonProgress.user_id == user.id)).scalars())
+    return worldmap.build(worldmap.structure(track, user), done_ids)
+
+
 def _dashboard_data(user):
     today = user_today(user)
     # One evaluation of the quest board, shared between the payout and
@@ -117,11 +130,13 @@ def _dashboard_data(user):
 
     progress = level_progress(user.xp_total or 0)
     topics = mastery.for_user(user)
+    current = _primary_enrollment(user)
     return {
         "user": user,
         "progress": progress,
         "stats": _stats(user),
-        "current": _primary_enrollment(user),
+        "current": current,
+        "world": _world_for(user, current["track_row"] if current else None),
         "activity": _activity(user),
         "daily_goal": {
             "target_xp": user.daily_goal_xp or 0,
@@ -159,8 +174,9 @@ def _json_potd(card):
 def _json_data(data):
     current = data["current"]
     if current is not None:
+        # track_row carries the ORM object for the minimap; it never serialises.
         current = {
-            **current,
+            **{k: v for k, v in current.items() if k != "track_row"},
             "started_at": (
                 current["started_at"].isoformat()
                 if current["started_at"] else None
@@ -238,3 +254,5 @@ def index():
 @login_required
 def api():
     return jsonify(_json_data(_dashboard_data(current_user())))
+
+    

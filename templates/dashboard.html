@@ -1,9 +1,11 @@
 {% extends "base-dashboard.html" %}
 {% from "_heatmap.html" import heatmap as heatmap_grid %}
+{% from "_worldmap.html" import map_panel %}
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='worldmap.css') }}">
 {% endblock head %}
 
 {% block content %}
@@ -13,12 +15,6 @@
                    if progress.level_span else 0 %}
 
 <main class="dash" data-api-url="{{ url_for('dashboard.api') }}">
-
-<img class="ribbon rb1" src="https://cdn.hackclub.com/01a12dd7-71c3-753a-a1ee-51d1217588b3/Untitled%20design%20(94).png" alt="">
-<img class="ribbon rb2" src="https://cdn.hackclub.com/01a12dd7-71c3-753a-a1ee-51d1217588b3/Untitled%20design%20(94).png" alt="">
-<img class="ribbon rb3" src="https://cdn.hackclub.com/01a12dd7-71c3-753a-a1ee-51d1217588b3/Untitled%20design%20(94).png" alt="">
-<img class="ribbon rb4" src="https://cdn.hackclub.com/01a12dd7-71c3-753a-a1ee-51d1217588b3/Untitled%20design%20(94).png" alt="">
-<img class="ribbon rb5" src="https://cdn.hackclub.com/01a12dd7-71c3-753a-a1ee-51d1217588b3/Untitled%20design%20(94).png" alt="">
 
   <div class="dash__who">
       <h1 data-aos="fade-down" class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
@@ -42,14 +38,21 @@
     </div>
 
 
-  <div class="map" >
-    <div class="lvl1" >
-      <h3 class="lvl11">{{ current.unit.title if current and current.unit else 'No active unit' }}</h3>
-    </div>
-    <div class="lvl2">
-      <h3 class="lvl22">{{ current.upcoming_unit.title if current and current.upcoming_unit else 'No upcoming unit' }}</h3>
-    </div>
-  
+  <div class="map">
+    {% if world and world.panels %}
+      <a class="map__link"
+         href="{{ url_for('learn.map_page', track_slug=current.track.slug) }}">
+        {{ map_panel(world.panels[world.current_panel], current.track, compact=True) }}
+        <span class="map__chip">
+          {{ world.cleared }} / {{ world.total }} regions
+          <b>Expand the map</b>
+        </span>
+      </a>
+    {% else %}
+      <a class="map__empty" href="{{ url_for('learn.index') }}">
+        Pick a course path to open your map
+      </a>
+    {% endif %}
   </div>
 
   <div class="dash__overview">

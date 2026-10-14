@@ -10,7 +10,7 @@ from ..session import current_user, login_required
 from ..xp_rules import UNIT_COMPLETE, lesson_base
 from .. import quests
 from .markdown import render as render_md
-from . import pathmap
+from . import pathmap, worldmap
 from ..admin_gate import is_admin
 from ..content import visible
 from ..memo import per_request
@@ -232,7 +232,11 @@ def _complete(user, track, lesson):
                **level_progress(user.xp_total or 0)})
     result["unit_bonus"] = _award_unit(user, lesson, done_ids)
     result["awarded"] += result["unit_bonus"]
-
+    result["opened"] = (
+        worldmap.note_unlocks(user, worldmap.structure(track, user),
+                              done_ids, lesson.unit_id)
+        if result["unit_bonus"] and lesson.unit_id else [])
+    
     from .. import mastery
     mastery.record_lesson(user, lesson)
 
@@ -271,6 +275,32 @@ def index():
     return render_template("learn/index.html", tracks=summaries,
                            any_enrolled=bool(enrollments))
 
+@learn_bp.route("/map/")
+@learn_bp.route("/map/<track_slug>/")
+@login_required
+def map_page(track_slug=None):
+    """The region map: every unit in a track and what opens what."""
+    user = current_user()
+    done_ids = _completed_ids(user)
+
+    if track_slug:
+        track = _track_or_404(track_slug)
+    else:
+        enrollment = db.session.execute(
+            db.select(Enrollment).where(Enrollment.user_id == user.id,
+                                        Enrollment.is_primary.is_(True))
+        ).scalar_one_or_none()
+        track = enrollment.track if enrollment else db.session.execute(
+            _visible(db.select(Track).order_by(Track.position), Track).limit(1)
+        ).scalar_one_or_none()
+        if track is None:
+            return redirect(url_for("learn.index"))
+
+    nxt = _next_lesson(track, done_ids)
+    world = _world(track, user, done_ids, nxt.id if nxt else None)
+    return render_template("learn/map.html", track=track, world=world,
+                           next_lesson=nxt,
+                           summary=_track_summary(track, done_ids))
 
 @learn_bp.route("/<track_slug>/")
 @login_required
@@ -334,6 +364,11 @@ def lesson(track_slug, unit_slug, lesson_slug):
     unit, lesson = _lesson_or_404(track, unit_slug, lesson_slug)
 
     done_ids = _completed_ids(user)
+    if not _unit_open(track, user, done_ids, lesson.unit):
+        flash("That region is still locked. Finish the one before it first.",
+              "error")
+        return redirect(url_for("learn.map_page", track_slug=track.slug))
+
     solved_ids = _solved_problem_ids(user)
     ordered = _ordered_lessons(track)
     index = next(i for i, row in enumerate(ordered) if row.id == lesson.id)
@@ -369,6 +404,9 @@ def complete(track_slug, unit_slug, lesson_slug):
         flash(message, "error")
         return redirect(url_for("learn.lesson", track_slug=track.slug,
                                 unit_slug=unit.slug, lesson_slug=lesson.slug))
+
+    if not _unit_open(track, user, _completed_ids(user), lesson.unit):
+        abort(403)
 
     questions = questions_for(lesson, track, unit)
     if questions:
@@ -449,3 +487,13 @@ def complete_lessons_for_problem(user, problem_id):
         _advance(user, track, done_ids)
 
     return awarded
+
+def _world(track, user, done_ids, next_lesson_id=None):
+    """The drawable map for one track."""
+    return worldmap.build(worldmap.structure(track, user), done_ids, next_lesson_id)
+
+def _unit_open(track, user, done_ids, unit):
+    """Entry gate. Authors and admins walk through their own drafts."""
+    if unit is None or _may_preview(unit):
+        return True
+    return unit.id in worldmap.open_ids(worldmap.structure(track, user), done_ids)

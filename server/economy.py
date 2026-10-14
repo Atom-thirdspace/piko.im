@@ -26,6 +26,7 @@ LABELS = {
     "freeze": "Streak freeze",
     "retry": "Arena retry",
     "cosmetic": "Unlocked",
+    "area": "Region opened",
     "admin": "Adjustment",
 }
 

@@ -2419,3 +2419,24 @@ def current_season():
                                 Season.closed_at.is_(None))
         .order_by(Season.starts_at.desc()).limit(1)).scalar_one_or_none()
 
+class UnitPrereq(db.Model):
+    """One edge in the region graph: `unit_id` needs `requires_unit_id` cleared."""
+
+    __tablename__ = "unit_prereqs"
+    __table_args__ = (
+        UniqueConstraint("unit_id", "requires_unit_id", name="uq_unit_prereq"),
+        db.CheckConstraint("unit_id <> requires_unit_id",
+                           name="ck_unit_prereq_self"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    unit_id = db.Column(db.Integer, db.ForeignKey("units.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    requires_unit_id = db.Column(
+        db.Integer, db.ForeignKey("units.id", ondelete="CASCADE"),
+        nullable=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    unit = db.relationship("Unit", foreign_keys=[unit_id])
+    requires = db.relationship("Unit", foreign_keys=[requires_unit_id])

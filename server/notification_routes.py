@@ -13,6 +13,7 @@ notifications_bp = Blueprint("notifications", __name__,
 KEEP = 60
 
 ICONS = {
+    "area": "\U0001F5FA",
     "classroom": "\U0001F393",
     "published": "✔",
     "rejected": "✖",
@@ -24,6 +25,7 @@ ICONS = {
 DEFAULT_ICON = "\U0001F514"
 
 NAMES = {
+    "area": "New region",
     "classroom": "Classroom",
     "published": "Published",
     "rejected": "Changes asked",
