@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+  <p class="admin-sub">
+    <a href="{{ url_for('admin.redeem') }}">&larr; Redeem codes</a>
+  </p>
+  <h1><code>{{ row.code }}</code></h1>
+
+  <div class="admin-tiles">
+    <div class="admin-tile">
+      <b>{{ uses | length }}</b>
+      <span>redeemed{% if row.max_uses %} of {{ row.max_uses }}{% endif %}</span>
+    </div>
+    <div class="admin-tile">
+      <b>{{ rewards.get(row.reward, row.reward) }}</b>
+      <span>{% if row.reward != 'cosmetic' %}{{ row.amount }} each{% else %}{{ row.note }}{% endif %}</span>
+    </div>
+    <div class="admin-tile">
+      <b>{{ row.window }}</b>
+      <span>state right now</span>
+    </div>
+  </div>
+
+  <p class="admin-sub">
+    Live from
+    <b>{{ row.starts_at.strftime('%d %b %Y %H:%M') if row.starts_at else 'creation' }}</b>
+    until
+    <b>{{ row.expires_at.strftime('%d %b %Y %H:%M') if row.expires_at else 'forever' }}</b>
+    &middot; created by
+    {{ row.created_by.username if row.created_by else 'unknown' }}
+    on {{ row.created_at.strftime('%d %b %Y') }}
+  </p>
+
+  <h2>Who used it</h2>
+  <table class="admin-table">
+    <thead><tr><th>User</th><th>Reward</th><th>When</th></tr></thead>
+    <tbody>
+      {% for use in uses %}
+        {% set who = users.get(use.user_id) %}
+        <tr>
+          <td>
+            {% if who %}
+              <a href="{{ url_for('admin.user_detail', user_id=who.id) }}">
+                {{ who.username or who.email }}</a>
+            {% else %}#{{ use.user_id }}{% endif %}
+          </td>
+          <td>{{ use.amount }} {{ use.reward }}</td>
+          <td>{{ use.created_at.strftime('%d %b %Y %H:%M') }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3" class="admin-empty">Nobody yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock admin_content %}

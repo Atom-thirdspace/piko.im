@@ -179,3 +179,35 @@ tr.is-you td { background: var(--good-bg); font-weight: 600; }
     margin: 1.5rem 0;
     align-items: start;
 }
+
+.redeem {
+    margin: 0 0 1.4rem;
+    padding: .9rem 1rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 14px;
+    background: var(--surface-2);
+}
+
+.redeem__label { display: block; margin-bottom: .45rem; font-weight: 600;
+    font-size: .9rem; }
+
+.redeem__row { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+.redeem__input {
+    flex: 1 1 12rem;
+    min-width: 0;
+    padding: .55rem .75rem;
+    font: inherit;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+}
+
+.redeem__input:focus {
+    outline: none;
+    border-color: var(--brand-ink);
+    box-shadow: 0 0 0 3px rgba(165, 42, 42, .15);
+}

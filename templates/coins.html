@@ -16,6 +16,17 @@
     </p>
   </header>
 
+  <form class="redeem" method="post" action="{{ url_for('gamify.redeem_code') }}">
+    {{ csrf_field() }}
+    <label class="redeem__label" for="redeem-code">Have a code?</label>
+    <div class="redeem__row">
+      <input class="redeem__input" id="redeem-code" name="code"
+             placeholder="PIKO-XXXX" autocomplete="off"
+             maxlength="32" required>
+      <button class="btn btn-primary" type="submit">Redeem</button>
+    </div>
+  </form>
+
   {% if not rows %}
     <p class="learn-lede">Nothing yet. Solve something.</p>
   {% else %}

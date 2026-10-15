@@ -2440,3 +2440,75 @@ class UnitPrereq(db.Model):
 
     unit = db.relationship("Unit", foreign_keys=[unit_id])
     requires = db.relationship("Unit", foreign_keys=[requires_unit_id])
+
+class RedeemCode(db.Model):
+    __tablename__ = "redeem_codes"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_redeem_code"),
+        db.CheckConstraint("amount >= 0", name="ck_redeem_amount"),
+        db.CheckConstraint("max_uses >= 0 AND used_count >= 0",
+                           name="ck_redeem_uses"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(32), nullable=False, unique=True)
+    reward = db.Column(db.String(24), nullable=False)
+    amount = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    note = db.Column(db.String(200), nullable=False, default="", server_default="")
+    max_uses = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    used_count = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    per_user = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    starts_at = db.Column(db.DateTime(timezone=True))
+    expires_at = db.Column(db.DateTime(timezone=True))
+    is_active = db.Column(db.Boolean, nullable=False, default=True,
+                          server_default="true")
+    created_by_id = db.Column(db.Integer,
+                              db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    created_by = db.relationship("User")
+
+    @property
+    def uses_left(self):
+        if not self.max_uses:
+            return None
+        return max(0, self.max_uses - (self.used_count or 0))
+
+    @property
+    def window(self):
+        now = _utcnow()
+        if not self.is_active:
+            return "off"
+        if self.starts_at is not None and now < self.starts_at:
+            return "early"
+        if self.expires_at is not None and now >= self.expires_at:
+            return "over"
+        if self.max_uses and (self.used_count or 0) >= self.max_uses:
+            return "spent"
+        return "live"
+
+
+class RedeemUse(db.Model):
+    __tablename__ = "redeem_uses"
+    __table_args__ = (
+        UniqueConstraint("code_id", "user_id", name="uq_redeem_use"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    code_id = db.Column(db.Integer,
+                        db.ForeignKey("redeem_codes.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    reward = db.Column(db.String(24), nullable=False, default="",
+                       server_default="")
+    amount = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+
+    code = db.relationship("RedeemCode")
+    user = db.relationship("User")
+    

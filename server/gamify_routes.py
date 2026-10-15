@@ -2,6 +2,7 @@ from flask import (Blueprint, abort, flash, jsonify, redirect,
                    render_template, request, url_for)
 
 from . import cosmetics, economy, mastery, speedrun
+from . import redeem as redeem_mod
 from .models import Problem, db
 from .session import current_user, login_required
 
@@ -86,3 +87,12 @@ def times(slug):
 def records():
     return render_template("records.html",
                            rows=speedrun.mine(current_user(), limit=50))
+
+
+@gamify_bp.route("/coins/redeem", methods=["POST"])
+@login_required
+def redeem_code():
+    ok, _row, message = redeem_mod.redeem(current_user(),
+                                          request.form.get("code"))
+    flash(message, "success" if ok else "error")
+    return redirect(url_for("gamify.coins"))

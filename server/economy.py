@@ -27,6 +27,7 @@ LABELS = {
     "retry": "Arena retry",
     "cosmetic": "Unlocked",
     "area": "Region opened",
+    "redeem": "Code redeemed",
     "admin": "Adjustment",
 }
 

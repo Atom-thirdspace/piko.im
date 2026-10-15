@@ -21,6 +21,7 @@ ICONS = {
     "rival": "⚡",
     "season": "\U0001F3C6",
     "streak": "\U0001F525",
+    "redeem": "\U0001F381"
 }
 DEFAULT_ICON = "\U0001F514"
 
@@ -33,6 +34,7 @@ NAMES = {
     "rival": "Rival",
     "season": "Season",
     "streak": "Streak",
+    "redeem": "Code"
 }
 
 

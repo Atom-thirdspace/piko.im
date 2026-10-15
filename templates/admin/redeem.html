@@ -1,0 +1,97 @@
+{% extends "admin/base.html" %}
+{% from "admin/base.html" import pager %}
+
+{% block admin_content %}
+  <h1>Redeem codes</h1>
+  <p class="admin-sub">
+    Hand a code out and it grants its reward once per person, until it
+    expires or runs out of uses.
+  </p>
+
+  <form method="post" action="{{ url_for('admin.redeem_new') }}">
+    {{ csrf_field() }}
+    <div class="admin-filters">
+      <label>Code
+        <input name="code" size="16" value="{{ suggestion }}"
+               pattern="[A-Za-z0-9-]{3,32}">
+      </label>
+      <label>Reward
+        <select name="reward">
+          {% for key, label in rewards.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Amount
+        <input name="amount" type="number" min="0" value="100" size="6">
+      </label>
+      <label>Max uses
+        <input name="max_uses" type="number" min="0" value="1" size="6">
+      </label>
+    </div>
+    <div class="admin-filters">
+      <label>Live from
+        <input name="starts_at" type="datetime-local">
+      </label>
+      <label>Expires
+        <input name="expires_at" type="datetime-local">
+      </label>
+      <label>Note
+        <input name="note" size="28"
+               placeholder="Shown on redeem, or the cosmetic key">
+      </label>
+      <button class="admin-btn" type="submit">Create</button>
+    </div>
+    <p class="admin-hint">
+      Leave both dates blank for a code that is live immediately and never
+      expires. Max uses 0 means unlimited. For a cosmetic, put its key in
+      the note.
+    </p>
+  </form>
+
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>Code</th><th>Reward</th><th>Window</th>
+        <th class="num">Used</th><th>State</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td><a href="{{ url_for('admin.redeem_detail', code_id=row.id) }}">
+            <code>{{ row.code }}</code></a></td>
+          <td>
+            {{ rewards.get(row.reward, row.reward) }}
+            {% if row.reward != 'cosmetic' %}&times; {{ row.amount }}{% endif %}
+            {% if row.note %}<span class="admin-hint">{{ row.note }}</span>{% endif %}
+          </td>
+          <td>
+            {{ row.starts_at.strftime('%d %b %Y %H:%M') if row.starts_at else 'now' }}
+            &rarr;
+            {{ row.expires_at.strftime('%d %b %Y %H:%M') if row.expires_at else 'never' }}
+          </td>
+          <td class="num">
+            {{ claimed.get(row.id, 0) }}{% if row.max_uses %} / {{ row.max_uses }}{% endif %}
+          </td>
+          <td>
+            <span class="admin-badge {{ '' if row.window == 'live' else 'warn' }}">
+              {{ row.window }}
+            </span>
+          </td>
+          <td>
+            <form class="admin-inline" method="post"
+                  action="{{ url_for('admin.redeem_toggle', code_id=row.id) }}">
+              {{ csrf_field() }}
+              <button type="submit">{{ 'Turn off' if row.is_active else 'Turn on' }}</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="admin-empty">No codes yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {{ pager(p, 'admin.redeem') }}
+{% endblock admin_content %}

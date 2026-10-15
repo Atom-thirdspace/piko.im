@@ -18,6 +18,7 @@ from .models import (AdminAction, DeletionRequest, Enrollment, Lesson, LessonPro
                      Team, open_report_count, SimilarityFlag,
                      GeneratedProblem, publish_generated, Contest, ContestEntry, ContestProblem)
 from . import contentcache, notify
+from . import redeem as redeem_mod
 from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
@@ -40,7 +41,7 @@ from .mailer import send_author_invite_email
 from .models import (DRAFT, PUBLISHED, REVIEW, SUB_GRANTING, VERIFY_MONTHS,
                      AuthorInvite, AuthorInviteUse, Classroom,
                      StudentVerification, Subscription, Team, _utcnow,
-                     new_join_code)
+                     new_join_code, RedeemCode, RedeemUse)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -93,6 +94,10 @@ NAV = [
         ("admin.system", "System"),
         ("admin.audit", "Audit log"),
         ("health.detail", "Health"),
+    ]),
+        ("Money", [
+        ("admin.subscriptions", "Subscriptions"),
+        ("admin.redeem", "Redeem codes"),
     ]),
 ]
 
@@ -1745,3 +1750,118 @@ def stats():
         engagement=adminstats.engagement(),
         billing=billing_stats.overview(),
     )
+
+@admin_bp.route("/redeem/")
+@admin_required
+def redeem():
+    page = _page()
+    stmt = db.select(RedeemCode).order_by(RedeemCode.created_at.desc())
+    rows, pager = _paginate(stmt, page)
+    claimed = dict(db.session.execute(
+        db.select(RedeemUse.code_id, db.func.count())
+        .group_by(RedeemUse.code_id)).all())
+    return render_template("admin/redeem.html", rows=rows, p=pager,
+                           claimed=claimed, rewards=redeem_mod.REWARDS,
+                           suggestion=redeem_mod.make_code())
+
+@admin_bp.route("/redeem/new", methods=["POST"])
+@admin_required
+def redeem_new():
+    from datetime import datetime, timezone as _tz
+    form = request.form
+
+    def when(field):
+        raw = (form.get(field) or "").strip()
+        if not raw:
+            return None
+        try:
+            return datetime.fromisoformat(raw).replace(tzinfo=_tz.utc)
+        except ValueError:
+            return False
+
+    code = redeem_mod.normalise(form.get("code"))
+    if not code:
+        code = redeem_mod.make_code()
+
+    if not redeem_mod.CODE_RE.match(code):
+        flash("3-32 characters: capitals, digits and hyphens.", "error")
+        return redirect(url_for("admin.redeem"))
+
+    reward = (form.get("reward") or "").strip()
+    if reward not in redeem_mod.REWARDS:
+        flash("Pick a reward type.", "error")
+        return redirect(url_for("admin.redeem"))
+
+    try:
+        amount = int(form.get("amount") or 0)
+        max_uses = int(form.get("max_uses") or 1)
+    except ValueError:
+        flash("Amount and uses must be whole numbers.", "error")
+        return redirect(url_for("admin.redeem"))
+
+    if amount < 0 or max_uses < 0:
+        flash("Amount and uses cannot be negative.", "error")
+        return redirect(url_for("admin.redeem"))
+    if reward != redeem_mod.COSMETIC and amount <= 0:
+        flash("Give an amount greater than zero.", "error") 
+        return redirect(url_for("admin.redeem"))
+
+    starts, expires = when("starts_at"), when("expires_at")
+    if starts is False or expires is False:
+        flash("Those dates aren't valid.", "error")
+        return redirect(url_for("admin.redeem"))
+    if starts and expires and expires <= starts:
+        flash("The end has to be after the start.", "error")
+        return redirect(url_for("admin.redeem"))
+
+    if redeem_mod.find(code) is not None:
+        flash("That code already exists.", "error")
+        return redirect(url_for("admin.redeem"))
+
+    row = RedeemCode(
+        code=code,
+        reward = reward,
+        amount=amount,
+        note=(form.get("note") or "")[:200],
+        max_uses=max_uses,
+        starts_at=starts,
+        expires_at=expires,
+        is_active=True,
+        created_by_id=current_user().id,
+    )
+    db.session.add(row)
+    db.session.commit()
+    log_action("redeem.create", row.code,
+               "%s %s, %s uses" % (amount, reward, max_uses or "unlimited"))
+    flash("Code %s created." % row.code, "success")
+    return redirect(url_for("admin.redeem"))
+
+@admin_bp.route("/redeem/<int:code_id>/toggle", methods=["POST"])
+@admin_required
+def redeem_toggle(code_id):
+    row = db.session.get(RedeemCode, code_id)
+    if row is None:
+        abort(404)
+    row.is_active = not row.is_active
+    db.session.commit()
+    log_action("redeem.toggle", row.code, "active" if row.is_active else "off")
+    flash("%s is now %s." % (row.code, "live" if row.is_active else "off"),
+          "success")
+    return redirect(url_for("admin.redeem"))
+
+
+@admin_bp.route("/redeem/<int:code_id>/")
+@admin_required
+def redeem_detail(code_id):
+    row = db.session.get(RedeemCode, code_id)
+    if row is None:
+        abort(404)
+    uses = redeem_mod.uses_for(code_id)
+    users = {}
+    if uses:
+        users = {u.id: u for u in db.session.execute(
+            db.select(User).where(
+                User.id.in_({use.user_id for use in uses}))).scalars()}
+    return render_template("admin/redeem_detail.html", row=row, uses=uses,
+                           users=users, rewards=redeem_mod.REWARDS)
+
