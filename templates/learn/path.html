@@ -1,0 +1,71 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='paths.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head cp-head">
+    <div>
+      <p class="learn-crumbs">
+        <a href="{{ url_for('learn.paths') }}">Your own paths</a>
+      </p>
+      <h1>{{ path.title }}</h1>
+      {% if path.summary %}<p class="learn-lede">{{ path.summary }}</p>{% endif %}
+      <p class="cp-goal">&ldquo;{{ path.goal }}&rdquo;</p>
+    </div>
+    {% if next %}
+      <a class="btn btn-primary"
+         href="{{ url_for('learn.lesson', track_slug=next.track_slug,
+                          unit_slug=next.unit_slug,
+                          lesson_slug=next.lesson_slug) }}">Continue</a>
+    {% endif %}
+  </header>
+
+  <div class="cp-meter cp-meter--big" role="img"
+       aria-label="{{ done }} of {{ total }} lessons done">
+    <span class="cp-meter__fill" style="width: {{ percent }}%"></span>
+  </div>
+  <p class="cp-card__meta">{{ done }} / {{ total }} lessons &middot; {{ xp }} XP</p>
+
+  {% for stage in stages %}
+    <section class="cp-stage">
+      <h2 class="cp-stage__head">
+        {{ stage.name }}
+        <span class="cp-stage__meta">{{ stage.done }} / {{ stage.total }}</span>
+      </h2>
+      <ol class="cp-steps">
+        {% for row in stage.items %}
+          <li class="cp-step {{ 'is-done' if row.done }}{{ ' is-current' if row.current }}">
+            <span class="cp-step__tick" aria-hidden="true">
+              {{- '✓' if row.done else '' -}}
+            </span>
+            <span class="cp-step__body">
+              <a class="cp-step__title"
+                 href="{{ url_for('learn.lesson', track_slug=row.track_slug,
+                                  unit_slug=row.unit_slug,
+                                  lesson_slug=row.lesson_slug) }}">
+                {{ row.lesson.title }}</a>
+              {% if row.reason %}
+                <span class="cp-step__why">{{ row.reason }}</span>
+              {% endif %}
+            </span>
+            <span class="pill pill-{{ row.kind }}">{{ row.kind }}</span>
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+  {% endfor %}
+
+  <form class="cp-danger" method="post"
+        action="{{ url_for('learn.path_delete', slug=path.slug) }}">
+    {{ csrf_field() }}
+    <button type="submit" class="cp-danger__btn">Delete this path</button>
+    <span class="cp-card__meta">
+      Your finished lessons stay finished.
+    </span>
+  </form>
+</main>
+{% endblock content %}
