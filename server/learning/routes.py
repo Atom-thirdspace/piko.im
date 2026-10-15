@@ -2,9 +2,9 @@ from flask import (Blueprint, abort, flash, redirect, render_template, request,
                    url_for)
 from sqlalchemy.orm import selectinload
 
-from .. import contentcache
+from .. import contentcache, pathbuilder
 from ..models import (Enrollment, Lesson, LessonProgress, Problem, Submission,
-                      Track, Unit, db, PUBLISHED)
+                      Track, Unit, db, PUBLISHED, CustomPath)
 from ..progress import award_xp, level_progress
 from ..session import current_user, login_required
 from ..xp_rules import UNIT_COMPLETE, lesson_base
@@ -275,11 +275,69 @@ def index():
     return render_template("learn/index.html", tracks=summaries,
                            any_enrolled=bool(enrollments))
 
+@learn_bp.route("/paths")
+@login_required
+def paths():
+    user = current_user()
+    done_ids = _completed_ids(user)
+    rows = []
+    for path in pathbuilder.mine(user):
+        rows.append({"path": path,
+                     **pathbuilder.view(path, done_ids)})
+    return render_template("learn/paths.html", rows=rows,
+                           ai_on=pathbuilder.is_configured(),
+                           left=max(0, pathbuilder.daily_limit(user)
+                                    - pathbuilder.builds_today(user)))
+
+@learn_bp.route("/paths/new", methods = ["POST"])
+@login_required
+def path_new():
+    user = current_user()
+    if pathbuilder.over_cap(user):
+        flash("You've built as many paths as you can today. Try tomorrow.",
+              "error")
+        return redirect(url_for("learn.paths"))
+
+    goal = request.form.get("goal")
+    use_ai = bool(request.form.get("use_ai"))
+    try:
+        draft, model = pathbuilder.plan(goal, use_ai=use_ai)
+    except pathbuilder.PlanError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("learn.paths"))
+
+    path = pathbuilder.save(user, goal, draft, model)
+    flash("Built \u201c%s\u201d \u2013 %d lessons."
+          % (path.title, len(path.items)), "success")
+    return redirect(url_for("learn.path_detail", slug=path.slug))
+
+@learn_bp.route("/paths/<slug>/")
+@login_required
+def path_detail(slug):
+    user = current_user()
+    path = pathbuilder.find(user, slug)
+    if path is None:
+        abort(404)
+    return render_template("learn/path.html", path=path,
+                           **pathbuilder.view(path, _completed_ids(user)))
+
+@learn_bp.route("/paths/<slug>/delete", methods=["POST"])
+@login_required
+def path_delete(slug):
+    user = current_user()
+    path = pathbuilder.find(user, slug)
+    if path is None:
+        abort(404)
+    db.session.delete(path)
+    db.session.commit()
+    flash("Path deleted.", "success")
+    return redirect(url_for("learn.paths"))
+
+
 @learn_bp.route("/map/")
 @learn_bp.route("/map/<track_slug>/")
 @login_required
 def map_page(track_slug=None):
-    """The region map: every unit in a track and what opens what."""
     user = current_user()
     done_ids = _completed_ids(user)
 

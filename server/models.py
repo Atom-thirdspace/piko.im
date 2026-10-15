@@ -2511,4 +2511,51 @@ class RedeemUse(db.Model):
 
     code = db.relationship("RedeemCode")
     user = db.relationship("User")
-    
+
+class CustomPath(db.Model):
+    __tablename__ = "custom_paths"
+    __table_args__ = (
+        UniqueConstraint("user_id", "slug", name="uq_custom_path_slug"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    slug = db.Column(db.String(80), nullable=False)
+    title = db.Column(db.String(160), nullable=False)
+    goal = db.Column(db.String(500), nullable=False, default="", server_default="")
+    summary = db.Column(db.String(500), nullable=False, default="",
+                        server_default="")
+    source = db.Column(db.String(24), nullable=False, default="ai",
+                       server_default="ai")
+    model = db.Column(db.String(64), nullable=False, default="", server_default="")
+    is_active = db.Column(db.Boolean, nullable=False, default=True,
+                          server_default="true")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    user = db.relationship("User")
+    items = db.relationship("CustomPathItem", back_populates="path",
+                            cascade="all, delete-orphan",
+                            order_by="CustomPathItem.position")
+
+class CustomPathItem(db.Model):
+    __tablename__ = "custom_path_items"
+    __table_args__ = (
+        UniqueConstraint("path_id", "lesson_id", name="uq_custom_path_item"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    path_id = db.Column(db.Integer,
+                        db.ForeignKey("custom_paths.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    lesson_id = db.Column(db.Integer,
+                          db.ForeignKey("lessons.id", ondelete="CASCADE"),
+                          nullable=False)
+    position = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    stage = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    stage_name = db.Column(db.String(120), nullable=False, default="",
+                           server_default="")
+    reason = db.Column(db.String(240), nullable=False, default="",
+                       server_default="")
+
+    path = db.relationship("CustomPath", back_populates="items")
+    lesson = db.relationship("Lesson")

@@ -1,0 +1,78 @@
+{% extends "base-dashboard.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='paths.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head">
+    <p class="learn-crumbs"><a href="{{ url_for('learn.index') }}">Course paths</a></p>
+    <h1>Your own paths</h1>
+    <p class="learn-lede">
+      Say what you want to be able to do. We'll pick lessons that already
+      exist and put them in the order that gets you there.
+      Anything you've already finished counts straight away.
+    </p>
+  </header>
+
+  <form class="cp-new" method="post" action="{{ url_for('learn.path_new') }}">
+    {{ csrf_field() }}
+    <label class="cp-new__label" for="goal">What do you want to learn?</label>
+    <textarea class="cp-new__input" id="goal" name="goal" rows="2" required
+              maxlength="300"
+              placeholder="Get comfortable with graphs for interviews - I know arrays but BFS confuses me"></textarea>
+    <div class="cp-new__row">
+      {% if ai_on %}
+        <label class="cp-new__check">
+          <input type="checkbox" name="use_ai" value="1" checked>
+          Let the planner choose and order them
+        </label>
+      {% else %}
+        <span class="cp-new__hint">
+          The AI planner is off, so this will match on keywords.
+        </span>
+      {% endif %}
+      <span class="cp-new__hint">{{ left }} left today</span>
+      <button class="btn btn-primary" type="submit">Build my path</button>
+    </div>
+  </form>
+
+  {% if not rows %}
+    <section class="cp-empty">
+      <span class="cp-empty__icon" aria-hidden="true">&#129517;</span>
+      <p class="cp-empty__head">No paths of your own yet.</p>
+      <p class="cp-empty__sub">
+        Describe a goal above, or
+        <a href="{{ url_for('learn.index') }}">start from a ready-made course</a>.
+      </p>
+    </section>
+  {% else %}
+    <ul class="cp-list">
+      {% for row in rows %}
+        <li class="cp-card">
+          <div class="cp-card__top">
+            <h2 class="cp-card__title">
+              <a href="{{ url_for('learn.path_detail', slug=row.path.slug) }}">
+                {{ row.path.title }}</a>
+            </h2>
+            <span class="cp-card__pct">{{ row.percent }}%</span>
+          </div>
+          {% if row.path.summary %}
+            <p class="cp-card__sub">{{ row.path.summary }}</p>
+          {% endif %}
+          <div class="cp-meter" role="img"
+               aria-label="{{ row.done }} of {{ row.total }} lessons done">
+            <span class="cp-meter__fill" style="width: {{ row.percent }}%"></span>
+          </div>
+          <p class="cp-card__meta">
+            {{ row.done }} / {{ row.total }} lessons &middot; {{ row.xp }} XP
+            {%- if row.path.source == 'keywords' %} &middot; keyword match{% endif %}
+          </p>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock content %}

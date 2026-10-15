@@ -9,12 +9,6 @@ from .session import current_user, login_required
 gamify_bp = Blueprint("gamify", __name__)
 
 
-@gamify_bp.before_request
-def _wardrobe_unavailable():
-    if request.path.startswith("/wardrobe/"):
-        abort(404)
-
-
 @gamify_bp.route("/wardrobe/")
 @login_required
 def wardrobe():
