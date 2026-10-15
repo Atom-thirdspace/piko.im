@@ -28,6 +28,18 @@ WAYPOINTS = [
 ]
 PANEL_SIZE = len(WAYPOINTS)
 
+
+def _spread(count):
+    """Lay `count` steps evenly along the painted trail, end to end."""
+    if count <= 0:
+        return []
+    if count == 1:
+        return [WAYPOINTS[len(WAYPOINTS) // 2]]
+    if count > len(WAYPOINTS):
+        return [WAYPOINTS[i % len(WAYPOINTS)] for i in range(count)]
+    last = len(WAYPOINTS) - 1
+    return [WAYPOINTS[round(i * last / (count - 1))] for i in range(count)]
+
 def _build_structure(track_id, user):
     units = db.session.execute(
         db.select(Unit).where(Unit.track_id == track_id)
@@ -44,16 +56,18 @@ def _build_structure(track_id, user):
 
     shaped = []
     for unit in units:
-        lesson_ids = [lesson.id for lesson in unit.lessons
-                      if may_see(lesson, user)]
+        lessons = [lesson for lesson in unit.lessons if may_see(lesson, user)]
         shaped.append({
-           "id": unit.id,
+            "id": unit.id,
             "slug": unit.slug,
             "title": unit.title,
             "topic": unit.topic or "",
             "level": unit.level or "",
-            "lesson_ids": lesson_ids,
-            "total": len(lesson_ids),
+            "lesson_ids": [lesson.id for lesson in lessons],
+            "lessons": [{"id": lesson.id, "slug": lesson.slug,
+                         "title": lesson.title, "kind": lesson.kind}
+                        for lesson in lessons],
+            "total": len(lessons),
         })
     return {"units": shaped, "edges": _edges(shaped, authored)}
 
@@ -109,7 +123,6 @@ def _depths(units, edges):
     return depth, True
 
 def cleared_ids(struct, done_ids):
-    """Units whose every visible lesson is finished. An empty unit never clears."""
     return {unit["id"] for unit in struct["units"]
             if unit["lesson_ids"]
             and all(lid in done_ids for lid in unit["lesson_ids"])}
@@ -199,7 +212,7 @@ def build(struct, done_ids, next_lesson_id=None):
                 "walked": need in cleared,
             })
 
-    panels = _panels(regions)
+    panels = _panels(regions, struct, done_ids, next_lesson_id)
     current_panel = next((p["index"] for p in panels if p["current"]), 0)
 
     return {"regions": regions, "links": links, "panels": panels,
@@ -208,24 +221,45 @@ def build(struct, done_ids, next_lesson_id=None):
             "cleared": len(cleared), "total": len(units)}
 
 
-def _panels(regions):
-    grouped = {}
-    for region in regions:
-        grouped.setdefault(region["panel"], []).append(region)
-
+def _panels(regions, struct, done_ids, next_lesson_id=None):
+    by_id = {unit["id"]: unit for unit in struct["units"]}
     out = []
-    for index in sorted(grouped):
-        members = grouped[index]
+
+    for index, region in enumerate(regions):
+        unit = by_id.get(region["id"], {})
+        lessons = unit.get("lessons", [])
+        places = _spread(len(lessons))
+
+        steps = []
+        for number, (lesson, (wx, wy)) in enumerate(zip(lessons, places), 1):
+            steps.append({
+                "n": number,
+                "id": lesson["id"],
+                "slug": lesson["slug"],
+                "title": lesson["title"],
+                "kind": lesson["kind"],
+                "wx": wx,
+                "wy": wy,
+                "done": lesson["id"] in done_ids,
+                "current": lesson["id"] == next_lesson_id,
+                "open": region["open"],
+            })
+
+        nxt = regions[index + 1] if index + 1 < len(regions) else None
         out.append({
             "index": index,
-            "regions": members,
-            "open": any(r["open"] for r in members),
-            "cleared": all(r["state"] == "cleared" for r in members),
-            "current": any(r["current"] for r in members),
-            "done": sum(r["done"] for r in members),
-            "total": sum(r["total"] for r in members),
-            "title": "%s &ndash; %s" % (members[0]["title"], members[-1]["title"])
-            if len(members) > 1 else members[0]["title"],
+            "region": region,
+            "regions": [region],
+            "steps": steps,
+            "unit_slug": region["slug"],
+            "title": region["title"],
+            "next_title": nxt["title"] if nxt else "",
+            "open": region["open"],
+            "cleared": region["state"] == "cleared",
+            "current": region["current"],
+            "done": region["done"],
+            "total": region["total"],
+            "needs": region["needs"],
         })
     return out
 

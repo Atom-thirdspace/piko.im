@@ -44,17 +44,23 @@
 
     <div class="wm-panels">
       {% for panel in world.panels %}
-        <section class="wm-panel">
-          <div class="wm-panel__head">
-            <h2 class="wm-panel__title">
-              Area {{ panel.index + 1 }}
-              <span class="wm-panel__meta">{{ panel.title | safe }}</span>
+        <section class="area" id="unit-{{ panel.unit_slug }}">
+          <div class="area__head">
+            <h2 class="area__title">
+              Area {{ panel.index + 1 }} &middot; {{ panel.title }}
+              {% if panel.cleared %}
+                <span class="area__badge area__badge--cleared">cleared</span>
+              {% elif panel.open %}
+                <span class="area__badge area__badge--open">open</span>
+              {% else %}
+                <span class="area__badge">locked</span>
+              {% endif %}
             </h2>
-            <span class="wm-panel__meta">
+            <span class="area__meta">
               {% if panel.open %}
                 {{ panel.done }} / {{ panel.total }} lessons
               {% else %}
-                Locked
+                Needs {{ panel.needs | join(', ') or 'the area before it' }}
               {% endif %}
             </span>
           </div>
