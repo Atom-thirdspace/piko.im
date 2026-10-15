@@ -93,7 +93,10 @@ def records():
 @gamify_bp.route("/coins/redeem", methods=["POST"])
 @login_required
 def redeem_code():
-    ok, _row, message = redeem_mod.redeem(current_user(),
-                                          request.form.get("code"))
+    user = current_user()
+    if not redeem_mod.attempt_allowed(user):
+        flash("Too many code attempts. Try again in a few minutes.", "error")
+        return redirect(url_for("gamify.coins"))
+    ok, _row, message = redeem_mod.redeem(user, request.form.get("code"))
     flash(message, "success" if ok else "error")
     return redirect(url_for("gamify.coins"))

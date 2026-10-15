@@ -16,6 +16,8 @@ class Achievement:
     description: str
     group: str
     test: Callable[[dict], bool]
+    field: str = ""
+    target: int = 0
 
 
 def snapshot(user):
@@ -77,7 +79,9 @@ def snapshot(user):
 
 
 def _at_least(field, n):
-    return lambda s: s[field] >= n
+    fn = lambda s: s[field] >= n
+    fn.progress = (field, n)
+    return fn
 
 
 REGISTRY = (

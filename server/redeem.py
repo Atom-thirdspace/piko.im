@@ -2,6 +2,9 @@ import re
 import secrets
 from datetime import timedelta
 
+import threading
+import time as _time
+
 from sqlalchemy.exc import IntegrityError
 
 from . import economy, notify
@@ -20,6 +23,13 @@ REWARDS = {
     FREEZE: "Streak freezes",
     COSMETIC: "Cosmetic",
 }
+
+ATTEMPT_WINDOW = 600.0
+MAX_ATTEMPTS = 8
+
+_tries_lock = threading.Lock()
+_tries = {}
+
 
 MAX_FREEZE_STACK = 9
 
@@ -114,6 +124,10 @@ def redeem(user, raw):
     except IntegrityError:
         return False, row, MESSAGES["already"]
 
+    if row is None:
+        return False, None, MESSAGES["unknown"]
+    forget_attempts(user)
+
     if not _claim_slot(row):
         db.session.rollback()
         return False, row, MESSAGES["race"]
@@ -142,3 +156,22 @@ def uses_for(code_id, limit=100):
     return db.session.execute(
         db.select(RedeemUse).where(RedeemUse.code_id == code_id)
         .order_by(RedeemUse.created_at.desc()).limit(limit)).scalars().all()
+
+def attempt_allowed(user):
+    now = _time.monotonic()
+    with _tries_lock:
+        seen = [t for t in _tries.get(user.id, ()) if now - t < ATTEMPT_WINDOW]
+        if len(seen) >= MAX_ATTEMPTS:
+            _tries[user.id] = seen
+            return False
+        seen.append(now)
+        _tries[user.id] = seen
+        if len(_tries) > 4096:
+            for uid in [k for k, v in _tries.items()
+                        if not v or now - v[-1] > ATTEMPT_WINDOW]:
+                _tries.pop(uid, None)
+    return True
+
+def forget_attempts(user):
+    with _tries_lock:
+        _tries.pop(user.id, None)

@@ -23,7 +23,7 @@ from .oauth import PROVIDERS
 from .progress import level_progress
 from .session import current_user, is_safe_next
 from .validators import (DELETION_REASON_LABELS, SLUG_RE, slugify,
-                         validate_post)
+                         validate_post, local_to_utc)
 from .admin_code import send_code, verify_code
 from .admin_gate import (MAX_FAILURES, admin_email_required, admin_required,
                          admin_emails, gate_ready, is_admin, lock_session,
@@ -1668,11 +1668,7 @@ def contest_save():
         return redirect(url_for("admin.contests"))
 
     def when(field):
-        raw = (form.get(field) or "").strip()
-        try:                               # the browser sends local wall time
-            return datetime.fromisoformat(raw).replace(tzinfo=_tz.utc)
-        except ValueError:
-            return None
+        return local_to_utc(form.get(field), current_user().timezone)
 
     starts, ends = when("starts_at"), when("ends_at")
     if starts is None or ends is None or ends <= starts:

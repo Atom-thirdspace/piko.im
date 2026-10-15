@@ -1,6 +1,6 @@
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
+from datetime import datetime, timezone as _tz
 
 USERNAME_RE = re.compile(r"^[a-z0-9_]{3,20}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
@@ -224,3 +224,18 @@ def validate_post(form, slug_taken):
     if cover and (len(cover) > 500 or not AVATAR_RE.match(cover)):
         errors["cover_url"] = "Enter an https:// image URL, or leave it blank."
     return errors
+
+def local_to_utc(raw, tzname):
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        naive = datetime.fromisoformat(raw)
+    except ValueError:
+        return False
+    try:
+        zone = ZoneInfo(tzname or "UTC")
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = ZoneInfo("UTC")
+    return naive.replace(tzinfo=zone).astimezone(_tz.utc)
+
