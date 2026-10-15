@@ -87,8 +87,16 @@ def touch_streak(user, today):
     # Every path, not just the reset one - otherwise a best is never set.
     user.streak_best = max(user.streak_best or 0, user.streak_days)
     user.last_active_date = today
+
+    milestone = 0
+    if user.streak_days and user.streak_days % 7 == 0:
+        from . import economy
+        milestone = economy.earn(user, economy.STREAK_WEEK_COINS, "streak",
+                                 str(user.streak_days))
+
     return {"changed": True, "continued": missed == 0 and last is not None,
             "frozen": frozen, "reset": reset, "granted": granted,
+            "milestone_coins": milestone,
             "days": user.streak_days, "freezes_left": user.streak_freezes or 0}
 
 
@@ -154,3 +162,27 @@ def grant_monthly_freeze(user, today):
     give = min(per_month, cap - have)
     user.streak_freezes = have + give
     return give
+
+def bump_combo(user, clean):
+    if clean:
+        user.solve_combo = (user.solve_combo or 0) + 1
+        user.combo_best = max(user.combo_best or 0, user.solve_combo)
+    else:
+        user.solve_combo = 0
+    db.session.commit()
+    return user.solve_combo
+
+
+def buy_freeze(user):
+    _, cap = freeze_limits(user)
+    if (user.streak_freezes or 0) >= cap:
+        return False, "You are already holding the maximum."
+
+    from . import economy
+    ref = "%s:%d" % (user_today(user).isoformat(), user.streak_freezes or 0)
+    if not economy.spend(user, economy.FREEZE_COST, "freeze", ref):
+        return False, "Not enough coins."
+
+    user.streak_freezes = (user.streak_freezes or 0) + 1
+    db.session.commit()
+    return True, "One more freeze banked."

@@ -2,16 +2,23 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='notifications.css') }}">
 {% endblock head %}
 
 {% block content %}
 <main class="learn">
-  <header class="learn-head">
-    <h1>Alerts</h1>
-    <p class="learn-lede">
-      What happened while you were away. The last {{ rows|length }} are kept.
-    </p>
-    {% if rows | selectattr('read_at', 'none') | list %}
+  <header class="learn-head nt-head">
+    <div>
+      <h1>Alerts</h1>
+      <p class="learn-lede">
+        {% if unread %}
+          <b>{{ unread }}</b> unread &middot; last {{ keep }} kept.
+        {% else %}
+          All caught up &middot; last {{ keep }} kept.
+        {% endif %}
+      </p>
+    </div>
+    {% if unread %}
       <form method="post" action="{{ url_for('notifications.read_all') }}">
         {{ csrf_field() }}
         <button type="submit" class="btn">Mark all read</button>
@@ -19,29 +26,49 @@
     {% endif %}
   </header>
 
-  {% if not rows %}
-    <p class="learn-lede">Nothing yet.</p>
+  {% if not days %}
+    <section class="nt-empty">
+      <span class="nt-empty__icon" aria-hidden="true">&#128276;</span>
+      <p class="nt-empty__head">No alerts yet.</p>
+      <p class="nt-empty__sub">
+        We'll tell you here when a rival week settles, a raid needs you,
+        a season closes, or a teacher posts to your classroom.
+      </p>
+      <a class="btn btn-primary" href="{{ url_for('learn.index') }}">
+        Start a lesson
+      </a>
+    </section>
   {% else %}
-    <ul class="notif-list">
-      {% for row in rows %}
-        <li class="notif {{ 'is-unread' if not row.read_at }}">
-          <div class="notif__text">
-            <b>{{ row.title }}</b>
-            {% if row.body %}<p>{{ row.body }}</p>{% endif %}
-            <span class="notif__when">
-              {{ row.created_at.strftime('%d %b %H:%M') }}
-            </span>
-          </div>
-          {% if row.url %}
-            <form method="post"
-                  action="{{ url_for('notifications.open_one', row_id=row.id) }}">
-              {{ csrf_field() }}
-              <button type="submit" class="btn">Open</button>
-            </form>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
+    {% for label, cards in days %}
+      <section class="nt-day">
+        <h2 class="nt-day__head">{{ label }}</h2>
+        <ul class="nt-list">
+          {% for card in cards %}
+            <li class="nt {{ 'is-unread' if card.unread }} nt--{{ card.kind }}">
+              <span class="nt__icon" aria-hidden="true">{{ card.icon }}</span>
+              <span class="nt__body">
+                <span class="nt__meta">
+                  <span class="nt__kind">{{ card.name }}</span>
+                  <time class="nt__when" title="{{ card.exact }}">{{ card.ago }}</time>
+                  {% if card.unread %}
+                    <span class="nt__dot" aria-label="Unread"></span>
+                  {% endif %}
+                </span>
+                <span class="nt__title">{{ card.title }}</span>
+                {% if card.body %}<span class="nt__text">{{ card.body }}</span>{% endif %}
+              </span>
+              {% if card.url %}
+                <form method="post"
+                      action="{{ url_for('notifications.open_one', row_id=card.id) }}">
+                  {{ csrf_field() }}
+                  <button type="submit" class="nt__go">Open</button>
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
   {% endif %}
 </main>
 {% endblock content %}

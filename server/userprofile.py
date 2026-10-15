@@ -502,3 +502,23 @@ def api_key_revoke(key_id):
     revoke_key(row)
     flash("Key revoked.", "success")
     return redirect(url_for("profile.settings") + "#api")
+
+
+@profile_bp.route("/settings/rival", methods=["POST"])
+@login_required
+def save_rival():
+    user = current_user()
+    user.wants_rival = bool(request.form.get("wants_rival"))
+    db.session.commit()
+    flash("Saved. Pairings happen on Mondays." if user.wants_rival
+          else "You are out of the rival pool.", "success")
+    return redirect(url_for("profile.settings"))
+
+
+@profile_bp.route("/settings/freeze", methods=["POST"])
+@login_required
+def buy_streak_freeze():
+    from .progress import buy_freeze
+    ok, message = buy_freeze(current_user())
+    flash(message, "success" if ok else "error")
+    return redirect(request.referrer or url_for("dashboard.index"))

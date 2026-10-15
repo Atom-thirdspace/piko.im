@@ -11,7 +11,8 @@
 
 :root {
   color-scheme: light;
-
+  --map: url("https://user-cdn.hackclub-assets.com/01a12afd-8757-7f53-8594-8ac46bef897f/Untitled%20design%20%2891%29.png");
+  --timg: url("https://cdn.hackclub.com/01a12ca7-2965-7618-8d35-74817fc77ee3/WhatsApp%20Image%202026-10-12%20at%201.56.02%20AM.jpeg");
   --page:         #fffdfb;
   --surface:      #ffffff;
   --surface-2:    #fdf5ec;
@@ -63,6 +64,8 @@
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
+    --map: url("https://user-cdn.hackclub-assets.com/01a12b07-62b9-7b5c-9a3c-bd80eeb52d4e/Untitled%20design%20%2892%29.png");
+    --timg: url("https://cdn.hackclub.com/01a12c81-130b-75cb-92d1-4846c41c4262/WhatsApp%20Image%202026-10-12%20at%201.11.57%20AM.jpeg");
 
     --page:         #15110e;
     --surface:      #1d1814;
@@ -109,6 +112,8 @@
 /* The explicit choice wins over the OS setting, both ways. */
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --map: url("https://user-cdn.hackclub-assets.com/01a12b07-62b9-7b5c-9a3c-bd80eeb52d4e/Untitled%20design%20%2892%29.png");
+  --timg: url("https://cdn.hackclub.com/01a12c81-130b-75cb-92d1-4846c41c4262/WhatsApp%20Image%202026-10-12%20at%201.11.57%20AM.jpeg");
 
   --page:         #15110e;
   --surface:      #1d1814;

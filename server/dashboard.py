@@ -1,26 +1,21 @@
 from flask import Blueprint, jsonify, redirect, render_template, url_for
-
-from . import potd, quests
 from .achievements import describe
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
-from .models import (Enrollment, Lesson, LessonProgress, Submission, XpEvent,
+from .models import (Enrollment, Lesson, LessonProgress, Submission, Track, XpEvent,
                      db, earned_rows, recent_freeze_uses)
+from .content import may_see
 from .progress import level_progress, user_today, MAX_FREEZES, streak_state
 from .session import current_user, login_required
 from .validators import DAILY_GOAL_CHOICES
 from .activity import heatmap
-from . import recommend
+from . import companion, economy, mastery, potd, quests, rivals, seasons, recommend
+from .learning import worldmap
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
 def _stats(user):
-    """One round trip instead of three.
-
-    Correlated subqueries keep each count independent - a join would fan
-    the rows out and inflate two of the three.
-    """
     row = db.session.execute(db.select(
         db.select(db.func.count()).select_from(LessonProgress)
           .where(LessonProgress.user_id == user.id).scalar_subquery(),
@@ -38,11 +33,11 @@ def _stats(user):
 
 
 def _primary_enrollment(user):
-    # track, current_lesson and that lesson's unit were four separate lazy
-    # loads; one join fetches the lot.
+    # Eagerly fetch the track's units and the current lesson's unit for the
+    # dashboard's current/upcoming unit labels.
     enrollment = db.session.execute(
         db.select(Enrollment)
-        .options(joinedload(Enrollment.track),
+        .options(selectinload(Enrollment.track).selectinload(Track.units),
                  joinedload(Enrollment.current_lesson).joinedload(Lesson.unit))
         .where(
             Enrollment.user_id == user.id,
@@ -53,15 +48,30 @@ def _primary_enrollment(user):
         return None
 
     lesson = enrollment.current_lesson
+    unit = lesson.unit if lesson is not None else None
+    upcoming_unit = None
+    if unit is not None:
+        visible_units = [candidate for candidate in enrollment.track.units
+                         if may_see(candidate, user)]
+        for index, candidate in enumerate(visible_units):
+            if candidate.id == unit.id and index + 1 < len(visible_units):
+                upcoming_unit = visible_units[index + 1]
+                break
+
     return {
+        "track_row": enrollment.track,
         "track": {
             "slug": enrollment.track.slug,
             "title": enrollment.track.title,
             "description": enrollment.track.description,
         },
         "unit": (
-            {"slug": lesson.unit.slug, "title": lesson.unit.title}
-            if lesson is not None else None
+            {"slug": unit.slug, "title": unit.title}
+            if unit is not None else None
+        ),
+        "upcoming_unit": (
+            {"slug": upcoming_unit.slug, "title": upcoming_unit.title}
+            if upcoming_unit is not None else None
         ),
         "lesson": (
             {
@@ -97,6 +107,17 @@ def _activity(user, limit=8):
     ]
 
 
+def _world_for(user, track):
+    """The region minimap for the primary track. Structure is cached content,
+    so this costs one query for the learner's own progress."""
+    if track is None:
+        return None
+    done_ids = set(db.session.execute(
+        db.select(LessonProgress.lesson_id)
+        .where(LessonProgress.user_id == user.id)).scalars())
+    return worldmap.build(worldmap.structure(track, user), done_ids)
+
+
 def _dashboard_data(user):
     today = user_today(user)
     # One evaluation of the quest board, shared between the payout and
@@ -108,11 +129,14 @@ def _dashboard_data(user):
     today_xp = grid["today_xp"]
 
     progress = level_progress(user.xp_total or 0)
+    topics = mastery.for_user(user)
+    current = _primary_enrollment(user)
     return {
         "user": user,
         "progress": progress,
         "stats": _stats(user),
-        "current": _primary_enrollment(user),
+        "current": current,
+        "world": _world_for(user, current["track_row"] if current else None),
         "activity": _activity(user),
         "daily_goal": {
             "target_xp": user.daily_goal_xp or 0,
@@ -128,6 +152,13 @@ def _dashboard_data(user):
         "quests": board,
         "potd": potd.card(user),
         "goal_choices": DAILY_GOAL_CHOICES,
+        "companion": companion.state(user, today_xp, user.streak_days or 0),
+        "coins": economy.balance(user),
+        "mastery": topics[:6],
+        "rusty": mastery.rusty(user, rows=topics),
+        "combo": {"now": user.solve_combo or 0, "best": user.combo_best or 0},
+        "season": seasons.card(user),
+        "rival": rivals.card(user),
     }
 
 
@@ -143,14 +174,15 @@ def _json_potd(card):
 def _json_data(data):
     current = data["current"]
     if current is not None:
+        # track_row carries the ORM object for the minimap; it never serialises.
         current = {
-            **current,
+            **{k: v for k, v in current.items() if k != "track_row"},
             "started_at": (
                 current["started_at"].isoformat()
                 if current["started_at"] else None
             ),
         }
-    return {
+    out = {
         "user": {
             "id": data["user"].id,
             "name": data["user"].name,
@@ -171,6 +203,40 @@ def _json_data(data):
         "potd": _json_potd(data["potd"]),
     }
 
+    out["companion"] = data["companion"]
+    out["coins"] = data["coins"]
+    out["combo"] = data["combo"]
+    out["mastery"] = [
+        {"topic": m["topic"], "value": m["value"], "band": m["band"],
+         "fraction": m["fraction"], "faded": m["faded"]}
+        for m in data["mastery"]
+    ]
+    out["rusty"] = [r["topic"] for r in data["rusty"]]
+
+    season = data.get("season")
+    out["season"] = None if season is None else {
+        "name": season["season"].name,
+        "score": season["score"],
+        "tier": season["tier"],
+        "next": season["next"],
+        "days_left": season["days_left"],
+    }
+
+    rival = data.get("rival")
+    if rival is None or rival.get("waiting"):
+        out["rival"] = {"waiting": True} if rival else None
+    else:
+        out["rival"] = {
+            "waiting": False,
+            "ghost": rival["ghost"],
+            "yours": rival["yours"],
+            "theirs": rival["theirs"],
+            "leading": rival["leading"],
+            "opponent": (rival["opponent"].username
+                         if rival["opponent"] else None),
+        }
+    return out
+
 
 @dashboard_bp.route("/")
 def index():
@@ -188,3 +254,5 @@ def index():
 @login_required
 def api():
     return jsonify(_json_data(_dashboard_data(current_user())))
+
+    

@@ -3,11 +3,13 @@ from datetime import timedelta
 from flask import Blueprint, jsonify, render_template, request
 from .models import User, XpEvent, _utcnow, db
 from .progress import level_for_xp
+from . import seasons
 from .session import current_user
 
 leaderboard_bp = Blueprint("leaderboard", __name__)
 
-SCOPES = {"week": "This week", "all": "All time", "streak": "Streaks"}
+SCOPES = {"week": "This week", "season": "Season", "all": "All time",
+          "streak": "Streaks"}
 BOARD_SIZE = 50
 CACHE_TTL = 60         
 
@@ -16,36 +18,72 @@ _cache = {}
 def _eligible():
      return (User.username.isnot(None), User.show_on_leaderboard.is_(True))
 
+WINDOW = timedelta(days=7)
+
 def _week_totals():
-    since = _utcnow() - timedelta(days=7)
+    since = _utcnow() - WINDOW
     return (db.select(XpEvent.user_id.label("uid"),
                       db.func.sum(XpEvent.amount).label("xp"))
             .where(XpEvent.created_at >= since)
             .group_by(XpEvent.user_id)
             .subquery())
 
-def _row(rank, r, score):
+def _two_weeks():
+    now = _utcnow()
+    return (db.select(
+        XpEvent.user_id.label("uid"),
+        db.func.coalesce(
+            db.func.sum(XpEvent.amount).filter(
+                XpEvent.created_at >= now - WINDOW), 0).label("xp"),
+        db.func.coalesce(
+            db.func.sum(XpEvent.amount).filter(
+                XpEvent.created_at >= now - 2 * WINDOW,
+                XpEvent.created_at < now - WINDOW), 0).label("prev"),
+    ).where(XpEvent.created_at >= now - 2 * WINDOW)
+     .group_by(XpEvent.user_id).subquery())
+
+def _row(rank, r, score, delta=None):
     return {"rank": rank, "user_id": r.id, "username": r.username,
             "name": r.name or r.username, "avatar_url": r.avatar_url,
             "score": int(score or 0), "streak": r.streak_days or 0,
-            "level": level_for_xp(r.xp_total or 0)}
+            "level": level_for_xp(r.xp_total or 0), "delta": delta}
 
 _COLUMNS = (User.id, User.username, User.name, User.avatar_url,
-            User.xp_total, User.streak_days)
+            User.xp_total, User.streak_days, User.created_at)
 
 def _fetch(scope, limit):
+    if scope == "season":
+        season = seasons.current()
+        if season is None:
+            return []
+        # ladder hands back User objects; flatten them to the shape every
+        # other scope uses so the template and the JSON API need no special case.
+        return [dict(_row(p["rank"], p["user"], p["score"]), tier=p["tier"])
+                for p in seasons.ladder(season, limit)]
+
     if scope == "week":
-        earned = _week_totals()
+        totals = _two_weeks()
         rows = db.session.execute(
-            db.select(*_COLUMNS, earned.c.xp)
-            .join(earned, earned.c.uid == User.id)
+            db.select(*_COLUMNS, totals.c.xp, totals.c.prev)
+            .join(totals, totals.c.uid == User.id)
             .where(*_eligible())
             # created_at breaks ties the same way everywhere, so the order is
             # stable between two requests a second apart.
-            .order_by(earned.c.xp.desc(), User.created_at.asc())
+            .order_by(totals.c.xp.desc(), User.created_at.asc())
             .limit(limit)
         ).all()
-        return [_row(i, r, r.xp) for i, r in enumerate(rows, 1)]
+
+        # The delta is ranked within this fetched slice, not the whole
+        # table - exact at this table's size, and it only needs to degrade
+        # gracefully once the board is bigger than `limit`.
+        before = sorted(rows, key=lambda r: (-(r.prev or 0), r.created_at))
+        was = {r.id: i for i, r in enumerate(before, 1)}
+
+        out = []
+        for i, r in enumerate(rows, 1):
+            delta = None if not r.prev else was.get(r.id, i) - i
+            out.append(_row(i, r, r.xp, delta))
+        return out
 
     if scope == "streak":
         rows = db.session.execute(
@@ -81,6 +119,19 @@ def standing(scope, user):
         earned = _week_totals()
         score = db.session.execute(
             db.select(earned.c.xp).where(earned.c.uid == user.id)).scalar() or 0
+        ahead = (db.select(db.func.count()).select_from(User)
+                 .join(earned, earned.c.uid == User.id)
+                 .where(*_eligible(), earned.c.xp > score))
+    elif scope == "season":
+        season = seasons.current()
+        if season is None:
+            return None
+        score = seasons.score_for(user, season)
+        earned = (db.select(XpEvent.user_id.label("uid"),
+                            db.func.sum(XpEvent.amount).label("xp"))
+                  .where(XpEvent.created_at >= season.starts_at,
+                         XpEvent.created_at < season.ends_at)
+                  .group_by(XpEvent.user_id).subquery())
         ahead = (db.select(db.func.count()).select_from(User)
                  .join(earned, earned.c.uid == User.id)
                  .where(*_eligible(), earned.c.xp > score))

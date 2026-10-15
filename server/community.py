@@ -532,3 +532,75 @@ def feed():
                "what": labels.get(e.reason, e.reason), "at": e.created_at}
               for e, u in rows]
     return render_template("feed.html", events=events, following=len(ids))    
+
+
+@community_bp.route("/teams/<slug>/raid")
+@login_required
+def raid(slug):
+    from . import raids
+    from .models import Boss, open_raid
+
+    team = _get_team(slug)
+    mine = membership(team, current_user())
+    if mine is None:
+        abort(404)
+
+    row = open_raid(team)
+    recent = db.session.execute(
+        db.select(raids.Raid).where(raids.Raid.team_id == team.id,
+                                    raids.Raid.status != "open")
+        .order_by(raids.Raid.started_at.desc()).limit(5)).scalars().all()
+
+    return render_template(
+        "team_raid.html", team=team, raid=row,
+        board=raids.board(row) if row else [], recent=recent,
+        is_owner=mine.role == "owner",
+        hp_preview=raids.hp_for(team),
+        bosses=db.session.execute(
+            db.select(Boss).where(Boss.is_live.is_(True))
+            .order_by(Boss.tier, Boss.position)).scalars().all())
+
+
+@community_bp.route("/teams/<slug>/raid/start", methods=["POST"])
+@login_required
+def raid_start(slug):
+    from . import raids
+    from .models import Boss
+
+    team = _get_team(slug)
+    mine = membership(team, current_user())
+    if mine is None or mine.role != "owner":
+        abort(404)
+
+    boss = db.session.get(Boss, int(request.form.get("boss_id") or 0))
+    if boss is None or not boss.is_live:
+        flash("Pick a boss to raid.", "error")
+        return redirect(url_for("community.raid", slug=team.slug))
+
+    raids.start(team, boss)
+    return redirect(url_for("community.raid", slug=team.slug))
+
+
+@community_bp.route("/teams/<slug>/raid/fight", methods=["POST"])
+@login_required
+def raid_fight(slug):
+    from . import raids
+    from .arena import engine
+
+    team = _get_team(slug)
+    mine = membership(team, current_user())
+    if mine is None:
+        abort(404)
+
+    row = raids.open_raid(team)
+    if row is None:
+        flash("No raid is running.", "error")
+        return redirect(url_for("community.raid", slug=team.slug))
+
+    run, error = engine.start(current_user(), row.boss,
+                              stake=request.form.get("stake", "safe"),
+                              raid=row)
+    if error:
+        flash(error, "error")
+        return redirect(url_for("community.raid", slug=team.slug))
+    return redirect(url_for("arena.fight", run_id=run.id))

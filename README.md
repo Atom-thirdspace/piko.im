@@ -21,13 +21,23 @@
 > [!IMPORTANT]
 > **AI Usage:** 
 
-> Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project.
+> Aryan: I use ChatGPT for taking some CSS reference. For example, working with the infinite scroll thing in the hero section, I use ChatGPT to debug some of the stuck issues. The line you see below the text is also made by ChatGPT. That's not a very big deal, though. I occasionally did use ChatGPT for coding, for example, when I was not able to figure out what I am supposed to do. I use ChatGPT for those purposes. I also used Copilot for a while to fix the bugs of the infinite scroll and some backend bugs because I was not aware of the backend, as I am the frontend engineer in this project. I used AI to remove some old code safely and do some backend work for me as i am only a frontend engineer in this project so the AI helped me with the backend when my friend was not there. He reviewed and cleaned the vibe code later.
 
 > Adhdhyan: I used Claude Code for making email templates and helped me with some BASIC frontend for the sake of backend testing, it also suggested me options to how to implement compiler in website for DSA problems, also took suggestions for admin tools. Apart from that I ask Claude to fix bugs whichever existed in my code.
+
+> We did use AI but this product is our own imagination and effort. AI is only used to help us in development where er were not able to do that. Later those parts were cleaned by either ME or Adhdhyan based on our speciality.
 
 
 
 > [!NOTE]
+>
+> Aryan : My github copilot usage is 2 hours 24 min in hackatime but it shows around 5 hours of AI coding I suspect that either it is thinking that my terminal is AI or its thinking that me copy pasting is AI which is most of caase me copy passting old css to rewrite pages but i also agree that i used chatgpt at come places like the progress bar etc. 
+> The Landing page is still under development
+> While the infrastructure is done we dont have good content right now. We have a author dashboard for that puspose
+> The dashboard is still under development so dont expect very good screen size responsiveness.
+> there is a bug in login page where my art is going very wrong it will be fixed by one of my friend soon.
+> there are still some frontend bugs that i intend to fix in the upcoming weeks.
+>
 > This is a very big project. We aim to make this project a very big SAAS.
 > 1) We have implemented features like google/hackclub/discord auth with 2 factor authentication which connects to 1Password/Google Authenticator/Microsoft Authenticator and many more
 > 2) We have also implemented developers API for the users as this is a app for future developers. so that they can use our API to get real time data of their profile from their coding agent or community projects
@@ -37,11 +47,16 @@
 > 6) Tho we have a Pro Plan we also provide Student Plan which is free and give acess to all pro benifits. It works just like github education. Aproval goes manually from our admin dashbord
 > 7) Emails are well equiped for OTPs, Messages, Newsletters etc
 > 8) University/School teachers can also make a classroom. We have some dedicated pages for classrooms
-> 9) The engeneering is almost done except frontend for new pages. We are still polishing and out team is small with a very huge codebase so we still need time to polish our frontend. The infrastructure is done. We have dedicated Author dashboard. Right now we have some small cources which we will delete after we find some volunteers who will be willing to become the author. We have a dedicateed Author dashboard where they will write the some cool content.
+> 9) The engineering is almost done except frontend for new pages. We are still polishing and out team is small with a very huge codebase so we still need time to polish our frontend. The infrastructure is done. We have dedicated Author dashboard. Right now we have some small cources which we will delete after we find some volunteers who will be willing to become the author. We have a dedicateed Author dashboard where they will write the some cool content.
 
 ## Screenshot
-![screenshot](https://cdn.hackclub.com/01a0bf10-6694-7374-a227-ea723ea9cc09/image%20(7).png)
+![piko-ss-collage](https://user-cdn.hackclub-assets.com/01a12e21-ae54-7ec2-a671-c44b5fc3a63b/1-piko-all-five-readme-collage.png)
 
+## Why we made this project
+
+there are already a lot of DSA platform but we computer science students still learn DSA the ols bookish way. We gave a reason to the potential developers to enjoy this amazing process of learning DSA.
+
+This project also helped us understand how good python is for making backend and complex systems. for ex we implemented our own server side python interpretor :3
 
 ## Tech Stack
 - Flask
@@ -54,6 +69,7 @@
 - Polar Payment gateway
 - openai v2 LLM compatable API
 - AWS EC2
+- Vanilla CSS and JS
 
 
 

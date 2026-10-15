@@ -1,0 +1,51 @@
+{#- One area. The near sign names it, the far sign names where it leads,
+    and the steps along the trail are its lessons. -#}
+{% macro map_panel(panel, track, compact=False) %}
+  <div class="mapart{{ ' mapart--mini' if compact }}{{ ' is-fogged' if not panel.open }}">
+    <div class="mapart__art" aria-hidden="true"></div>
+
+    <div class="mapsign mapsign--start">
+      <p class="mapsign__text">{{ panel.title }}</p>
+    </div>
+
+    {% if panel.next_title %}
+      <div class="mapsign mapsign--end">
+        <p class="mapsign__text">{{ panel.next_title }}</p>
+      </div>
+    {% endif %}
+
+    {% if panel.open %}
+      {% for step in panel.steps %}
+        {% set state = 'done' if step.done else ('current' if step.current else 'todo') %}
+        <a class="mapstep mapstep--{{ state }}"
+           style="left: {{ step.wx }}%; top: {{ step.wy }}%"
+           href="{{ url_for('learn.lesson', track_slug=track.slug,
+                            unit_slug=panel.unit_slug, lesson_slug=step.slug) }}"
+           title="{{ step.n }}. {{ step.title }} ({{ step.kind }})">
+          <span class="mapstep__disc">
+            {%- if step.done -%}&#10003;{%- else -%}{{ step.n }}{%- endif -%}
+          </span>
+        </a>
+      {% endfor %}
+    {% endif %}
+
+    {% if not panel.open %}
+      <span class="mapart__fog">
+        {%- if panel.needs -%}
+          Clear {{ panel.needs | join(', ') }} to open
+        {%- else -%}
+          Keep going to reach this area
+        {%- endif -%}
+      </span>
+    {% endif %}
+
+    <span class="sr-only">
+      {{ panel.title }} &mdash;
+      {% if panel.open %}
+        {{ panel.done }} of {{ panel.total }} lessons done
+      {% else %}
+        locked
+      {% endif %}
+    </span>
+  </div>
+{% endmacro %}

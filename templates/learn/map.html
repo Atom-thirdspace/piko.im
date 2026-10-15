@@ -1,0 +1,109 @@
+{% extends "base-dashboard.html" %}
+{% from "_worldmap.html" import map_panel %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='worldmap.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="learn">
+  <header class="learn-head wm-head">
+    <div>
+      <p class="learn-crumbs">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a> &middot;
+        <a href="{{ url_for('learn.index') }}">Course paths</a>
+      </p>
+      <h1>{{ track.title }}</h1>
+      <p class="learn-lede">
+        {{ world.cleared }} of {{ world.total }} regions cleared.
+        Clearing a region opens whatever depends on it.
+      </p>
+    </div>
+    {% if next_lesson %}
+      <a class="btn btn-primary"
+         href="{{ url_for('learn.lesson', track_slug=track.slug,
+                          unit_slug=next_lesson.unit.slug,
+                          lesson_slug=next_lesson.slug) }}">Continue</a>
+    {% endif %}
+  </header>
+
+  {% if not world.regions %}
+    <section class="wm-empty">
+      <span class="wm-empty__icon" aria-hidden="true">&#128506;</span>
+      <p class="wm-empty__head">This path has no regions yet.</p>
+      <a class="btn" href="{{ url_for('learn.index') }}">Pick another path</a>
+    </section>
+  {% else %}
+    {% if not world.acyclic %}
+      <p class="wm-warn">
+        These regions depend on each other in a loop, so the map is drawn in
+        plain order until the prerequisites are fixed.
+      </p>
+    {% endif %}
+
+    <div class="wm-panels">
+      {% for panel in world.panels %}
+        <section class="area" id="unit-{{ panel.unit_slug }}">
+          <div class="area__head">
+            <h2 class="area__title">
+              Area {{ panel.index + 1 }} &middot; {{ panel.title }}
+              {% if panel.cleared %}
+                <span class="area__badge area__badge--cleared">cleared</span>
+              {% elif panel.open %}
+                <span class="area__badge area__badge--open">open</span>
+              {% else %}
+                <span class="area__badge">locked</span>
+              {% endif %}
+            </h2>
+            <span class="area__meta">
+              {% if panel.open %}
+                {{ panel.done }} / {{ panel.total }} lessons
+              {% else %}
+                Needs {{ panel.needs | join(', ') or 'the area before it' }}
+              {% endif %}
+            </span>
+          </div>
+          {{ map_panel(panel, track) }}
+        </section>
+      {% endfor %}
+    </div>
+
+    <section class="wm-legend" aria-hidden="true">
+      <span class="wm-legend__item"><i class="wm-dot wm-dot--cleared"></i>Cleared</span>
+      <span class="wm-legend__item"><i class="wm-dot wm-dot--open"></i>Open</span>
+      <span class="wm-legend__item"><i class="wm-dot wm-dot--locked"></i>Locked</span>
+    </section>
+
+    <h2 class="wm-h2">Regions</h2>
+    <ul class="wm-list">
+      {% for region in world.regions %}
+        <li class="wm-card wm-card--{{ region.state }}" id="unit-{{ region.slug }}">
+          <div class="wm-card__top">
+            <h3 class="wm-card__title">{{ region.title }}</h3>
+            {% if region.level %}
+              <span class="pill pill-reading">{{ region.level }}</span>
+            {% endif %}
+          </div>
+          <div class="wm-meter" role="img"
+               aria-label="{{ region.done }} of {{ region.total }} lessons done">
+            <span class="wm-meter__fill" style="width: {{ region.percent }}%"></span>
+          </div>
+          <p class="wm-card__meta">
+            {% if region.state == 'locked' %}
+              Needs {{ region.needs | join(', ') }}
+            {% else %}
+              {{ region.done }} / {{ region.total }} lessons
+              {%- if region.topic %} &middot; {{ region.topic }}{% endif %}
+            {% endif %}
+          </p>
+          {% if region.open %}
+            <a class="wm-card__go"
+               href="{{ url_for('learn.track', track_slug=track.slug) }}">Enter</a>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock content %}

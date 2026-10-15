@@ -1,7 +1,7 @@
 .learn {
     max-width: 52rem;
     margin: 0 auto;
-    padding: 6rem 1.25rem 4rem;
+    padding: 2rem 1.25rem 4rem;
     color: var(--ink);
 }
 
@@ -127,7 +127,7 @@
 .lesson-nav a:hover { text-decoration: underline; }
 
 /* quiz */
-.quiz-q { border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; margin: 0 0 1rem; }
+.quiz-q { border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; margin: 0 0 1rem; background-color: var(--page); }
 .quiz-q.is-wrong { border-color: var(--bad); background: var(--bad-bg); }
 .quiz-q.is-right { border-color: var(--good); background: var(--good-bg); }
 .quiz-q legend { font-weight: 600; padding: 0 .35rem; }
@@ -190,7 +190,7 @@
 .tutor__form { display: flex; flex-direction: column; gap: .6rem; align-items: flex-start; }
 
 .tutor__form textarea {
-    width: 100%;
+    width: 97%;
     padding: .7rem;
     font: inherit;
     font-size: .95rem;
@@ -306,25 +306,6 @@
 .hint.is-open { background: var(--surface-2); border-radius: 8px; padding: .6rem .7rem; }
 
 .solve-stat { font-size: .85rem; color: var(--ink-2); margin: .3rem 0 0; }
-
-/* ---------- notifications ---------- */
-.notif-list { list-style: none; margin: 1rem 0 0; padding: 0; }
-
-.notif {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .7rem 0 .7rem .8rem;
-  border-bottom: 1px solid rgba(128, 128, 128, .18);
-  border-left: 3px solid transparent;
-}
-.notif:last-child { border-bottom: 0; }
-.notif.is-unread { border-left-color: currentColor; }
-
-.notif__text { min-width: 0; }
-.notif__text p { margin: .2rem 0 0; opacity: .8; }
-.notif__when { font-size: .8rem; opacity: .55; }
 
 .nav-badge {
   display: inline-block;

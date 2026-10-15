@@ -1,0 +1,468 @@
+[
+  {
+    "kind": "choice",
+    "prompt": "Worst-case time to search a balanced BST of n nodes?",
+    "answer": "O(log n)",
+    "choices": ["O(log n)", "O(n)", "O(1)", "O(n log n)"],
+    "explain": "Each comparison discards half the remaining subtree.",
+    "topic": "trees", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "choice",
+    "prompt": "Which traversal of a BST visits keys in sorted order?",
+    "answer": "in-order",
+    "choices": ["in-order", "pre-order", "post-order", "level-order"],
+    "explain": "Left subtree, node, right subtree - ascending by construction.",
+    "topic": "trees", "difficulty": "easy", "seconds": 12
+  },
+  {
+    "kind": "short",
+    "prompt": "Time to read element i of an array?",
+    "answer": "O(1)",
+    "alternates": ["constant", "constant time", "O(1) time"],
+    "explain": "The address is base + i x stride, so the index is arithmetic rather than search.",
+    "topic": "arrays", "difficulty": "easy", "seconds": 12
+  },
+  {
+    "kind": "short",
+    "prompt": "Worst-case time for linear search over n items?",
+    "answer": "O(n)",
+    "alternates": ["linear", "linear time", "O(n) time"],
+    "explain": "The target may be last, or absent, so every item is touched.",
+    "topic": "arrays", "difficulty": "easy", "seconds": 12
+  },
+  {
+    "kind": "choice",
+    "prompt": "Binary search requires the input to be what?",
+    "answer": "sorted",
+    "choices": ["sorted", "unique", "numeric", "contiguous in memory"],
+    "explain": "Without order there is no way to know which half to discard.",
+    "topic": "arrays", "difficulty": "easy", "seconds": 12
+  },
+  {
+    "kind": "choice",
+    "prompt": "A stack removes items in which order?",
+    "answer": "last in, first out",
+    "choices": ["last in, first out", "first in, first out", "by priority", "in sorted order"],
+    "explain": "Push and pop both act on the same end.",
+    "topic": "stacks", "difficulty": "easy", "seconds": 10
+  },
+  {
+    "kind": "choice",
+    "prompt": "A queue removes items from which end?",
+    "answer": "the front",
+    "choices": ["the front", "the back", "the middle", "either end"],
+    "explain": "Enqueue at the back, dequeue at the front - first in, first out.",
+    "topic": "queues", "difficulty": "easy", "seconds": 10
+  },
+  {
+    "kind": "short",
+    "prompt": "Time to insert at the head of a singly linked list?",
+    "answer": "O(1)",
+    "alternates": ["constant", "constant time"],
+    "explain": "One new node, one pointer rewrite. No shifting, unlike an array.",
+    "topic": "linked-lists", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "short",
+    "prompt": "Time to reach the middle element of a singly linked list?",
+    "answer": "O(n)",
+    "alternates": ["linear", "linear time"],
+    "explain": "There is no indexing - you walk from the head, which is the price of cheap insertion.",
+    "topic": "linked-lists", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "choice",
+    "prompt": "Space for an adjacency matrix on V vertices?",
+    "answer": "O(V^2)",
+    "choices": ["O(V^2)", "O(V + E)", "O(E)", "O(V)"],
+    "explain": "A full V by V grid, whether or not the graph is sparse.",
+    "topic": "graphs", "difficulty": "easy", "seconds": 15
+  },
+  {
+    "kind": "choice",
+    "prompt": "Worst-case time for merge sort?",
+    "answer": "O(n log n)",
+    "choices": ["O(n log n)", "O(n^2)", "O(n)", "O(log n)"],
+    "explain": "log n levels of splitting, n work merging at each level - and no bad input changes that.",
+    "topic": "sorting", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "choice",
+    "prompt": "Which of these sorts is stable?",
+    "answer": "merge sort",
+    "choices": ["merge sort", "quicksort", "heapsort", "selection sort"],
+    "explain": "Merge sort breaks ties toward the left run. The other three can reorder equal keys.",
+    "topic": "sorting", "difficulty": "easy", "seconds": 16
+  },
+  {
+    "kind": "short",
+    "prompt": "How many edges does a tree with n nodes have?",
+    "answer": "n-1",
+    "alternates": ["n - 1", "n minus 1"],
+    "explain": "Every node but the root contributes exactly one edge to its parent.",
+    "topic": "trees", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "choice",
+    "prompt": "Depth-first search is naturally written with which structure?",
+    "answer": "a stack",
+    "choices": ["a stack", "a queue", "a heap", "a hash set"],
+    "explain": "Recursion is a stack too - the call stack is doing the work.",
+    "topic": "graphs", "difficulty": "easy", "seconds": 12
+  },
+  {
+    "kind": "choice",
+    "prompt": "Breadth-first search is written with which structure?",
+    "answer": "a queue",
+    "choices": ["a queue", "a stack", "a heap", "a trie"],
+    "explain": "Finish one layer before starting the next, which is first in, first out.",
+    "topic": "graphs", "difficulty": "easy", "seconds": 12
+  },
+  {
+    "kind": "short",
+    "prompt": "Average-case time for a hash table lookup?",
+    "answer": "O(1)",
+    "alternates": ["constant", "constant time"],
+    "explain": "Average, not worst. A bad hash or a full table degrades it.",
+    "topic": "hashing", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "choice",
+    "prompt": "Height of a complete binary tree with n nodes?",
+    "answer": "O(log n)",
+    "choices": ["O(log n)", "O(n)", "O(sqrt n)", "O(n log n)"],
+    "explain": "Each level roughly doubles the node count, so depth grows logarithmically.",
+    "topic": "trees", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "choice",
+    "prompt": "Best-case time for bubble sort with early exit?",
+    "answer": "O(n)",
+    "choices": ["O(n)", "O(n^2)", "O(n log n)", "O(1)"],
+    "explain": "One clean pass over sorted input swaps nothing, so it stops.",
+    "topic": "sorting", "difficulty": "easy", "seconds": 15
+  },
+  {
+    "kind": "choice",
+    "prompt": "What does a max-heap guarantee about its root?",
+    "answer": "it is the largest element",
+    "choices": ["it is the largest element", "it is the smallest element", "it is the median", "nothing in particular"],
+    "explain": "The heap property is local - parent beats child - and that makes the root the global maximum.",
+    "topic": "heaps", "difficulty": "easy", "seconds": 14
+  },
+  {
+    "kind": "short",
+    "prompt": "Time to append to a dynamic array, amortised?",
+    "answer": "O(1)",
+    "alternates": ["constant", "amortised constant", "amortized constant", "O(1) amortised"],
+    "explain": "Doubling makes the occasional copy rare enough to average out to constant.",
+    "topic": "arrays", "difficulty": "easy", "seconds": 16
+  },
+
+  {
+    "kind": "short",
+    "prompt": "Time to build a heap from an unsorted array of n items?",
+    "answer": "O(n)",
+    "alternates": ["linear", "linear time"],
+    "explain": "Sift down from the middle: the level sizes form a converging series, so it is linear, not n log n.",
+    "topic": "heaps", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Worst-case time for quicksort?",
+    "answer": "O(n^2)",
+    "choices": ["O(n^2)", "O(n log n)", "O(n)", "O(log n)"],
+    "explain": "A pivot that splits off one element each time gives n levels of n work.",
+    "topic": "sorting", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "short",
+    "prompt": "Extra space used by heapsort?",
+    "answer": "O(1)",
+    "alternates": ["constant", "constant space", "none"],
+    "explain": "The heap is built inside the array being sorted, which is its advantage over merge sort.",
+    "topic": "sorting", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "choice",
+    "prompt": "Auxiliary space for standard array merge sort?",
+    "answer": "O(n)",
+    "choices": ["O(n)", "O(1)", "O(log n)", "O(n log n)"],
+    "explain": "Merging needs somewhere to write the combined run.",
+    "topic": "sorting", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "short",
+    "prompt": "Worst-case time for a hash table lookup?",
+    "answer": "O(n)",
+    "alternates": ["linear", "linear time"],
+    "explain": "If every key collides, the bucket is a list and you walk all of it.",
+    "topic": "hashing", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "choice",
+    "prompt": "Dijkstra with a binary heap runs in?",
+    "answer": "O((V + E) log V)",
+    "choices": ["O((V + E) log V)", "O(V^2)", "O(V E)", "O(V^3)"],
+    "explain": "Each edge may push a key, and each pop costs log V. Often written O(E log V).",
+    "topic": "graphs", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Which shortest-path algorithm breaks on negative edge weights?",
+    "answer": "Dijkstra",
+    "choices": ["Dijkstra", "Bellman-Ford", "Floyd-Warshall", "BFS on an unweighted graph"],
+    "explain": "Dijkstra finalises a node on pop, and a later negative edge could have improved it.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Bellman-Ford on V vertices and E edges runs in?",
+    "answer": "O(V E)",
+    "choices": ["O(V E)", "O(E log V)", "O(V^3)", "O(V + E)"],
+    "explain": "V-1 relaxation rounds, every edge each round.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Which structure does Kruskal use to reject cycle-forming edges?",
+    "answer": "union-find",
+    "choices": ["union-find", "a min-heap", "a trie", "an adjacency matrix"],
+    "explain": "Two endpoints already in one set means the edge would close a cycle.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "choice",
+    "prompt": "What dominates Kruskal's running time?",
+    "answer": "sorting the edges",
+    "choices": ["sorting the edges", "the union-find operations", "building the adjacency list", "counting the vertices"],
+    "explain": "E log E to sort, against almost-constant union-find per edge.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Shortest path in an unweighted graph is found by?",
+    "answer": "BFS",
+    "choices": ["BFS", "DFS", "Dijkstra only", "Floyd-Warshall only"],
+    "explain": "Equal edge costs mean layer order is distance order, so BFS is enough.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 16
+  },
+  {
+    "kind": "choice",
+    "prompt": "Topological sorting is possible only on what kind of graph?",
+    "answer": "a directed acyclic graph",
+    "choices": ["a directed acyclic graph", "any directed graph", "a connected undirected graph", "a bipartite graph"],
+    "explain": "A cycle has no valid first element, so no ordering exists.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "short",
+    "prompt": "Extra space to reverse a singly linked list in place?",
+    "answer": "O(1)",
+    "alternates": ["constant", "constant space"],
+    "explain": "Three pointers walked along the list - previous, current, next.",
+    "topic": "linked-lists", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "choice",
+    "prompt": "Counting sort over n items with key range k runs in?",
+    "answer": "O(n + k)",
+    "choices": ["O(n + k)", "O(n log n)", "O(n k)", "O(n^2)"],
+    "explain": "One pass to tally, one over the range to emit. Useless when k dwarfs n.",
+    "topic": "sorting", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Looking up a word of length m in a trie costs?",
+    "answer": "O(m)",
+    "choices": ["O(m)", "O(log n)", "O(n)", "O(m log n)"],
+    "explain": "One step per character, independent of how many words the trie holds.",
+    "topic": "tries", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "choice",
+    "prompt": "Worst-case recursion depth of DFS on V vertices?",
+    "answer": "O(V)",
+    "choices": ["O(V)", "O(log V)", "O(E)", "O(1)"],
+    "explain": "A path graph forces the stack to the full length - which is how DFS blows the stack.",
+    "topic": "graphs", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Deleting the minimum from a binary min-heap costs?",
+    "answer": "O(log n)",
+    "choices": ["O(log n)", "O(1)", "O(n)", "O(n log n)"],
+    "explain": "Reading it is constant, but restoring the heap sifts down one full height.",
+    "topic": "heaps", "difficulty": "medium", "seconds": 18
+  },
+  {
+    "kind": "choice",
+    "prompt": "Finding the minimum in a max-heap of n items costs?",
+    "answer": "O(n)",
+    "choices": ["O(n)", "O(log n)", "O(1)", "O(n log n)"],
+    "explain": "The heap property says nothing about the smallest, and it is in some leaf - so you scan them all.",
+    "topic": "heaps", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "An unbalanced BST built from sorted input degrades search to?",
+    "answer": "O(n)",
+    "choices": ["O(n)", "O(log n)", "O(n log n)", "O(1)"],
+    "explain": "Each insert goes right, so the tree is a linked list wearing a tree's clothes.",
+    "topic": "trees", "difficulty": "medium", "seconds": 20
+  },
+  {
+    "kind": "choice",
+    "prompt": "Two-pointer scanning on a sorted array typically costs?",
+    "answer": "O(n)",
+    "choices": ["O(n)", "O(n log n)", "O(n^2)", "O(log n)"],
+    "explain": "Each pointer only moves forward, so together they take at most n steps.",
+    "topic": "arrays", "difficulty": "medium", "seconds": 18
+  },
+
+  {
+    "kind": "choice",
+    "prompt": "Floyd-Warshall on V vertices runs in?",
+    "answer": "O(V^3)",
+    "choices": ["O(V^3)", "O(V^2)", "O(V E)", "O(E log V)"],
+    "explain": "Three nested loops - every pair, tried through every intermediate.",
+    "topic": "graphs", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "Amortised cost per union-find operation with path compression and union by rank?",
+    "answer": "inverse Ackermann, effectively constant",
+    "choices": ["inverse Ackermann, effectively constant", "O(log n)", "O(1) exactly", "O(log* n) and no better"],
+    "explain": "O(alpha(n)), which is under 5 for any n you will ever store - constant in practice but not in theory.",
+    "topic": "union-find", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "KMP preprocessing on a pattern of length m costs?",
+    "answer": "O(m)",
+    "choices": ["O(m)", "O(m^2)", "O(m log m)", "O(n + m)"],
+    "explain": "The failure table is built in one pass with the same two-pointer trick as the search.",
+    "topic": "strings", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "Optimal time to find the median of two sorted arrays of sizes m and n?",
+    "answer": "O(log(m + n))",
+    "choices": ["O(log(m + n))", "O(m + n)", "O(min(m, n))", "O((m + n) log(m + n))"],
+    "explain": "Binary search the split point in the shorter array rather than merging.",
+    "topic": "arrays", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Longest common subsequence of lengths m and n by DP costs?",
+    "answer": "O(m n)",
+    "choices": ["O(m n)", "O(m + n)", "O(m n log n)", "O(2^n)"],
+    "explain": "One cell per prefix pair, each filled in constant time.",
+    "topic": "dynamic-programming", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "0/1 knapsack DP with n items and capacity W costs?",
+    "answer": "O(n W)",
+    "choices": ["O(n W)", "O(n log W)", "O(n^2)", "O(2^n)"],
+    "explain": "A table of items by capacities. Pseudo-polynomial: W is exponential in its own bit length.",
+    "topic": "dynamic-programming", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Why is the knapsack DP called pseudo-polynomial?",
+    "answer": "W is exponential in the bits used to write it",
+    "choices": ["W is exponential in the bits used to write it", "it is only polynomial on average", "the recursion is not memoised", "it only works for small n"],
+    "explain": "Input size counts digits. W written in binary takes log W bits, so O(nW) is exponential in the real input length.",
+    "topic": "dynamic-programming", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Tarjan's strongly connected components algorithm runs in?",
+    "answer": "O(V + E)",
+    "choices": ["O(V + E)", "O(V E)", "O(V^2)", "O(E log V)"],
+    "explain": "A single DFS with low-link values - no second pass needed, unlike Kosaraju's two.",
+    "topic": "graphs", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "A range query on a segment tree over n elements costs?",
+    "answer": "O(log n)",
+    "choices": ["O(log n)", "O(1)", "O(n)", "O(log^2 n)"],
+    "explain": "Any range decomposes into at most two nodes per level of the tree.",
+    "topic": "segment-trees", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "A point update on a Fenwick tree costs?",
+    "answer": "O(log n)",
+    "choices": ["O(log n)", "O(1)", "O(n)", "O(sqrt n)"],
+    "explain": "You walk up by adding the lowest set bit, which happens log n times.",
+    "topic": "segment-trees", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "A* returns an optimal path when its heuristic is?",
+    "answer": "admissible - it never overestimates",
+    "choices": ["admissible - it never overestimates", "always zero", "as large as possible", "computed in constant time"],
+    "explain": "Overestimating can prune the true best path. Underestimating only costs you extra exploration.",
+    "topic": "graphs", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Edmonds-Karp maximum flow runs in?",
+    "answer": "O(V E^2)",
+    "choices": ["O(V E^2)", "O(V^2 E)", "O(E log V)", "O(V^3)"],
+    "explain": "BFS augmenting paths bound the number of rounds at O(VE), each costing O(E).",
+    "topic": "graphs", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Matrix chain multiplication by DP over n matrices costs?",
+    "answer": "O(n^3)",
+    "choices": ["O(n^3)", "O(n^2)", "O(n log n)", "O(2^n)"],
+    "explain": "O(n^2) subchains, each trying O(n) split points.",
+    "topic": "dynamic-programming", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "Which algorithm finds the k-th smallest element in expected linear time?",
+    "answer": "quickselect",
+    "choices": ["quickselect", "heapsort", "merge sort", "counting sort"],
+    "explain": "Partition like quicksort, then recurse into one side only - n + n/2 + n/4 converges to 2n.",
+    "topic": "sorting", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "short",
+    "prompt": "Extra space used by the Boyer-Moore majority vote algorithm?",
+    "answer": "O(1)",
+    "alternates": ["constant", "constant space"],
+    "explain": "One candidate and one counter, in a single pass.",
+    "topic": "arrays", "difficulty": "hard", "seconds": 22
+  },
+  {
+    "kind": "choice",
+    "prompt": "Building a suffix array by prefix doubling costs?",
+    "answer": "O(n log n)",
+    "choices": ["O(n log n)", "O(n)", "O(n log^2 n)", "O(n^2)"],
+    "explain": "log n doubling rounds, each sorting ranks in linear time with radix sort.",
+    "topic": "strings", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Which of these decision problems is NP-complete?",
+    "answer": "3-SAT",
+    "choices": ["3-SAT", "single-source shortest path with non-negative weights", "minimum spanning tree", "bipartite matching"],
+    "explain": "The other three have known polynomial algorithms - Dijkstra, Kruskal, and Hopcroft-Karp.",
+    "topic": "complexity", "difficulty": "hard", "seconds": 25
+  },
+  {
+    "kind": "choice",
+    "prompt": "Why can memoised recursion still blow up where bottom-up DP does not?",
+    "answer": "the recursion depth itself can exceed the stack",
+    "choices": ["the recursion depth itself can exceed the stack", "memoisation does not reduce the work", "hash lookups are not constant", "it computes the wrong answer"],
+    "explain": "Same asymptotic work, but a chain of n nested calls needs n stack frames that a loop never allocates.",
+    "topic": "dynamic-programming", "difficulty": "hard", "seconds": 25
+  }
+]

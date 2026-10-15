@@ -3,8 +3,9 @@ from typing import Callable
 
 from sqlalchemy.exc import IntegrityError
 
-from .models import (LessonProgress, Problem, Submission, UserAchievement,
-                     XpEvent, db, earned_keys)
+from . import mastery
+from .models import (BossRun, CoinEvent, LessonProgress, Problem, SpeedRecord,
+                     Submission, UserAchievement, XpEvent, db, earned_keys)
 from .progress import level_for_xp
 
 
@@ -54,6 +55,24 @@ def snapshot(user):
         "shared": count(
             db.select(db.func.count()).select_from(Submission)
             .where(Submission.user_id == user.id, Submission.is_public.is_(True))),
+        "boss_wins": count(
+            db.select(db.func.count()).select_from(BossRun)
+            .where(BossRun.user_id == user.id, BossRun.status == "won")),
+        "best_combo": count(
+            db.select(db.func.coalesce(db.func.max(BossRun.best_combo), 0))
+            .where(BossRun.user_id == user.id)),
+        "endless_best": count(
+            db.select(db.func.coalesce(db.func.max(BossRun.score), 0))
+            .where(BossRun.user_id == user.id, BossRun.mode == "endless")),
+        "coins_earned": count(
+            db.select(db.func.coalesce(db.func.sum(CoinEvent.amount), 0))
+            .where(CoinEvent.user_id == user.id, CoinEvent.amount > 0)),
+        "combo_best": user.combo_best or 0,
+        "records": count(
+            db.select(db.func.count()).select_from(SpeedRecord)
+            .where(SpeedRecord.user_id == user.id)),
+        "mastered": len([m for m in mastery.for_user(user)
+                         if m["band"] == "mastered"]),
     }
 
 
@@ -100,6 +119,26 @@ REGISTRY = (
                 _at_least("level", 10)),
     Achievement("level_25", "Level 25", "Reach level 25", "level",
                 _at_least("level", 25)),
+
+    Achievement("boss_first", "First blood", "Win a fight in the arena",
+                "arena", _at_least("boss_wins", 1)),
+    Achievement("boss_10", "Boss hunter", "Win 10 fights in the arena",
+                "arena", _at_least("boss_wins", 10)),
+    # A combo cannot be ground out the way a win count can - it has to be
+    # earned in one unbroken run.
+    Achievement("combo_15", "Unbroken", "Land a 15-hit combo",
+                "arena", _at_least("best_combo", 15)),
+    Achievement("endless_300", "No end to it", "Score 300 in endless mode",
+                "arena", _at_least("endless_best", 300)),
+
+    Achievement("combo_6", "On a roll", "Six clean solves in a row",
+                "range", _at_least("combo_best", 6)),
+    Achievement("records_10", "Against the clock", "Set 10 personal bests",
+                "volume", _at_least("records", 10)),
+    Achievement("mastered_1", "Mastery", "Master a topic",
+                "range", _at_least("mastered", 1)),
+    Achievement("saver", "Saver", "Earn 1000 coins",
+                "volume", _at_least("coins_earned", 1000)),
 )
 
 BY_KEY = {a.key: a for a in REGISTRY}
@@ -131,6 +170,9 @@ def evaluate(user):
         # Two workers evaluated the same user at once; the constraint won.
         db.session.rollback()
         return []
+
+    from . import cosmetics
+    cosmetics.grant_for_achievements(user, [a.key for a in fresh])
     return fresh
 
 

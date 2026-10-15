@@ -66,6 +66,20 @@ class User(db.Model):
                           server_default="false")
     author_since = db.Column(db.DateTime(timezone=True))
 
+    coin_balance = db.Column(db.Integer, nullable=False, default=0,
+                             server_default="0")
+    solve_combo = db.Column(db.Integer, nullable=False, default=0,
+                            server_default="0")
+    combo_best = db.Column(db.Integer, nullable=False, default=0,
+                           server_default="0")
+    companion = db.Column(db.String(32), nullable=False, default="byte",
+                          server_default="byte")
+    equipped = db.Column(JSONB, nullable=False, default=dict,
+                         server_default="{}")
+    wants_rival = db.Column(db.Boolean, nullable=False, default=False,
+                            server_default="false")
+
+
 
     def __repr__(self):
         return f"<User {self.id} {self.email}>"
@@ -249,13 +263,8 @@ def set_interests(user, keys):
     user.interests = list(keys)
     user.interest = keys[0] if keys else None
 
-def create_email_user(email,username,name,interests,password):
-    user = User(
-        email=email.lower(),
-        username=username.lower(),
-        name=name,
-    )
-    set_interests(user, interests)
+def create_email_user(email, name, password):
+    user = User(email=email.lower(), name=name)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -2089,3 +2098,417 @@ def saved_tests_for(user, problem):
     return db.session.execute(
         db.select(SavedTest).filter_by(user_id=user.id, problem_id=problem.id)
         .order_by(SavedTest.id)).scalars().all()
+
+class BossQuestion(Authored, db.Model):
+    __tablename__ = "boss_questions"
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(16), nullable=False, default="choice")
+    prompt = db.Column(db.Text, nullable=False)
+    answer = db.Column(db.String(200), nullable=False)
+    alternates = db.Column(ARRAY(db.Text), nullable=False, default=list,
+                           server_default="{}")
+    choices = db.Column(JSONB, nullable=False, default=list,
+                        server_default="[]")
+    explain_md = db.Column(db.Text, nullable=False, default="",
+                           server_default="")
+    topic = db.Column(db.String(64))
+    difficulty = db.Column(db.String(16), nullable=False, default="easy")
+    seconds = db.Column(db.Integer, nullable=False, default=20)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+class Boss(db.Model):
+    __tablename__ = "bosses"
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(120), nullable=False)
+    blurb = db.Column(db.Text, nullable=False, default="", server_default="")
+    sigil = db.Column(db.String(16), nullable=False, default="",
+                      server_default="")
+    tier = db.Column(db.Integer, nullable=False, default=1)
+    hp = db.Column(db.Integer, nullable=False, default=240)
+    attack = db.Column(db.Integer, nullable=False, default=14)
+    topic = db.Column(db.String(64))
+    difficulty = db.Column(db.String(16), nullable=False, default="easy")
+    position = db.Column(db.Integer, nullable=False, default=0)
+    is_live = db.Column(db.Boolean, nullable=False, default=True,
+                        server_default="true")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+class BossRun(db.Model):
+    __tablename__ = "boss_runs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    boss_id = db.Column(db.Integer, db.ForeignKey("bosses.id", ondelete="CASCADE"),
+                        nullable=False)
+    seed = db.Column(db.BigInteger, nullable=False)
+    plan = db.Column(JSONB, nullable=False, default=list, server_default="[]")
+    cursor = db.Column(db.Integer, nullable=False, default=0)
+    boss_hp = db.Column(db.Integer, nullable=False)
+    player_hp = db.Column(db.Integer, nullable=False)
+    combo = db.Column(db.Integer, nullable=False, default=0)
+    best_combo = db.Column(db.Integer, nullable=False, default=0)
+    asked = db.Column(db.Integer, nullable=False, default=0)
+    correct = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(16), nullable=False, default="active",
+                       index=True)
+    xp_awarded = db.Column(db.Integer, nullable=False, default=0)
+    started_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    ended_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User")
+    boss = db.relationship("Boss")
+    asked_rows = db.relationship("BossRunQuestion", back_populates="run",
+                                 cascade="all, delete-orphan",
+                                 order_by="BossRunQuestion.position")
+    mode = db.Column(db.String(16), nullable=False, default="boss",
+                     server_default="boss")
+    stake = db.Column(db.String(16), nullable=False, default="safe",
+                      server_default="safe")
+    lives = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    score = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    raid_id = db.Column(db.Integer, db.ForeignKey("raids.id", ondelete="SET NULL"))
+
+
+    @property
+    def accuracy(self):
+        return (self.correct / self.asked) if self.asked else 0.0
+
+    @property
+    def perfect(self):
+        return self.status == "won" and self.correct == self.asked
+
+class BossRunQuestion(db.Model):
+    __tablename__ = "boss_run_questions"
+    __table_args__ = (
+        UniqueConstraint("run_id", "position", name="uq_brq_position"),
+        UniqueConstraint("run_id", "question_id", name="uq_brq_question"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey("boss_runs.id", ondelete="CASCADE"),
+                       nullable=False, index=True)
+    question_id = db.Column(db.Integer,
+                            db.ForeignKey("boss_questions.id", ondelete="CASCADE"),
+                            nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    served_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                          nullable=False)
+    deadline_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    answered_at = db.Column(db.DateTime(timezone=True))
+    given = db.Column(db.String(200), nullable=False, default="",
+                      server_default="")
+    correct = db.Column(db.Boolean, nullable=False, default=False)
+    damage = db.Column(db.Integer, nullable=False, default=0)
+
+    run = db.relationship("BossRun", back_populates="asked_rows")
+    question = db.relationship("BossQuestion")
+
+def active_boss_run(user):
+    return db.session.execute(
+        db.select(BossRun).filter_by(user_id=user.id, status="active")
+    ).scalar_one_or_none()
+
+
+class CoinEvent(db.Model):
+    __tablename__ = "coin_events"
+    __table_args__ = (
+        UniqueConstraint("user_id", "reason", "ref", name="uq_coin_event"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    amount = db.Column(db.Integer, nullable=False)      # negative when spent
+    reason = db.Column(db.String(32), nullable=False)
+    ref = db.Column(db.String(64), nullable=False, default="", server_default="")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False, index=True)
+
+    user = db.relationship("User")
+
+class UserCosmetic(db.Model):
+    __tablename__ = "user_cosmetics"
+    __table_args__ = (
+        UniqueConstraint("user_id", "key", name="uq_user_cosmetic"),
+    )
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    key = db.Column(db.String(48), nullable=False)
+    source = db.Column(db.String(16), nullable=False, default="bought")
+    unlocked_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                            nullable=False)
+
+    user = db.relationship("User")
+
+class TopicMastery(db.Model):
+    __tablename__ = "topic_mastery"
+    __table_args__ = (
+        UniqueConstraint("user_id", "topic", name="uq_topic_mastery"),
+    )
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    topic = db.Column(db.String(64), nullable=False)
+    points = db.Column(db.Float, nullable=False, default=0.0)
+    peak = db.Column(db.Float, nullable=False, default=0.0)
+    updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    user = db.relationship("User")
+
+class SpeedAttempt(db.Model):
+    __tablename__ = "speed_attempts"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    started_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    finished_at = db.Column(db.DateTime(timezone=True))
+    seconds = db.Column(db.Integer)
+    submission_id = db.Column(db.Integer,
+                              db.ForeignKey("submissions.id", ondelete="SET NULL"))
+
+    user = db.relationship("User")
+    problem = db.relationship("Problem")
+
+class SpeedRecord(db.Model):
+    __tablename__ = "speed_records"
+    
+    __table_args__ = (
+        UniqueConstraint("user_id", "problem_id", name="uq_speed_record"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    problem_id = db.Column(db.Integer,
+                           db.ForeignKey("problems.id", ondelete="CASCADE"),
+                           nullable=False, index=True)
+    seconds = db.Column(db.Integer, nullable=False)
+    submission_id = db.Column(db.Integer,
+                              db.ForeignKey("submissions.id", ondelete="SET NULL"))
+    set_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                       nullable=False)
+
+    user = db.relationship("User")
+    problem = db.relationship("Problem")
+
+class Season(db.Model):
+    __tablename__ = "seasons"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    name = db.Column(db.String(80), nullable=False)
+    starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    ends_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    closed_at = db.Column(db.DateTime(timezone=True))
+
+    @property
+    def live(self):
+        return self.closed_at is None and self.starts_at <= _utcnow() < self.ends_at
+
+
+class SeasonResult(db.Model):
+    __tablename__ = "season_results"
+    __table_args__ = (
+        UniqueConstraint("season_id", "user_id", name="uq_season_result"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    season_id = db.Column(db.Integer, db.ForeignKey("seasons.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    score = db.Column(db.Integer, nullable=False, default=0)
+    rank = db.Column(db.Integer, nullable=False, default=0)
+    tier = db.Column(db.String(16), nullable=False, default="bronze")
+
+    season = db.relationship("Season")
+    user = db.relationship("User")
+
+class Rivalry(db.Model):
+    __tablename__ ="rivalries"
+    __table_args__ = (
+        UniqueConstraint("week", "user_a_id", name="uq_rival_a"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    week = db.Column(db.Date, nullable=False, index=True)
+    user_a_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                          nullable=False, index=True)
+    user_b_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                          index=True)
+    ghost_score = db.Column(db.Integer, nullable=False, default=0)
+    score_a = db.Column(db.Integer, nullable=False, default=0)
+    score_b = db.Column(db.Integer, nullable=False, default=0)
+    settled_at = db.Column(db.DateTime(timezone=True))
+
+    user_a = db.relationship("User", foreign_keys=[user_a_id])
+    user_b = db.relationship("User", foreign_keys=[user_b_id])
+
+    @property
+    def is_ghost(self):
+        return self.user_b_id is None
+
+class Raid(db.Model):
+    __tablename__ = "raids"
+
+    id = db.Column(db.Integer, primary_key=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    boss_id = db.Column(db.Integer, db.ForeignKey("bosses.id", ondelete="CASCADE"),
+                        nullable=False)
+    hp_total = db.Column(db.Integer, nullable=False)
+    hp_left = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(16), nullable=False, default="open", index=True)
+    started_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+    ends_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    closed_at = db.Column(db.DateTime(timezone=True))
+
+    team = db.relationship("Team")
+    boss = db.relationship("Boss")
+    contributions = db.relationship("RaidContribution", back_populates="raid",
+                                    cascade="all, delete-orphan")
+
+    @property
+    def done(self):
+        return self.hp_left <= 0
+
+    @property
+    def expired(self):
+        return self.ends_at <= _utcnow()
+
+class RaidContribution(db.Model):
+    __tablename__ = "raid_contributions"
+    __table_args__ = (
+        UniqueConstraint("raid_id", "user_id", name="uq_raid_contribution"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    raid_id = db.Column(db.Integer, db.ForeignKey("raids.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    damage = db.Column(db.Integer, nullable=False, default=0)
+    fights = db.Column(db.Integer, nullable=False, default=0)
+
+    raid = db.relationship("Raid", back_populates="contributions")
+    user = db.relationship("User")
+
+def open_raid(team):
+    return db.session.execute(
+        db.select(Raid).filter_by(team_id=team.id, status = "open")
+    ).scalar_one_or_none()
+
+def current_season():
+    now = _utcnow()
+    return db.session.execute(
+        db.select(Season).where(Season.starts_at <= now, Season.ends_at > now,
+                                Season.closed_at.is_(None))
+        .order_by(Season.starts_at.desc()).limit(1)).scalar_one_or_none()
+
+class UnitPrereq(db.Model):
+    """One edge in the region graph: `unit_id` needs `requires_unit_id` cleared."""
+
+    __tablename__ = "unit_prereqs"
+    __table_args__ = (
+        UniqueConstraint("unit_id", "requires_unit_id", name="uq_unit_prereq"),
+        db.CheckConstraint("unit_id <> requires_unit_id",
+                           name="ck_unit_prereq_self"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    unit_id = db.Column(db.Integer, db.ForeignKey("units.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    requires_unit_id = db.Column(
+        db.Integer, db.ForeignKey("units.id", ondelete="CASCADE"),
+        nullable=False, index=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    unit = db.relationship("Unit", foreign_keys=[unit_id])
+    requires = db.relationship("Unit", foreign_keys=[requires_unit_id])
+
+class RedeemCode(db.Model):
+    __tablename__ = "redeem_codes"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_redeem_code"),
+        db.CheckConstraint("amount >= 0", name="ck_redeem_amount"),
+        db.CheckConstraint("max_uses >= 0 AND used_count >= 0",
+                           name="ck_redeem_uses"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(32), nullable=False, unique=True)
+    reward = db.Column(db.String(24), nullable=False)
+    amount = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    note = db.Column(db.String(200), nullable=False, default="", server_default="")
+    max_uses = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    used_count = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    per_user = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    starts_at = db.Column(db.DateTime(timezone=True))
+    expires_at = db.Column(db.DateTime(timezone=True))
+    is_active = db.Column(db.Boolean, nullable=False, default=True,
+                          server_default="true")
+    created_by_id = db.Column(db.Integer,
+                              db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    created_by = db.relationship("User")
+
+    @property
+    def uses_left(self):
+        if not self.max_uses:
+            return None
+        return max(0, self.max_uses - (self.used_count or 0))
+
+    @property
+    def window(self):
+        now = _utcnow()
+        if not self.is_active:
+            return "off"
+        if self.starts_at is not None and now < self.starts_at:
+            return "early"
+        if self.expires_at is not None and now >= self.expires_at:
+            return "over"
+        if self.max_uses and (self.used_count or 0) >= self.max_uses:
+            return "spent"
+        return "live"
+
+
+class RedeemUse(db.Model):
+    __tablename__ = "redeem_uses"
+    __table_args__ = (
+        UniqueConstraint("code_id", "user_id", name="uq_redeem_use"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    code_id = db.Column(db.Integer,
+                        db.ForeignKey("redeem_codes.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey("users.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    reward = db.Column(db.String(24), nullable=False, default="",
+                       server_default="")
+    amount = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+
+    code = db.relationship("RedeemCode")
+    user = db.relationship("User")
+    

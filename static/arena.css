@@ -1,0 +1,247 @@
+/* The arena: boss fights and rapid-fire questions. Sits on learn.css. */
+
+/* ---------- boss select ---------- */
+
+.bosses { display: grid; gap: 1rem; margin: 1.5rem 0; }
+
+.boss {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.15rem;
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: .6rem;
+    background: var(--page);
+}
+.boss--t1 { border-left-color: var(--good); }
+.boss--t2 { border-left-color: var(--brand); }
+.boss--t3 { border-left-color: var(--bad); }
+
+.boss__sigil { font-size: 2.4rem; line-height: 1; }
+.boss__body { flex: 1 1 14rem; }
+.boss__body h2 { margin: 0 0 .2rem; font-size: 1.1rem; }
+.boss__meta {
+    margin: 0;
+    font-size: .85rem;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    flex-wrap: wrap;
+}
+.boss__blurb { margin: .4rem 0 0; font-size: .9rem; }
+
+/* ---------- the fight ---------- */
+
+.arena {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.arena__top {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.arena__boss { display: flex; align-items: center; gap: 1rem; }
+.arena__bossinfo { flex: 1 1 auto; }
+.arena__bossinfo h1 { margin: 0 0 .35rem; font-size: 1.25rem; }
+
+.arena__sigil {
+    font-size: 3rem;
+    line-height: 1;
+    transition: transform .18s ease;
+}
+.arena__sigil.is-alive { animation: breathe 3.2s ease-in-out infinite; }
+
+@keyframes breathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-4px) scale(1.03); }
+}
+
+.bar {
+    height: .7rem;
+    border-radius: 1rem;
+    background: var(--surface-3);
+    overflow: hidden;
+}
+.bar__fill {
+    display: block;
+    height: 100%;
+    border-radius: 1rem;
+    transition: width .35s ease;
+}
+.bar--boss .bar__fill { background: var(--bad-solid); }
+.bar--you .bar__fill { background: var(--good-solid); }
+
+.bar__label {
+    margin: .25rem 0 0;
+    font-size: .8rem;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+.arena__combo {
+    margin: .3rem 0 0;
+    font-size: .85rem;
+    font-weight: 700;
+    color: var(--brand-ink);
+}
+
+/* The whole stage reacts, so the feedback is unmissable without a sound. */
+.arena.is-hitting .arena__sigil { transform: translateX(6px) rotate(3deg); }
+.arena.is-hurt .bar--you { animation: shake .4s ease; }
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-5px); }
+    75%      { transform: translateX(5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .arena__sigil.is-alive { animation: none; }
+    .arena.is-hurt .bar--you { animation: none; }
+    .arena__sigil, .bar__fill { transition: none; }
+}
+
+/* ---------- stage ---------- */
+
+.arena__stage {
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: .7rem;
+    background: var(--page);
+}
+
+.arena__timer {
+    height: .35rem;
+    border-radius: 1rem;
+    background: var(--surface-3);
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+.arena__timer-fill {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--brand);
+    transition: width .1s linear;
+}
+.arena__timer-fill.is-low { background: var(--bad-solid); }
+
+.arena__meta {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .6rem;
+    font-size: .8rem;
+    color: var(--ink-soft);
+}
+
+.arena__prompt {
+    margin: 0 0 1.1rem;
+    font-size: 1.15rem;
+    line-height: 1.45;
+    font-weight: 500;
+}
+
+.arena__choices { display: grid; gap: .5rem; }
+
+.arena__choice {
+    text-align: left;
+    padding: .7rem .9rem;
+    font: inherit;
+    font-size: .95rem;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: .5rem;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+.arena__choice:hover:not(:disabled) {
+    background: var(--surface-3);
+    border-color: var(--brand);
+}
+.arena__choice:disabled { opacity: .55; cursor: default; }
+
+.arena__short { display: flex; gap: .5rem; }
+.arena__short input {
+    flex: 1 1 auto;
+    padding: .65rem .8rem;
+    font: inherit;
+    font-family: ui-monospace, Consolas, monospace;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: .5rem;
+}
+
+.arena__verdict {
+    margin-top: 1rem;
+    padding: .75rem .9rem;
+    border-radius: .5rem;
+    border-left: 3px solid var(--line);
+    font-size: .9rem;
+}
+.arena__verdict.is-hit {
+    background: var(--good-bg);
+    border-left-color: var(--good);
+}
+.arena__verdict.is-miss {
+    background: var(--bad-bg);
+    border-left-color: var(--bad);
+}
+.arena__verdict-line { margin: 0; font-weight: 600; }
+.arena__why { margin-top: .4rem; color: var(--ink-2); }
+.arena__why p:first-child { margin-top: 0; }
+.arena__why p:last-child { margin-bottom: 0; }
+
+.arena__foot { margin-top: 1.25rem; text-align: center; }
+
+@media (min-width: 40rem) {
+    .arena__top { grid-template-columns: 1fr 13rem; align-items: center; }
+}
+
+/* ---------- result ---------- */
+
+.result__title--won { color: var(--good); }
+.result__title--lost { color: var(--bad); }
+
+.scoreline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    gap: .75rem;
+    margin: 1.5rem 0;
+}
+.score {
+    padding: .8rem .6rem;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: .6rem;
+    background: var(--page);
+}
+.score--paid { border-color: var(--good); background: var(--good-bg); }
+.score__n {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.score__k {
+    display: block;
+    font-size: .75rem;
+    color: var(--ink-soft);
+    text-transform: lowercase;
+}
+
+.recap td { font-size: .88rem; }
+.recap tr.is-hit .recap__dmg { color: var(--good); font-weight: 600; }
+.recap tr.is-miss td { background: var(--bad-bg); }
+.recap__dmg { text-align: right; font-variant-numeric: tabular-nums; }
+
+.result__again { margin-top: 1.5rem; }

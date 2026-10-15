@@ -1,9 +1,11 @@
 {% extends "base-dashboard.html" %}
 {% from "_heatmap.html" import heatmap as heatmap_grid %}
+{% from "_worldmap.html" import map_panel %}
 
 {% block head %}
-  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='worldmap.css') }}">
 {% endblock head %}
 
 {% block content %}
@@ -14,17 +16,7 @@
 
 <main class="dash" data-api-url="{{ url_for('dashboard.api') }}">
 
-  <header class="dash__intro">
-    {% if user.avatar_url %}
-      <img class="dash__avatar" src="{{ user.avatar_url }}"
-           alt="" width="64" height="64">
-    {% else %}
-      <div class="dash__avatar dash__avatar--blank" aria-hidden="true">
-        {{ (user.name or user.username)[0] | upper }}
-      </div>
-    {% endif %}
-
-    <div class="dash__who">
+  <div class="dash__who">
       <h1 data-aos="fade-down" class="dash__title">Welcome back, {{ user.name or user.username }}</h1>
       <p data-aos="fade-down" data-aos-delay="150" class="dash__handle">
         @{{ user.username }}
@@ -32,8 +24,8 @@
         {%- if focus %} · {{ focus | join(', ') }}{% endif %}
       </p>
     </div>
-
-    <div class="dash__streak" title="Current streak">
+  
+  <div class="dash__streak" title="Current streak">
 <img class="fire" src="https://cdn.pixabay.com/animation/2025/06/26/05/26/05-26-59-506_512.gif" alt="">
 
       <div data-aos="fade-in" data-aos-delay="200" >
@@ -44,130 +36,73 @@
         {% endif %}
       </div>
     </div>
-  </header>
+
+
+  <div class="map">
+    {% if world and world.panels %}
+      <a class="map__link"
+         href="{{ url_for('learn.map_page', track_slug=current.track.slug) }}">
+        {{ map_panel(world.panels[world.current_panel], current.track, compact=True) }}
+        <span class="map__chip">
+          {{ world.cleared }} / {{ world.total }} regions
+          <b>Expand the map</b>
+        </span>
+      </a>
+    {% else %}
+      <a class="map__empty" href="{{ url_for('learn.index') }}">
+        Pick a course path to open your map
+      </a>
+    {% endif %}
+  </div>
 
   <div class="dash__overview">
     <div class="one">
-    <!-- ---------- level ---------- -->
-    <section data-aos="fade-in" data-aos-delay="200" class="dash__level card cardstyle" aria-labelledby="level-h">
-      <div class="card__head">
-        <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
-        <span class="card__meta">{{ progress.xp }} total XP</span>
-      </div>
-      <div class="meter" role="img"
-           aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
-        <span class="meter__fill" style="width: {{ level_pct }}%"></span>
-      </div>
-      <p class="card__foot">
-        {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
-      </p>
-    </section>
-    <section data-aos="fade-in" data-aos-delay="400" class="dash__goal card cardstyle" aria-labelledby="goal-h">
-      <div class="card__head">
-        <h2 class="card__title" id="goal-h">Today's goal</h2>
-        <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
-      </div>
-      <div class="meter meter--goal" role="img"
-           aria-label="{{ goal_pct }} percent of today's goal">
-        <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
-      </div>
-      <p class="card__foot">
-        {% if daily_goal.remaining_xp %}
-          {{ daily_goal.remaining_xp }} XP to go.
-        {% else %}
-          Goal hit. Anything more is a bonus.
-        {% endif %}
-      </p>
-    </section>
-
-    <!-- ---------- daily quests ---------- -->
-    {% if quests.tasks %}
-      <section data-aos="fade-in" data-aos-delay="500"
-               class="dash__quests card cardstyle" aria-labelledby="quests-h">
+      <!-- ---------- level ---------- -->
+      <section data-aos="fade-in" data-aos-delay="200" class="dash__level" aria-labelledby="level-h">
         <div class="card__head">
-          <h2 class="card__title" id="quests-h">Today's quests</h2>
-          <span class="card__meta">{{ quests.finished }} / {{ quests.total }}</span>
+          <h2 class="card__title" id="level-h">Level {{ progress.level }}</h2>
+          <span class="card__meta">{{ progress.xp }} total XP</span>
         </div>
-        <ul class="quests">
-          {% for q in quests.tasks %}
-            <li class="quest {{ 'is-done' if q.complete }}">
-              <span class="quest__tick" aria-hidden="true">{{ '&#10003;' | safe if q.complete else '&#9675;' | safe }}</span>
-              <span class="quest__title">{{ q.title }}</span>
-              {% if q.target > 1 and not q.complete %}
-                <span class="quest__count">{{ q.done }}/{{ q.target }}</span>
-              {% endif %}
-              <span class="quest__xp">+{{ q.reward }}</span>
-            </li>
-          {% endfor %}
-        </ul>
+        <div class="meter" role="img"
+             aria-label="{{ progress.into_level }} of {{ progress.level_span }} XP toward level {{ progress.level + 1 }}">
+          <span class="meter__fill" style="width: {{ [level_pct, 100] | min }}%"></span>
+        </div>
         <p class="card__foot">
-          {% if quests.all_done %}
-            All {{ quests.total }} done &mdash; +{{ quests.bonus }} XP bonus banked.
+          {{ progress.into_level }} / {{ progress.level_span }} XP to level {{ progress.level + 1 }}
+        </p>
+      </section>
+      <section data-aos="fade-in" data-aos-delay="400" class="dash__goal" aria-labelledby="goal-h">
+        <div class="card__head">
+          <h2 class="card__title" id="goal-h">Today's goal</h2>
+          <span class="card__meta">{{ daily_goal.earned_xp }} / {{ daily_goal.target_xp }} XP</span>
+        </div>
+        <div class="meter meter--goal" role="img"
+             aria-label="{{ goal_pct }} percent of today's goal">
+          <span class="meter__fill" style="width: {{ [goal_pct, 100] | min }}%"></span>
+        </div>
+        <p class="card__foot">
+          {% if daily_goal.remaining_xp %}
+            {{ daily_goal.remaining_xp }} XP to go.
           {% else %}
-            Clear all {{ quests.total }} for a +{{ quests.bonus }} XP bonus.
-            They reset at midnight.
+            Goal hit. Anything more is a bonus.
           {% endif %}
         </p>
       </section>
-    {% endif %}
-
     </div>
 
-    <div class="dash__right">
-      <!-- ---------- continue ---------- -->
-      <section data-aos="fade-in" data-aos-delay="300" class="dash__continue card" aria-labelledby="continue-h">
-    <div class="card__head">
-      <h2 class="card__title" id="continue-h">Continue learning</h2>
-      {% if current %}
-        <a class="card__link" href="{{ url_for('learn.track', track_slug=current.track.slug) }}">
-          Whole path
-        </a>
-      {% endif %}
-    </div>
-
-    {% if current %}
-      <p class="dash__path">{{ current.track.title }}</p>
-      {% if current.unit %}
-        <p class="dash__unit">{{ current.unit.title }}</p>
-      {% endif %}
-
-      {% if current.lesson %}
-        <article class="lessoncard" data-lesson-id="{{ current.lesson.id }}">
-          <h3 class="lessoncard__title">{{ current.lesson.title }}</h3>
-          <p class="lessoncard__meta">
-            <span class="tag tag--{{ current.lesson.kind }}">{{ current.lesson.kind }}</span>
-            <span class="lessoncard__xp">+{{ current.lesson.xp }} XP</span>
-          </p>
-          <a class="btn btn--primary"
-             href="{{ url_for('learn.lesson',
-                              track_slug=current.track.slug,
-                              unit_slug=current.unit.slug,
-                              lesson_slug=current.lesson.slug) }}">
-            Start lesson
-          </a>
-        </article>
-      {% else %}
-        <p class="empty">You've finished every lesson on this path.</p>
-        <a class="btn" href="{{ url_for('learn.index') }}">Pick another path</a>
-      {% endif %}
-
-    {% else %}
-      <p class="empty">You haven't joined a learning path yet.</p>
-      <a class="btn btn--primary" href="{{ url_for('learn.index') }}">Choose a path</a>
-    {% endif %}
-      </section>
-
-      <div class="point">
+    <div class="dash__problem-grid" aria-label="Recommended problems">
         <!-- ---------- try this next ---------- -->
-        {% if next_up and next_up.problem %}
-          <section data-aos="fade-in" data-aos-delay="550"
-                   class="dash__next card cardstyle" aria-labelledby="next-h">
-            <div class="card__head">
-              <h2 class="card__title" id="next-h">Try this next</h2>
+        <section data-aos="fade-in" data-aos-delay="550"
+                 class="dash__next card cardstyle" aria-labelledby="next-h">
+          <div class="card__head">
+            <h2 class="card__title" id="next-h">Try this next</h2>
+            {% if next_up and next_up.problem %}
               <span class="card__meta pill pill-{{ next_up.problem.difficulty }}">
                 {{ next_up.problem.difficulty }}
               </span>
-            </div>
+            {% endif %}
+          </div>
+          {% if next_up and next_up.problem %}
             <p class="potd__title">
               <a class="tito" href="{{ url_for('problems.page', slug=next_up.problem.slug) }}">
                 {{ next_up.problem.title }}</a>
@@ -175,16 +110,20 @@
             <p class="potd__meta">
               {{ next_up.problem.xp }} XP &middot; because {{ next_up.reason }}.
             </p>
-          </section>
-        {% endif %}
+          {% else %}
+            <p class="card__foot">No recommended problem is available right now.</p>
+          {% endif %}
+        </section>
         <!-- ---------- problem of the day ---------- -->
-        {% if potd %}
-          <section data-aos="fade-in" data-aos-delay="600"
-                   class="dash__potd card cardstyle" aria-labelledby="potd-h">
-            <div class="card__head">
-              <h2 class="card__title" id="potd-h">Problem of the day</h2>
+        <section data-aos="fade-in" data-aos-delay="600"
+                 class="dash__potd card cardstyle" aria-labelledby="potd-h">
+          <div class="card__head">
+            <h2 class="card__title" id="potd-h">Problem of the day</h2>
+            {% if potd %}
               <span class="card__meta pill pill-{{ potd.problem.difficulty }}">{{ potd.problem.difficulty }}</span>
-            </div>
+            {% endif %}
+          </div>
+          {% if potd %}
             <p class="potd__title">
               <a class="tito" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">{{ potd.problem.title }}</a>
             </p>
@@ -209,115 +148,66 @@
                 <a class="btn btn--primary" href="{{ url_for('problems.page', slug=potd.problem.slug) }}">Take it on</a>
               {% endif %}
             </p>
-          </section>
-        {% endif %}
-      </div>
+          {% else %}
+            <p class="card__foot">No problem has been published for today yet.</p>
+          {% endif %}
+        </section>
     </div>
   </div>
 
-  
-
-  <section class="dash__stats" aria-label="Your totals">
-    {% set tiles = [
-      ('Lessons done',    stats.lessons_done),
-      ('Problems solved', stats.problems_solved),
-      ('Submissions',     stats.submissions),
-      ('XP today',        daily_goal.earned_xp),
-    ] %}
-    {% for label, value in tiles %}
-      <div class="stat">
-        <strong class="stat__value">{{ value }}</strong>
-        <span class="stat__label">{{ label }}</span>
-      </div>
-    {% endfor %}
-  </section>
 
   
+<section class="contu" data-aos="fade-in" data-aos-delay="300" aria-labelledby="continue-h">
 
-  <aside class="dash__links" aria-label="Shortcuts">
-    <a class="quicklink" href="{{ url_for('learn.index') }}">
-      <span class="quicklink__title">Course paths</span>
-      <span class="quicklink__sub">Browse and switch</span>
-    </a>
-  </aside>
-
-  <div class="last">
-    <section class="hm-card">
-      <h2>Your year</h2>
-      {{ heatmap_grid(heatmap) }}
-    </section>
+    <div class="str" >
+      <h2 id="continue-h">Continue learning</h2>
+      {% if current %}
+        <a href="{{ url_for('learn.track', track_slug=current.track.slug) }}">
+          Whole path
+        </a>
+      {% endif %}
+    </div>
+      <div class="card matflex">
+      <div class="matimg" >
+      <div class="mat">
+      {% if current %}
+        <p>{{ current.track.title }}</p>
+    </div></div>
     
-    {% if achievements %}
-      <section class="ach">
-        <h2>Achievements</h2>
-        <ul class="ach__list">
-          {% for a in achievements %}
-            <li class="ach__item ach__item--{{ a.group }}" title="{{ a.description }}">
-              <b>{{ a.title }}</b>
-              <small>{{ a.description }}</small>
-            </li>
-          {% endfor %}
-        </ul>
-      </section>
-    {% endif %}
-      <section class="streak-card streak-card--{{ streak.status }}">
-      <div class="streak-card__head">
-        <b class="streak-card__days">{{ streak.days }}</b>
-        <span>day{{ '' if streak.days == 1 else 's' }} in a row</span>
-      </div>
-      <p class="streak-card__say">
-        {% if streak.status == 'safe' %}
-          Practised today. Nothing to do.
-        {% elif streak.status == 'at_risk' %}
-          Practise today to keep it.
-        {% elif streak.status == 'frozen' %}
-          {{ streak.covered_by }} day{{ '' if streak.covered_by == 1 else 's' }} missed -
-          come back today and a freeze covers it.
-        {% elif streak.status == 'broken' %}
-          {% if streak.lost %}Your {{ streak.lost }}-day streak ended.{% endif %}
-          Start a new one.
-        {% else %}
-          No streak yet. Finish anything today to start one.
+      <div class="matext">
+        {% if current.unit %}
+          <p>{{ current.unit.title }}</p>
         {% endif %}
-      </p>
-      <p class="streak-card__freezes" title="One free freeze a month, up to {{ max_freezes }}.">
-        {% for i in range(max_freezes) %}
-          <span class="freeze {{ 'is-held' if i < streak.freezes }}">&#10052;</span>
-        {% endfor %}
-        <span class="streak-card__count">{{ streak.freezes }} / {{ max_freezes }}</span>
-      </p>
-      {% if freeze_uses %}
-        <p class="streak-card__log">
-          Saved you on
-          {% for use in freeze_uses %}
-            {{ use.covered_date.strftime('%d %b') }}{{ '' if loop.last else ',' }}
-          {% endfor %}
-        </p>
-      {% endif %}
-    </section>
-    <section class="dash__activity card" aria-labelledby="activity-h">
-      <div class="card__head">
-        <h2 class="card__title" id="activity-h">Recent activity</h2>
+        {% if current.lesson %}
+          <article data-lesson-id="{{ current.lesson.id }}">
+            <h3>{{ current.lesson.title }}</h3>
+            <div class="flexa">
+              <p>
+                <span>{{ current.lesson.kind }}</span>
+                <span>+{{ current.lesson.xp }} XP</span>
+              </p>
+              <a class="buto" href="{{ url_for('learn.lesson',
+                                  track_slug=current.track.slug,
+                                  unit_slug=current.unit.slug,
+                                  lesson_slug=current.lesson.slug) }}">
+                Start lesson
+              </a>
+            </div>
+          </article>
+        {% else %}
+          <p>You've finished every lesson on this path.</p>
+          <a href="{{ url_for('learn.index') }}">Pick another path</a>
+        {% endif %}
+            {% else %}
+        <p>You haven't joined a learning path yet.</p>
+        <a href="{{ url_for('learn.index') }}">Choose a path</a>
+            {% endif %}
+          </div>
       </div>
-      {% if activity %}
-        <ul class="feed">
-          {% for row in activity %}
-            <li class="feed__item" data-reason="{{ row.reason }}" data-ref="{{ row.ref }}">
-              <span class="feed__dot feed__dot--{{ row.reason }}" aria-hidden="true"></span>
-              <span class="feed__label">{{ row.label }}</span>
-              <strong class="feed__xp">+{{ row.amount }} XP</strong>
-              <time class="feed__time" datetime="{{ row.at.isoformat() }}">
-                {{ row.at.strftime('%d %b') }}
-              </time>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p class="empty">Nothing yet. Finish a lesson and it shows up here.</p>
-      {% endif %}
-    </section>
-  </div>
+</section>
 
+
+  
 
 </main>
 {% endblock content %}

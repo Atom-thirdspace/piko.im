@@ -66,15 +66,21 @@ def _goal_hit(user, lo, hi):
                XpEvent.created_at >= lo, XpEvent.created_at < hi)).scalar() or 0
     return 1 if earned >= target else 0
 
-def _unsolved_exists(user, difficulties=None):
+def _unsolved_stmt(user, difficulties=None):
     solved = (db.select(ProblemSolve.problem_id)
               .where(ProblemSolve.user_id == user.id))
     stmt = db.select(Problem.id).where(Problem.id.notin_(solved))
     if difficulties:
         stmt = stmt.where(Problem.difficulty.in_(difficulties))
-    return db.session.execute(stmt.limit(1)).scalar() is not None 
+    return stmt
 
-def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
+
+def _unsolved_exists(user, difficulties=None):
+    return db.session.execute(
+        _unsolved_stmt(user, difficulties).limit(1)).scalar() is not None
+
+
+def _lesson_stmt(user, kind=None, enrolled_only=False):
     done = (db.select(LessonProgress.lesson_id)
             .where(LessonProgress.user_id == user.id))
     stmt = (db.select(Lesson.id).join(Unit, Unit.id == Lesson.unit_id)
@@ -86,16 +92,106 @@ def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
         tracks = (db.select(Enrollment.track_id)
                   .where(Enrollment.user_id == user.id))
         stmt = stmt.where(Unit.track_id.in_(tracks))
-    return db.session.execute(stmt.limit(1)).scalar() is not None
+    return stmt
+
+
+def _unfinished_lesson_exists(user, kind=None, enrolled_only=False):
+    return db.session.execute(
+        _lesson_stmt(user, kind, enrolled_only).limit(1)).scalar() is not None
+
+
+def _solved_stmt(user):
+    return (db.select(ProblemSolve.id)
+            .where(ProblemSolve.user_id == user.id))
+
+def _boss_wins(user, lo, hi):
+    """Wins only.
+
+    Deliberately not the XP ledger: the arena also pays a consolation for a
+    good loss, and "win a fight" has to mean winning.
+    """
+    from .models import BossRun
+    return db.session.execute(
+        db.select(db.func.count()).select_from(BossRun)
+        .where(BossRun.user_id == user.id, BossRun.status == "won",
+               BossRun.ended_at >= lo, BossRun.ended_at < hi)).scalar() or 0
+
+
+def _boss_fightable():
+    """Is any live boss backed by a pool big enough to fight?
+
+    Grouped in one query rather than counted per boss - this runs inside the
+    dashboard's request, where every round trip shows.
+
+    A boss that also filters by topic is treated optimistically here: the
+    worst case is a quest that is harder to clear than it looks, not a
+    crash.
+    """
+    from . import contentcache
+    return contentcache.cached("quests:boss_fightable", _compute_fightable,
+                               ttl=300.0)
+
+
+def _compute_fightable():
+    from .arena.rules import MIN_POOL
+    from .models import Boss, BossQuestion
+
+    counts = dict(db.session.execute(
+        db.select(BossQuestion.difficulty, db.func.count())
+        .where(BossQuestion.status == PUBLISHED)
+        .group_by(BossQuestion.difficulty)).all())
+    if not counts:
+        return False
+
+    tiers = db.session.execute(
+        db.select(Boss.difficulty).where(Boss.is_live.is_(True))).scalars()
+    return any(counts.get(tier, 0) >= MIN_POOL for tier in tiers)
+
+
+def _endless_scores(user, lo, hi, target=150):
+    from .models import BossRun
+    return db.session.execute(
+        db.select(db.func.count()).select_from(BossRun)
+        .where(BossRun.user_id == user.id, BossRun.mode == "endless",
+               BossRun.score >= target, BossRun.ended_at >= lo,
+               BossRun.ended_at < hi)).scalar() or 0
+
+
+def _records_set(user, lo, hi):
+    from .models import SpeedRecord
+    return db.session.execute(
+        db.select(db.func.count()).select_from(SpeedRecord)
+        .where(SpeedRecord.user_id == user.id,
+               SpeedRecord.set_at >= lo, SpeedRecord.set_at < hi)).scalar() or 0
+
+
+def _has_solved_something(user):
+    """You can only race a problem you have already solved."""
+    from .models import ProblemSolve
+    return db.session.execute(
+        db.select(ProblemSolve.id).where(ProblemSolve.user_id == user.id)
+        .limit(1)).scalar() is not None
+
 
 def _capability(user):
+    row = db.session.execute(db.select(
+        db.exists(_unsolved_stmt(user)).label("unsolved"),
+        db.exists(_unsolved_stmt(user, ("medium", "hard"))).label("hard"),
+        db.exists(_lesson_stmt(user)).label("lesson"),
+        db.exists(_lesson_stmt(user, enrolled_only=True)).label("enrolled"),
+        db.exists(_lesson_stmt(user, kind="quiz")).label("quiz"),
+        db.exists(_solved_stmt(user)).label("speed"),
+    )).one()
+
     return {
-        "unsolved": _unsolved_exists(user),
-        "unsolved_hard": _unsolved_exists(user, ("medium", "hard")),
-        "lesson": _unfinished_lesson_exists(user),
-        "lesson_enrolled": _unfinished_lesson_exists(user, enrolled_only=True),
-        "quiz": _unfinished_lesson_exists(user, kind="quiz"),
+        "unsolved": bool(row.unsolved),
+        "unsolved_hard": bool(row.hard),
+        "lesson": bool(row.lesson),
+        "lesson_enrolled": bool(row.enrolled),
+        "quiz": bool(row.quiz),
         "goal": (user.daily_goal_xp or 0) > 0,
+        "boss": _boss_fightable(),
+        "speed": bool(row.speed),
     }
 
 
@@ -150,6 +246,15 @@ REGISTRY = (
     Quest("goal", "Hit your daily XP goal", 1, 15,
           _goal_hit,
           lambda c: c["goal"]),
+    Quest("boss", "Win a fight in the arena", 1, 25,
+          _boss_wins,
+          lambda c: c["boss"]),
+    Quest("endless", "Score 150 in endless mode", 1, 25,
+          _endless_scores,
+          lambda c: c["boss"]),
+    Quest("speed", "Beat one of your own times", 1, 25,
+          _records_set,
+          lambda c: c["speed"]),
 )
 
 BY_KEY = {q.key: q for q in REGISTRY}
@@ -178,6 +283,15 @@ def _paid_keys(user, day):
     return {r.split(":", 1)[1] for r in _paid_refs(user, day)} - {"all"}
 
 
+def _forget_paid_refs(user, day):
+    if not has_request_context():
+        return
+    cache = getattr(g, "_memo", None)
+    if cache is not None:
+        cache.pop(("_paid_refs", (user.id, day)), None)
+
+
+@per_request(lambda user, day: (user.id, day))
 def _paid_refs(user, day):
     return set(db.session.execute(
         db.select(XpEvent.ref).where(XpEvent.user_id == user.id,
@@ -219,6 +333,8 @@ def sync_board(user, day=None):
     day = day or user_today(user)
     state = board(user, day)
 
+    from . import economy
+
     gained = 0
     for task in state["tasks"]:
         if task["complete"] and not task["paid"]:
@@ -226,6 +342,8 @@ def sync_board(user, day=None):
                            _ref(day, task["key"]))["awarded"]
             if got:
                 task["paid"] = True
+                economy.earn(user, economy.QUEST_COINS, "quest",
+                             _ref(day, task["key"]))
             gained += got
 
     if state["all_done"] and not state["bonus_paid"]:
@@ -233,7 +351,12 @@ def sync_board(user, day=None):
                        _ref(day, "all"))["awarded"]
         if got:
             state["bonus_paid"] = True
+            economy.earn(user, economy.ALL_QUESTS_COINS, "quest_all",
+                         _ref(day, "all"))
         gained += got
+
+    if gained:
+        _forget_paid_refs(user, day)
     return gained, state
 
 
