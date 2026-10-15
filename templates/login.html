@@ -12,8 +12,22 @@
 <a href="/"><img id="back" src="https://cdn.hackclub.com/01a0e5d7-a554-7b26-abae-a66a345756ba/back2.avif" alt=""></a>
 
 <main class="auth">
-<img id="leaf" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
-<img draggable="false" id="letter" src="https://user-cdn.hackclub-assets.com/01a0e485-111b-7ffb-977f-45f865ccc53e/background.avif" alt="">
+<img id="l1" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l2" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l3" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l4" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l5" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l6" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l7" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l8" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l9" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l10" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l11" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l12" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l13" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+<img id="l14" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+
+<img draggable="false" id="letter" src="" alt="">
   <h1>Log in to Piko</h1>
 
   <form class="auth-form" method="post" action="{{ url_for('accounts.password_login') }}">
@@ -56,14 +70,16 @@
   <button type="button" class="oauth-btn curve" id="passkey-btn" hidden>
     Sign in with a passkey
   </button>
+
+  <p class="auth-alt">
+    New here? <a class="green" href="{{ url_for('accounts.signup', next=next) }}">Create an account</a>
+  </p>
 </div>
 {% endif %}
 
 
 
-  <p class="auth-alt">
-    New here? <a class="green" href="{{ url_for('accounts.signup', next=next) }}">Create an account</a>
-  </p>
+  
 </main>
 {% endblock content %}
 
