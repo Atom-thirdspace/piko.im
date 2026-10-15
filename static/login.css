@@ -34,7 +34,7 @@ body{
 
 .auth {
     position: fixed;
-    top: 55%;
+    top: 53%;
     left: 50%;
     transform: translateY(-50%) translateX(-50%);
     margin-top: 0;
@@ -106,18 +106,7 @@ label{
     -webkit-text-fill-color: var(--sign-ink);
 }
 
-#leaf {
-    width: 15rem;
-    position: absolute;
-    left: 23rem;
-    top: 20rem;
-    z-index: -2;
-    transition: 0.3s;
-}
 
-#leaf:hover {
-    transform: rotate(20deg) translateY(1rem);
-}
 
 #back {
     width: 2.5rem;
@@ -141,4 +130,430 @@ label{
 #passkey-btn { color: var(--sign-ink); }
 
 /* This one sits below the sign, on the page, so it follows the theme. */
-.auth-alt { color: var(--ink); }
+.auth-alt {
+     color: var(--ink);
+    margin-top: 3rem; }
+
+
+
+
+
+    
+#l1{
+    width: 15rem;
+    position: absolute;
+    left: 21rem;
+    top: 20rem;
+    z-index: -2;
+    transition: 0.2s;
+}
+
+#l2{
+    width: 15rem;
+    position: absolute;
+    left: 21rem;
+    top: 16rem;
+    z-index: -3;
+    transition: 0.2s;
+
+    transform: rotate(-10deg);
+}
+
+#l3{
+    width: 15rem;
+    position: absolute;
+    left: 23rem;
+    top: 12rem;
+    z-index: -4;
+    transition: 0.2s;
+
+    transform: rotate(-20deg);
+}
+
+#l4{
+    width: 15rem;
+    position: absolute;
+    left: 20rem;
+    top: 10rem;
+    z-index: -5;
+    transition: 0.2s;
+
+    transform: rotate(-30deg);
+}
+
+#l5{
+    width: 15rem;
+    position: absolute;
+    left: 27rem;
+    top: 5rem;
+    z-index: -11;
+    transition: 0.2s;
+
+    transform: rotate(-20deg);
+}
+
+#l6{
+    width: 15rem;
+    position: absolute;
+    left: 31rem;
+    top: 8rem;
+    z-index: -10;
+    transition: 0.2s;
+
+    transform: rotate(-10deg);
+}
+
+#l7{
+    width: 15rem;
+    position: absolute;
+    left: 30rem;
+    top: 12rem;
+    z-index: -9;
+    transition: 0.2s;
+}
+
+#l8{
+    width: 15rem;
+    position: absolute;
+    left: 31rem;
+    top: 15rem;
+    z-index: -8;
+    transition: 0.2s;
+
+    transform: rotate(10deg);
+}
+
+#l9{
+    width: 15rem;
+    position: absolute;
+    left: 29rem;
+    top: 19rem;
+    z-index: -7;
+    transition: 0.2s;
+
+    transform: rotate(20deg);
+}
+
+#l10{
+    width: 15rem;
+    position: absolute;
+    left: 30rem;
+    top: 22rem;
+    z-index: -6;
+    transition: 0.2s;
+
+    transform: rotate(30deg);
+}
+
+#l11{
+    width: 15rem;
+    position: absolute;
+    left: 35rem;
+    top: 12rem;
+    z-index: -15;
+    transition: 0.2s;
+
+    transform: rotate(10deg);
+}
+
+#l12{
+    width: 15rem;
+    position: absolute;
+    left: 38rem;
+    top: 16rem;
+    z-index: -13;
+    transition: 0.2s;
+
+    transform: rotate(20deg);
+}
+
+#l13{
+    width: 15rem;
+    position: absolute;
+    left: 36rem;
+    top: 19rem;
+    z-index: -13;
+    transition: 0.2s;
+
+    transform: rotate(30deg);
+}
+
+#l14{
+    width: 15rem;
+    position: absolute;
+    left: 36rem;
+    top: 23rem;
+    z-index: -12;
+    transition: 0.2s;
+
+    transform: rotate(40deg);
+}
+
+#l1:hover {
+    transform: rotate(20deg) translateY(1rem);
+}
+
+#l2:hover {
+    transform: rotate(10deg) translateY(1rem);
+}
+
+#l3:hover {
+    transform: rotate(0deg) translateY(1rem);
+}
+
+#l4:hover {
+    transform: rotate(-10deg) translateY(1rem);
+}
+
+#l5:hover {
+    transform: rotate(0deg) translateY(1rem);
+}
+
+#l6:hover {
+    transform: rotate(10deg) translateY(1rem);
+}
+
+#l7:hover {
+    transform: rotate(20deg) translateY(1rem);
+}
+
+#l8:hover {
+    transform: rotate(30deg) translateY(1rem);
+}
+
+#l9:hover {
+    transform: rotate(40deg) translateY(1rem);
+}
+
+#l10:hover {
+    transform: rotate(50deg) translateY(1rem);
+}
+
+#l11:hover {
+    transform: rotate(30deg) translateY(1rem);
+}
+
+#l12:hover {
+    transform: rotate(40deg) translateY(1rem);
+}
+
+#l13:hover {
+    transform: rotate(50deg) translateY(1rem);
+}
+
+#l14:hover {
+    transform: rotate(60deg) translateY(1rem);
+}
+
+
+
+#----------------------------------------------
+#----------------------------------------------
+
+
+
+#l15{
+    width: 15rem;
+    position: absolute;
+    right: 21rem;
+    top: 20rem;
+    z-index: -2;
+    transition: 0.2s;
+}
+
+#l16{
+    width: 15rem;
+    position: absolute;
+    right: 21rem;
+    top: 16rem;
+    z-index: -3;
+    transition: 0.2s;
+
+    transform: rotate(10deg);
+}
+
+#l17{
+    width: 15rem;
+    position: absolute;
+    right: 23rem;
+    top: 12rem;
+    z-index: -4;
+    transition: 0.2s;
+
+    transform: rotate(20deg);
+}
+
+#l18{
+    width: 15rem;
+    position: absolute;
+    right: 20rem;
+    top: 10rem;
+    z-index: -5;
+    transition: 0.2s;
+
+    transform: rotate(30deg);
+}
+
+#l19{
+    width: 15rem;
+    position: absolute;
+    right: 27rem;
+    top: 5rem;
+    z-index: -11;
+    transition: 0.2s;
+
+    transform: rotate(20deg);
+}
+
+#l20{
+    width: 15rem;
+    position: absolute;
+    right: 31rem;
+    top: 8rem;
+    z-index: -10;
+    transition: 0.2s;
+
+    transform: rotate(10deg);
+}
+
+#l21{
+    width: 15rem;
+    position: absolute;
+    right: 30rem;
+    top: 12rem;
+    z-index: -9;
+    transition: 0.2s;
+}
+
+#l22{
+    width: 15rem;
+    position: absolute;
+    right: 31rem;
+    top: 15rem;
+    z-index: -8;
+    transition: 0.2s;
+
+    transform: rotate(-10deg);
+}
+
+#l23{
+    width: 15rem;
+    position: absolute;
+    right: 29rem;
+    top: 19rem;
+    z-index: -7;
+    transition: 0.2s;
+
+    transform: rotate(-20deg);
+}
+
+#l24{
+    width: 15rem;
+    position: absolute;
+    right: 30rem;
+    top: 22rem;
+    z-index: -6;
+    transition: 0.2s;
+
+    transform: rotate(-30deg);
+}
+
+#l25{
+    width: 15rem;
+    position: absolute;
+    right: 35rem;
+    top: 12rem;
+    z-index: -15;
+    transition: 0.2s;
+
+    transform: rotate(-10deg);
+}
+
+#l26{
+    width: 15rem;
+    position: absolute;
+    right: 38rem;
+    top: 16rem;
+    z-index: -13;
+    transition: 0.2s;
+
+    transform: rotate(-20deg);
+}
+
+#l27{
+    width: 15rem;
+    position: absolute;
+    right: 36rem;
+    top: 19rem;
+    z-index: -13;
+    transition: 0.2s;
+
+    transform: rotate(-30deg);
+}
+
+#l28{
+    width: 15rem;
+    position: absolute;
+    right: 36rem;
+    top: 23rem;
+    z-index: -12;
+    transition: 0.2s;
+
+    transform: rotate(-40deg);
+}
+
+#l15:hover {
+    transform: rotate(-20deg) translateY(1rem);
+}
+
+#l16:hover {
+    transform: rotate(-10deg) translateY(1rem);
+}
+
+#l17:hover {
+    transform: rotate(0deg) translateY(1rem);
+}
+
+#l18:hover {
+    transform: rotate(10deg) translateY(1rem);
+}
+
+#l19:hover {
+    transform: rotate(0deg) translateY(1rem);
+}
+
+#l20:hover {
+    transform: rotate(-10deg) translateY(1rem);
+}
+
+#l21:hover {
+    transform: rotate(-20deg) translateY(1rem);
+}
+
+#l22:hover {
+    transform: rotate(-30deg) translateY(1rem);
+}
+
+#l23:hover {
+    transform: rotate(-40deg) translateY(1rem);
+}
+
+#l24:hover {
+    transform: rotate(-50deg) translateY(1rem);
+}
+
+#l25:hover {
+    transform: rotate(-30deg) translateY(1rem);
+}
+
+#l26:hover {
+    transform: rotate(-40deg) translateY(1rem);
+}
+
+#l27:hover {
+    transform: rotate(-50deg) translateY(1rem);
+}
+
+#l28:hover {
+    transform: rotate(-60deg) translateY(1rem);
+}
