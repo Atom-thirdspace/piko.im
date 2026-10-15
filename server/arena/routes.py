@@ -5,9 +5,12 @@ from ..learning.markdown import render as render_md
 from ..models import Boss, BossRun, active_boss_run, db
 from ..session import current_user, login_required
 from . import engine, rules
+import os
 
 arena_bp = Blueprint("arena", __name__, url_prefix="/arena")
 
+def _arena_off():
+    return (os.environ.get("ARENA_OFF") or "").strip().lower() in ("1", "true", "yes")
 
 def _boss_or_404(slug):
     row = db.session.execute(
@@ -38,6 +41,12 @@ def index():
                            active=active_boss_run(user),
                            paid_left=max(0, rules.PAID_RUNS_PER_DAY
                                          - engine._paid_today(user)))
+
+
+@arena_bp.before_request
+def _arena_unavailable():
+    if _arena_off():
+        abort(404)
 
 @arena_bp.route("/<slug>/start", methods=["POST"])
 @login_required

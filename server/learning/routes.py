@@ -275,7 +275,7 @@ def index():
     return render_template("learn/index.html", tracks=summaries,
                            any_enrolled=bool(enrollments))
 
-@learn_bp.route("/paths")
+@learn_bp.route("/paths/")
 @login_required
 def paths():
     user = current_user()

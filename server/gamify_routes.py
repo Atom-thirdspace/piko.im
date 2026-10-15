@@ -5,6 +5,7 @@ from . import cosmetics, economy, mastery, speedrun
 from . import redeem as redeem_mod
 from .models import Problem, db
 from .session import current_user, login_required
+import os
 
 gamify_bp = Blueprint("gamify", __name__)
 
@@ -16,6 +17,12 @@ def wardrobe():
     return render_template("wardrobe.html", slots=cosmetics.SLOTS,
                            wardrobe=cosmetics.wardrobe(user),
                            coins=economy.balance(user))
+
+@gamify_bp.before_request
+def _wardrobe_unavailable():
+    off = (os.environ.get("WARDROBE_OFF") or "").strip().lower()
+    if off in ("1", "true", "yes") and request.path.startswith("/wardrobe/"):
+        abort(404)
 
 @gamify_bp.route("/wardrobe/buy/<key>", methods=["POST"])
 @login_required
