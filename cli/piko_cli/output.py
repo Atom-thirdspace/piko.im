@@ -1,0 +1,41 @@
+import os
+import sys
+
+class Fail(Exception):
+    """Anything the user should see as a message, not a traceback."""
+
+
+def _tty():
+    return sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def bold(t):  return _paint("1", t)
+def dim(t):   return _paint("2", t)
+def green(t): return _paint("32", t)
+def red(t):   return _paint("31", t)
+def amber(t): return _paint("33", t)
+
+DIFFICULTY = {"easy": green, "medium": amber, "hard": red}
+
+def difficulty(name):
+    return DIFFICULTY.get(name, dim)(name or "-")
+
+def header(text):
+    print()
+    print(bold(text))
+    print(dim("-" * len(text)))
+
+def row(*cells):
+    print("  " + "  ".join(cells))
+
+def ok(text):
+    print(green(" ok ") + text)
+
+def bad(text):
+    print(red("  fail")+ "  " + text)
+
+def note(text):
+    print(dim("  " + text))
+    
+
+
