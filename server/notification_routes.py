@@ -1,7 +1,7 @@
 from datetime import timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from flask import Blueprint, redirect, render_template, url_for
+from flask import Blueprint, jsonify, redirect, render_template, url_for
 
 from . import notify
 from .models import Notification, _utcnow, db
@@ -105,6 +105,35 @@ def index():
     return render_template("notifications.html", days=days, keep=KEEP,
                            shown=len(rows),
                            unread=sum(1 for r in rows if r.read_at is None))
+
+
+PEEK = 5
+
+
+@notifications_bp.route("/recent")
+@login_required
+def recent():
+    """The nav dropdown's contents.
+
+    Fetched when the menu opens rather than rendered into base.html: that
+    template is on every page, and this is one more round trip on each of
+    them for a panel most views never open.
+    """
+    user = current_user()
+    rows = db.session.execute(
+        db.select(Notification).where(Notification.user_id == user.id)
+        .order_by(Notification.created_at.desc()).limit(PEEK)).scalars().all()
+
+    now = _utcnow()
+    return jsonify(items=[{
+        "id": row.id,
+        "icon": ICONS.get(row.kind, DEFAULT_ICON),
+        "kind": NAMES.get(row.kind, row.kind),
+        "title": row.title,
+        "url": row.url or url_for("notifications.index"),
+        "ago": _ago(row.created_at, now),
+        "unread": row.read_at is None,
+    } for row in rows])
 
 
 @notifications_bp.route("/read", methods=["POST"])

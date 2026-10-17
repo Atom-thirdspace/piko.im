@@ -22,7 +22,7 @@ code, kbd, samp { overflow-wrap: break-word; }
     overscroll-behavior-x: contain;
 }
 
-.landing-nav { display: contents; }
+.navtoggle { display: none; }
 
 
 .tablescroll > table { min-width: 32rem; }
@@ -38,17 +38,48 @@ code, kbd, samp { overflow-wrap: break-word; }
     #custom-cursor { display: block; }
 }
 
-.topnav__links,
-.topnav__tools { display: contents; }
-
 .navtoggle { display: none; }
 
 @media (max-width: 60rem) {
-    .topnav {
-        flex-wrap: nowrap;
-        gap: .7rem;
-        padding: .6rem var(--gutter);
+        .topnav { padding: .6rem var(--gutter); }
+
+    .topnav__links { margin: 0; }
+
+    .navgroup { position: static; }
+
+    .navgroup__trigger {
+        padding: .9rem .6rem .35rem;
+        font-size: .72rem;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--ink-soft);
+        pointer-events: none;
     }
+
+    .navgroup__trigger::after { display: none; }
+    .navgroup__chev { display: none; }
+
+    .navgroup__menu {
+        position: static;
+        transform: none;
+        min-width: 0;
+        padding: 0;
+        background: none;
+        border: 0;
+        box-shadow: none;
+    }
+
+    .navgroup__menu a {
+        min-height: var(--tap);
+        align-content: center;
+        padding: .4rem .6rem;
+    }
+
+    .navgroup__blurb { display: none; }
+
+    .topnav__tools { margin-left: 0; order: 2; }
+
+
 
     .topnav .logo {
         position: static;
@@ -150,7 +181,7 @@ code, kbd, samp { overflow-wrap: break-word; }
     }
 
     .topnav__account {
-        position: static;
+        position: relative;
         top: auto;
         right: auto;
         transform: none;
