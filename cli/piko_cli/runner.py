@@ -8,11 +8,29 @@ from .output import Fail
 
 TIMEOUT = 10
 
-def _python():
-    for name in ("python3" , "python"):
-        if shutil.which(name):
-            return name
+_PYTHON = None
+
+
+def _find_python():
+    for name in ("python3", "python"):
+        path = shutil.which(name)
+        if not path:
+            continue
+        try:
+            proc = subprocess.run([path, "-c", "pass"], capture_output=True,
+                                  timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if proc.returncode == 0:
+            return path
     return sys.executable
+
+
+def _python():
+    global _PYTHON
+    if _PYTHON is None:
+        _PYTHON = _find_python()
+    return _PYTHON
 
 LANGUAGES = {
     "python": {
@@ -60,14 +78,14 @@ def detect(folder):
     for key, spec in LANGUAGES.items():
         if (folder / spec["source"]).exists():
             return key
-        return None
+    return None
 
 
 def normalise(text):
     return "\n".join(line.rstrip() for line in (text or "").splitlines()).rstrip()
 
 def compile_if_needed(folder, language):
-    spec = LANGUAGES(language)
+    spec = LANGUAGES[language]
     if spec["compile"] is None:
         return
     cmd = spec["compile"](folder)

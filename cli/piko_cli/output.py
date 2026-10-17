@@ -9,6 +9,10 @@ def _tty():
     return sys.stdout.isatty() and not os.environ.get("NO_COLOR")
 
 
+def _paint(code, text):
+    return "\033[%sm%s\033[0m" % (code, text) if _tty() else text
+
+
 def bold(t):  return _paint("1", t)
 def dim(t):   return _paint("2", t)
 def green(t): return _paint("32", t)

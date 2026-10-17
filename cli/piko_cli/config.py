@@ -49,3 +49,9 @@ def masked(value=None):
         return "(none)"
     return raw[:12] + "…" + raw[-4:] if len(raw) > 20 else raw[:8] + "…"
 
+
+
+def set_api(url):
+    data = _read()
+    data["api"] = url.rstrip("/")
+    _write(data)

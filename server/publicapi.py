@@ -4,13 +4,15 @@ import time
 from collections import defaultdict, deque
 from functools import wraps
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, g, jsonify, request, url_for
 from .apikeys import resolve, touch
+from .judge import LANGUAGES as JUDGE_LANGUAGES, verdicts as V
 
 from .learning.catalog import TOPICS
 from .learning.markdown import render as render_md
-from .models import (API_SCOPES, PUBLISHED, Lesson, Problem, Submission,
-                     Track, Unit, db)
+from .models import (API_SCOPES, PUBLISHED, Enrollment, JudgeJob, Lesson,
+                     Problem, Submission, Track, Unit, db,
+                     may_read_editorial)
 
 api_bp = Blueprint("publicapi",__name__, url_prefix="/api/v1")
 
@@ -24,6 +26,9 @@ TIER_ANON = 120
 TIER_KEY = 600
 TIER_PRO = 2000
 
+MAX_SOURCE_BYTES = 64 * 1024
+
+
 REQUIRE_KEY = False
 
 _hits = defaultdict(deque)
@@ -36,6 +41,26 @@ def _bearer():
     if header.lower().startswith("bearer "):
         return header[7:].strip()
     return ""
+
+def _json(payload, status=200):
+    resp = jsonify(payload)
+    resp.status_code = status
+    resp.headers["Cache-Control"] = "private, no-store"
+    resp.headers["X-API-Version"] = VERSION
+    if getattr(g, "api_limit", None):
+        resp.headers["X-RateLimit-Limit"] = str(g.api_limit)
+    return resp
+
+
+def _allows_any(*scopes):
+    key = getattr(g, "api_key", None)
+    return key is not None and any(key.allows(s) for s in scopes)
+
+
+def _published_problem(slug):
+    return db.session.execute(
+        db.select(Problem).filter_by(slug=slug, status=PUBLISHED)
+    ).scalar_one_or_none()
 
 
 def _rate_limited(bucket, limit):
@@ -220,20 +245,55 @@ def _problem_full(p):
                           "expected_stdout": t.expected_stdout}
                          for t in samples])
 
+def _sub_payload(problem, sub):
+    ordered = list(problem.tests)
+    rows = []
+    for t in sub.test_results:
+        row = {"index": t.position, "verdict": t.verdict,
+               "label": V.LABELS.get(t.verdict, t.verdict),
+               "time_ms": t.time_ms, "is_sample": t.is_sample}
+        if t.is_sample and t.position < len(ordered):
+            case = ordered[t.position]
+            row.update(stdin=case.stdin, expected=case.expected_stdout,
+                       actual=t.stdout)
+        rows.append(row)
+
+    pending = sub.verdict in (V.QUEUED, V.RUNNING)
+    return {"submission_id": sub.id,
+            "status": "pending" if pending else "done",
+            "problem": problem.slug,
+            "language": sub.language,
+            "verdict": sub.verdict,
+            "label": V.LABELS.get(sub.verdict, sub.verdict),
+            "passed": sub.passed,
+            "total": sub.total,
+            "max_time_ms": sub.max_time_ms,
+            "compile_output": sub.compile_output or "",
+            "created_at": sub.created_at.isoformat() if sub.created_at else None,
+            "tests": rows,
+            "first_failure": next(
+                (r for r in rows if r["verdict"] != V.AC), None)}
+
 @api_bp.route("/")
 def index():
     return _ok({
          "endpoints": {
             "topics": "/api/v1/topics",
+            "languages": "/api/v1/languages",
             "tracks": "/api/v1/tracks",
             "track": "/api/v1/tracks/<track_slug>",
             "lesson": "/api/v1/tracks/<track_slug>/<unit_slug>/<lesson_slug>",
             "problems": "/api/v1/problems?topic=&difficulty=&q=&page=&per_page=",
             "problem": "/api/v1/problems/<problem_slug>",
+            "potd" : "/api/v1/potd"
         },
         "me": {
             "profile": "/api/v1/me",
+            "next": "/api/v1/me/next",
+            "streak": "/api/v1/me/streak",
             "submissions": "/api/v1/me/submissions?verdict=&page=&per_page=",
+            "submit": "POST /api/v1/submissions",
+            "submission": "/api/v1/submissions/<id>",
         },
         "auth": {
             "scheme": "Authorization: Bearer piko_sk_...",
@@ -243,13 +303,23 @@ def index():
             "rate_limits": {"anonymous": TIER_ANON, "key": TIER_KEY,
                             "pro": TIER_PRO, "window_seconds": RATE_WINDOW},
         },
-        "notes": "Read-only. Hidden tests, hints, quiz answers and "
-                 "unpublished drafts are never served.",
+        "notes": "Reads are open; writing needs a scoped key. Hidden tests, "
+                 "hints, quiz answers and unpublished drafts are never served.",
     })
 
 @api_bp.route("/topics")
 def topics():
     return _ok({"items": [{"key": k, "title": t} for k, t in TOPICS]})
+
+@api_bp.route("/languages")
+def languages():
+    return _ok({"items": [
+        {"key": lang.key,
+         "label": lang.label,
+         "source_name": lang.source_name,
+         "compiled": lang.compile_cmd is not None,
+         "default_memory_mb": lang.default_memory_mb}
+        for lang in JUDGE_LANGUAGES.values()]})
 
 @api_bp.route("/tracks")
 def tracks():
@@ -374,3 +444,140 @@ def my_submissions():
         # leaked key exposes their solutions.
         "source": s.source,
     } for s in rows], **meta}, private=True)
+
+
+@api_bp.route("/submissions", methods=["POST"])
+@require_scope("submissions:write")
+
+def create_submission():
+    from .billing.service import is_pro
+    from .problems import _cached, _sha, _tests_fingerprint
+    from .ratelimit import submit_block_reason
+
+    user = g.api_user
+    payload = request.get_json(silent=True) or {}
+    slug = (payload.get("problem") or "").strip()
+    language = payload.get("language") or ""
+    source = payload.get("source") or ""
+
+    problem = _published_problem(slug)
+    if problem is None:
+        return _error("not_found", "No problem %r." % slug, 404)
+    if language not in JUDGE_LANGUAGES:
+        return _error("bad_language",
+                      "Unsupported language %r. See /api/v1/languages."
+                      % language, 400)
+    if not source.strip():
+        return _error("empty_source", "There is no source to judge.", 400)
+    if len(source.encode("utf-8")) > MAX_SOURCE_BYTES:
+        return _error("too_large", "Submissions cap at %d KB."
+                      % (MAX_SOURCE_BYTES // 1024), 413)
+    if not problem.tests:
+        return _error("no_tests", "That problem has no test cases yet.", 503)
+
+    blocked = submit_block_reason(user)
+    if blocked:
+        body, status = _error("submit_limited", blocked, 429)
+        body.headers["Retry-After"] = "60"
+        return body, status
+
+    source_hash = _sha(source)
+    tests_hash = _tests_fingerprint(problem)
+
+    hit = _cached(user, problem, language, source_hash, tests_hash)
+    if hit is not None:
+        return _json(dict(_sub_payload(problem, hit), cached=True))
+
+    sub = Submission(
+        user_id=user.id, problem_id=problem.id, language=language,
+        source=source, verdict=V.QUEUED, passed=0,
+        total=len(problem.tests), max_time_ms=0,
+        source_hash=source_hash, tests_hash=tests_hash)
+    db.session.add(sub)
+    db.session.flush()
+    db.session.add(JudgeJob(submission_id=sub.id,
+                            priority=1 if is_pro(user) else 0))
+    db.session.commit()
+
+    return _json(dict(_sub_payload(problem, sub), cached=False), 202)
+
+@api_bp.route("/submissions/<int:sub_id>")
+def submission(sub_id):
+    if not _allows_any("submissions:read", "submissions:write"):
+        return _error("missing_scope", "This needs 'submissions:read' or 'submissions:write'.", 403)
+    sub = db.session.get(Submission, sub_id)
+    if sub is None or sub.user_id != g.api_user.id:
+        return _error("not_found", "No submission %d." % sub_id, 404)
+    problem = db.session.get(Problem, sub.problem_id)
+    if problem is None:
+        return _error("not_found", "That problem has been removed.", 404)
+    return _json(_sub_payload)
+
+@api_bp.route("/me/next")
+@require_scope("me:read")
+def next_up():
+    from . import recommend
+    user = g.api_user
+    enrollment = db.session.execute(
+        db.select(Enrollment).where(Enrollment.user_id == user.id,
+                                    Enrollment.is_primary.is_(True))).scalar_one_or_none()
+
+    lesson_out = None
+    if enrollment is not None and enrollment.current_lesson is not None:
+        row = enrollment.current_lesson
+        unit = row.unit
+        if unit is not None:
+            lesson_out = {
+                "track": enrollment.track.slug,
+                "unit": unit.slug,
+                "slug": row.slug,
+                "title": row.title,
+                "kind": row.kind,
+                "xp": row.xp,
+                "problem": row.problem.slug if row.problem else None,
+                "url": url_for("learn.lesson", track_slug=enrollment.track.slug,
+                               unit_slug=unit.slug, lesson_slug=row.slug,
+                               _external=True),
+            }
+
+    pick = recommend.next_problem(user)
+    return _json({
+        "lesson": lesson_out,
+        "problem": _problem_brief(pick["problem"]) if pick else None,
+        "reason": pick["reason"] if pick else None,
+    })
+
+@api_bp.route("me/streak")
+@require_scope("me:read")
+def my_streak():
+    from .activity import heatmap
+    from .progress import streak_state, user_today
+
+    user = g.api_user
+    today = user_today(user)
+    today_xp = heatmap(user).get("today_xp", 0)
+    goal = user.daily_goal_xp or 0
+    return _json({
+        "day": today.isoformat(),
+        "streak_days": user.streak_days or 0,
+        "streak_best": user.streak_best or 0,
+        "today_xp": today_xp,
+        "goal_xp": goal,
+        "remaining_xp": max(goal - today_xp, 0),
+        "state": streak_state(user, today),
+    })
+
+@api_bp.route("/potd")
+def problem_of_the_day():
+    from . import potd as potd_mod
+
+    card = potd_mod.card(g.api_user)
+    if card is None:
+        return _error("not_found", "No problem of the day yet.", 404)
+    body = {"day": card["day"].isoformat(),
+            "bonus": card["bonus"],
+            "solvers": card.get("solvers", 0),
+            "solved": card["solved"],
+            "problem": _problem_brief(card["problem"])}
+
+    return _json(body) if g.api_user is not None else _ok(body)

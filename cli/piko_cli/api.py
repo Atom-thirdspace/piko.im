@@ -24,19 +24,49 @@ def _save_cache(url, etag, body):
     try:
         config.CACHE.mkdir(parents=True, exist_ok=True)
         _cache_path(url).write_text(
-            json.dump({"etag": etag, "body": body}), encoding="utf-8")
+            json.dumps({"etag": etag, "body": body}), encoding="utf-8")
     except OSError:
         pass
 
+def _headers(auth=True):
+    headers = {"Accept": "application/json", "User-Agent": "piko-cli"}
+    tok = config.token() if auth else ""
+    if tok:
+        headers["Authorization"] = "Bearer " + tok
+    return headers
+
+
+def _unwrap(resp):
+    if resp.status_code == 401:
+        raise Fail("That API key isn't valid. Run `piko login` again.")
+    if resp.status_code == 403:
+        raise Fail("Your key doesn't carry the scope this needs.\n"
+                   "Make a new one at /settings/#api with the right scopes.")
+    if resp.status_code == 404:
+        raise Fail("Not found.")
+    if resp.status_code == 429:
+        wait = resp.headers.get("Retry-After", "60")
+        raise Fail("Rate limited. Wait %s seconds." % wait)
+
+    try:
+        body = resp.json()
+    except ValueError:
+        raise Fail("Piko sent back something unreadable")
+    
+    if resp.status_code >= 400:
+        # Most errors are {"error": {"code", "message"}}, but the CSRF guard
+        # and Flask's own handlers answer with a bare string.
+        detail = (body or {}).get("error") if isinstance(body, dict) else None
+        if isinstance(detail, dict):
+            detail = detail.get("message")
+        raise Fail(detail or "Piko returned %s." % resp.status_code)
+    return body
+
+
 def get(path, params=None, auth=True, use_cache=True):
     url = config.api_base() + path
-    headers = {"Accept": "application/json",
-               "User-Agent": "piko-cli"}
+    headers = _headers(auth)
 
-    tok = config.token() if auth else ""
-
-    if tok:
-        headers["Authorization"] = "Bearer" + tok
     cached = _load_cache(url) if use_cache and not params else None
     if cached and cached.get("etag"):
         headers["If-None-Match"] = cached["etag"]
@@ -52,30 +82,27 @@ def get(path, params=None, auth=True, use_cache=True):
     if resp.status_code == 304 and cached:
         return cached["body"]
 
-    if resp.status_code == 401:
-        raise Fail("That API key isn't valid. Run `piko login` again.")
-    if resp.status_code == 403:
-        raise Fail("Your key doesn't carry the scope this needs.\n"
-                   "Make a new one at /settings/#api with the right scopes.")
-    if resp.status_code == 404:
-        raise Fail("Not found.")
-    if resp.status_code == 429:
-        wait = resp.headers.get("Retry-After", "60")
-        raise Fail("Rate limited. Wait %s seconds." % wait)
-    if resp.status_code >= 400:
-        raise Fail("Piko returned %s." % resp.status_code)
-
-    try:
-        body = resp.json()
-    except ValueError:
-        raise Fail("Piko sent back something unreadable")
-
+    body = _unwrap(resp)
     if not params:
-        _save_cache(url, resp.headers.get("ETag") , body)
+        _save_cache(url, resp.headers.get("ETag"), body)
     return body
 
+def post(path, payload, timeout=None):
+    url = config.api_base() + path
+    headers = _headers(True)
+    headers["Content-Type"] = "application/json"
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=timeout or TIMEOUT)
+    except requests.Timeout:
+        raise Fail("Piko took too long to answer. Try again.")
+    except requests.RequestException:
+        raise Fail("Couldn't reach Piko at %s." % config.api_base())
+    return _unwrap(resp)
+
+    
+
 def whoami():
-    return get("/me")
+    return get("/me", use_cache=False)
 
 def tracks():
     return get("/tracks", auth=False)
@@ -83,6 +110,14 @@ def tracks():
 
 def track(slug):
     return get("/tracks/%s" % slug, auth=False)
+
+def lesson(track_slug, unit_slug, lesson_slug):
+    return get("/tracks/%s/%s/%s" % (track_slug, unit_slug, lesson_slug),
+               auth=False)
+
+def languages():
+    return get("/languages", auth=False)
+
 
 def problems(topic=None, difficulty=None, q=None, page=1, per_page=25):
     params = {"page": page, "per_page": per_page}
@@ -97,3 +132,20 @@ def problems(topic=None, difficulty=None, q=None, page=1, per_page=25):
 
 def problem(slug):
     return get("/problems/%s" % slug, auth=False)
+
+def potd():
+    return get("/potd", use_cache=False)
+
+def next_up():
+    return get("/me/next", use_cache=False)
+
+def streak():
+    return get("/me/streak", use_cache=False)
+
+def submit(slug, language, source):
+    return post("/submissions", {"problem": slug, "language": language,
+                                 "source": source})
+
+def submission(sub_id):
+    return get("/submissions/%d" % sub_id, use_cache=False)
+ 
