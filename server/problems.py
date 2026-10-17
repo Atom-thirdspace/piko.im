@@ -8,9 +8,9 @@ from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
 from .models import (JudgeJob, Lesson, Problem, ProblemHint, SavedTest,
                      ScratchRun, StreakFreezeUse, Submission, User,
-                     attempts_on, db, may_read_editorial, reveal_hint,
-                     revealed_hint_ids, saved_tests_for, solve_percentile,
-                     used_hints)
+                     attempts_on, db, judge_is_live, may_read_editorial,
+                     reveal_hint, revealed_hint_ids, saved_tests_for,
+                     solve_percentile, used_hints)
 from .ratelimit import run_block_reason, run_headroom, submit_block_reason
 from .progress import streak_state, user_today
 from .xp_rules import solve_award, summarise, total
@@ -233,6 +233,11 @@ def submit(slug):
         body.update(_result_payload(problem, hit))
         return jsonify(**body)
 
+    # Only now, with a real run ahead of us, does a dead judge matter.
+    if not judge_is_live():
+        return jsonify(error="The judge is offline right now. Your code is "
+                             "not lost - try again in a moment."), 503
+
     sub = Submission(
         user_id=user.id, problem_id=problem.id, language=language, source=source,
         verdict=V.QUEUED, passed=0, total=len(problem.tests), max_time_ms=0,
@@ -303,6 +308,9 @@ def run(slug):
     blocked = run_block_reason(user)
     if blocked:
         return jsonify(error=blocked), 429
+    if not judge_is_live():
+        return jsonify(error="The judge is offline right now. Nothing is "
+                             "lost - try again in a moment."), 503
 
     row = ScratchRun(user_id=user.id, problem_id=problem.id, language=language,
                      source=source, stdin=stdin)

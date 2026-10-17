@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
+
 from . import verdicts as V
 from .languages import get_language
-from .sandbox import Sandbox, SandboxError
+from .pool import POOL
+from .sandbox import SandboxError
 
 @dataclass
 class TestCase:
@@ -21,11 +23,6 @@ class TestOutcome:
 
 @dataclass
 class RunResult:
-    """One execution against the learner's own input - no expected output.
-
-    This is the Run button, not Submit: nothing is scored and nothing is
-    stored against the problem, we just hand back what the program printed.
-    """
     verdict: str
     stdout: str = ""
     stderr: str = ""
@@ -59,57 +56,64 @@ def judge(source, language_key, tests, time_limit_sec=2.0, memory_mb=None,
     result = JudgeResult(verdict=V.AC, total=len(tests))
 
     try:
-        with Sandbox(image=lang.image, memory_mb=memory_mb) as box:
-            box.put_file(lang.source_name, source)
+        box = POOL.acquire(lang.image, memory_mb)
+    except SandboxError as exc:
+        return JudgeResult(verdict=V.IE, total=len(tests), message=str(exc))
 
-            if lang.compile_cmd:
-                comp = box.exec(lang.compile_cmd, timeout_sec=lang.compile_timeout_sec)
-                if comp.timed_out:
-                    return JudgeResult(verdict=V.CE, total=len(tests),
-                                       compile_output="Compilation timed out.")
-                if comp.output_exceeded:
-                    return JudgeResult(verdict=V.CE, total=len(tests),
-                                       compile_output="Compiler produced too much output.")
-                if comp.exit_code != 0:
-                    return JudgeResult(verdict=V.CE, total=len(tests),
-                                       compile_output=comp.stderr or comp.stdout)
-                result.compile_output = comp.stderr
+    try:
+        box.put_file(lang.source_name, source)
 
-            for i, test in enumerate(tests):
-                run = box.exec(lang.run_cmd, stdin=test.stdin,timeout_sec=time_limit_sec)
-                if run.timed_out:
-                    verdict = V.TLE
-                elif run.output_exceeded:
-                    verdict = V.OLE
-                elif run.oom_killed:
-                    verdict = V.MLE
-                elif run.exit_code != 0:
-                    verdict = V.RE
-                elif V.outputs_match(test.expected_stdout, run.stdout):
-                    verdict = V.AC
-                else:
-                    verdict = V.WA
+        if lang.compile_cmd:
+            comp = box.exec(lang.compile_cmd, timeout_sec=lang.compile_timeout_sec)
+            if comp.timed_out:
+                return JudgeResult(verdict=V.CE, total=len(tests),
+                                   compile_output="Compilation timed out.")
+            if comp.output_exceeded:
+                return JudgeResult(verdict=V.CE, total=len(tests),
+                                   compile_output="Compiler produced too much output.")
+            if comp.exit_code != 0:
+                return JudgeResult(verdict=V.CE, total=len(tests),
+                                   compile_output=comp.stderr or comp.stdout)
+            result.compile_output = comp.stderr
 
-                result.tests.append(TestOutcome(
-                    index=i, verdict=verdict, time_ms=run.duration_ms,
-                    # Never leak hidden-test output; samples are safe to show.
-                    stdout=run.stdout if test.is_sample else "",
-                    stderr=run.stderr if verdict == V.RE else "",
-                    is_sample=test.is_sample,
-                ))
-                result.max_time_ms = max(result.max_time_ms, run.duration_ms)
+        for i, test in enumerate(tests):
+            run = box.exec(lang.run_cmd, stdin=test.stdin,timeout_sec=time_limit_sec)
+            if run.timed_out:
+                verdict = V.TLE
+            elif run.output_exceeded:
+                verdict = V.OLE
+            elif run.oom_killed:
+                verdict = V.MLE
+            elif run.exit_code != 0:
+                verdict = V.RE
+            elif V.outputs_match(test.expected_stdout, run.stdout):
+                verdict = V.AC
+            else:
+                verdict = V.WA
 
-                if verdict == V.AC:
-                    result.passed += 1
-                else:
-                    result.verdict = verdict
-                    # TLE and OLE both destroy the container, so we cannot
-                    # continue regardless of the caller's preference.
-                    if stop_on_first_failure or verdict in (V.TLE, V.OLE):
-                        break
+            result.tests.append(TestOutcome(
+                index=i, verdict=verdict, time_ms=run.duration_ms,
+                # Never leak hidden-test output; samples are safe to show.
+                stdout=run.stdout if test.is_sample else "",
+                stderr=run.stderr if verdict == V.RE else "",
+                is_sample=test.is_sample,
+            ))
+            result.max_time_ms = max(result.max_time_ms, run.duration_ms)
+
+            if verdict == V.AC:
+                result.passed += 1
+            else:
+                result.verdict = verdict
+                # A timeout or an overflow takes the container with it, so
+                # there is nothing left to run the remaining tests in.
+                if stop_on_first_failure or box.dead:
+                    break
 
     except SandboxError as exc:
         return JudgeResult(verdict=V.IE, total=len(tests), message=str(exc))
+    finally:
+        # Teardown is ~300ms of docker rm. The learner should not wait for it.
+        POOL.recycle(box)
 
     return result
 
@@ -124,40 +128,46 @@ def run_once(source, language_key, stdin="", time_limit_sec=5.0, memory_mb=None)
         return RunResult(verdict=V.CE, compile_output="Nothing to run.")
 
     try:
-        with Sandbox(image=lang.image, memory_mb=memory_mb or lang.default_memory_mb) as box:
-            box.put_file(lang.source_name, source)
-
-            compile_output = ""
-            if lang.compile_cmd:
-                comp = box.exec(lang.compile_cmd, timeout_sec=lang.compile_timeout_sec)
-                if comp.timed_out:
-                    return RunResult(verdict=V.CE,
-                                     compile_output="Compilation timed out.")
-                if comp.output_exceeded:
-                    return RunResult(verdict=V.CE,
-                                     compile_output="Compiler produced too much output.")
-                if comp.exit_code != 0:
-                    return RunResult(verdict=V.CE,
-                                     compile_output=comp.stderr or comp.stdout)
-                compile_output = comp.stderr
-
-            run = box.exec(lang.run_cmd, stdin=stdin, timeout_sec=time_limit_sec)
-
-            if run.timed_out:
-                verdict = V.TLE
-            elif run.output_exceeded:
-                verdict = V.OLE
-            elif run.oom_killed:
-                verdict = V.MLE
-            elif run.exit_code != 0:
-                verdict = V.RE
-            else:
-                verdict = V.OK
-
-            return RunResult(
-                verdict=verdict, stdout=run.stdout, stderr=run.stderr,
-                compile_output=compile_output, time_ms=run.duration_ms,
-                exit_code=run.exit_code,
-            )
+        box = POOL.acquire(lang.image, memory_mb or lang.default_memory_mb)
     except SandboxError as exc:
         return RunResult(verdict=V.IE, message=str(exc))
+
+    try:
+        box.put_file(lang.source_name, source)
+
+        compile_output = ""
+        if lang.compile_cmd:
+            comp = box.exec(lang.compile_cmd, timeout_sec=lang.compile_timeout_sec)
+            if comp.timed_out:
+                return RunResult(verdict=V.CE,
+                                 compile_output="Compilation timed out.")
+            if comp.output_exceeded:
+                return RunResult(verdict=V.CE,
+                                 compile_output="Compiler produced too much output.")
+            if comp.exit_code != 0:
+                return RunResult(verdict=V.CE,
+                                 compile_output=comp.stderr or comp.stdout)
+            compile_output = comp.stderr
+
+        run = box.exec(lang.run_cmd, stdin=stdin, timeout_sec=time_limit_sec)
+
+        if run.timed_out:
+            verdict = V.TLE
+        elif run.output_exceeded:
+            verdict = V.OLE
+        elif run.oom_killed:
+            verdict = V.MLE
+        elif run.exit_code != 0:
+            verdict = V.RE
+        else:
+            verdict = V.OK
+
+        return RunResult(
+            verdict=verdict, stdout=run.stdout, stderr=run.stderr,
+            compile_output=compile_output, time_ms=run.duration_ms,
+            exit_code=run.exit_code,
+        )
+    except SandboxError as exc:
+        return RunResult(verdict=V.IE, message=str(exc))
+    finally:
+        POOL.recycle(box)

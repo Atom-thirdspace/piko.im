@@ -1563,15 +1563,6 @@ class WebhookEvent(db.Model):
                             nullable=False)
 
 def active_subscription(user):
-    """The row granting paid access right now, if any.
-
-    The period end is checked as well as the status. Polar pushes
-    current_period_end forward on every subscription.cycled, so a live
-    subscription always sits in the future - but a complimentary grant has no
-    provider behind it to renew, and without this it would never expire.
-    A webhook we never receive therefore costs access at period end rather
-    than granting it for ever, which is the right way round.
-    """
     if user is None:
         return None
     now = _utcnow()
@@ -1996,6 +1987,36 @@ def unread_count(user):
         db.select(db.func.count()).select_from(Notification)
         .where(Notification.user_id == user.id,
                Notification.read_at.is_(None))).scalar() or 0
+
+class JudgeHeartbeat(db.Model):
+    __tablename__ = "judge_heartbeat"
+
+    id = db.Column(db.SmallInteger, primary_key=True, default=1)
+    beat_at = db.Column(db.DateTime(timezone=True), nullable=False,
+                        default=_utcnow)
+    worker = db.Column(db.String(80), nullable=False, default="",
+                       server_default="")
+
+
+JUDGE_STALE_AFTER_SEC = 20
+
+
+def judge_is_live():
+    row = db.session.get(JudgeHeartbeat, 1)
+    if row is None or row.beat_at is None:
+        return False
+    return (_utcnow() - row.beat_at).total_seconds() < JUDGE_STALE_AFTER_SEC
+
+
+def beat_judge(worker_name=""):
+    row = db.session.get(JudgeHeartbeat, 1)
+    if row is None:
+        row = JudgeHeartbeat(id=1)
+        db.session.add(row)
+    row.beat_at = _utcnow()
+    row.worker = (worker_name or "")[:80]
+    db.session.commit()
+
 
 def may_read_editorial(user, problem):
     if user is None or not problem.editorial_published:

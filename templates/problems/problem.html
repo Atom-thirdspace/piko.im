@@ -353,14 +353,21 @@
 
   /* --------------------------------------------------------------- run */
 
-  var POLL_MS = 700;
+  var POLL_MS = 400;
+  var RUN_TRIES = 60;          /* 400ms x 60 = 24s */
 
   function poll(url, id, tries) {
     return fetch(url + id, { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.status !== 'pending') { return data; }
-        if (tries <= 0) { throw new Error('timeout'); }
+        if (tries <= 0) {
+          /* Distinguish "we gave up waiting" from "the network broke", so
+             the catch below can say which one happened. */
+          var err = new Error('timeout');
+          err.timedOut = true;
+          throw err;
+        }
         return new Promise(function (ok) { setTimeout(ok, POLL_MS); })
           .then(function () { return poll(url, id, tries - 1); });
       });
@@ -421,11 +428,16 @@
 
       if (data.status === 'queued') {
         busy('Waiting for a judge…');
-        data = await poll(page.dataset.runResultUrl, data.run_id, 40);
+        data = await poll(page.dataset.runResultUrl, data.run_id, RUN_TRIES);
       }
       renderRun(data);
     } catch (err) {
-      fail('The judge is taking too long. Try again in a moment.');
+      if (err && err.timedOut) {
+        fail('Still waiting on the judge after 24 seconds. It may be down — '
+           + 'your code is safe, try again in a moment.');
+      } else {
+        fail('Lost contact with Piko. Check your connection and try again.');
+      }
     } finally {
       runBtn.disabled = subBtn.disabled = false;
       runBtn.textContent = 'Run';
@@ -518,8 +530,13 @@
         setTimeout(function () { location.reload(); }, 2200);
       }
     } catch (err) {
-      fail('The judge is taking too long. Your submission is saved and will '
-           + 'finish in the background.');
+      if (err && err.timedOut) {
+        fail('The judge has not answered yet. Your submission is saved and '
+           + 'will finish in the background — reload in a minute to see it.');
+      } else {
+        fail('Lost contact with Piko. Your submission is saved; reload to '
+           + 'check on it.');
+      }
     } finally {
       runBtn.disabled = subBtn.disabled = false;
       subBtn.textContent = 'Submit';

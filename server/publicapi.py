@@ -12,7 +12,7 @@ from .learning.catalog import TOPICS
 from .learning.markdown import render as render_md
 from .models import (API_SCOPES, PUBLISHED, Enrollment, JudgeJob, Lesson,
                      Problem, Submission, Track, Unit, db,
-                     may_read_editorial)
+                     judge_is_live, may_read_editorial)
 
 api_bp = Blueprint("publicapi",__name__, url_prefix="/api/v1")
 
@@ -497,6 +497,13 @@ def create_submission():
     hit = _cached(user, problem, language, source_hash, tests_hash)
     if hit is not None:
         return _json(dict(_sub_payload(problem, hit), cached=True))
+
+    if not judge_is_live():
+        body, status = _error(
+            "judge_offline",
+            "The judge is offline right now. Try again shortly.", 503)
+        body.headers["Retry-After"] = "30"
+        return body, status
 
     sub = Submission(
         user_id=user.id, problem_id=problem.id, language=language,

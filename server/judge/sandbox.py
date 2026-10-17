@@ -87,20 +87,31 @@ def _feed(stream, data):
 
 
 class Sandbox:
-    def __init__(self, image, memory_mb=256, pids=64, cpus="1.0", workdir_mb=64):
+    def __init__(self, image, memory_mb=256, pids=64, cpus="1.0", workdir_mb=64, owns_lifecycle=True):
         self.image = image
         self.memory_mb = memory_mb
         self.pids = pids
         self.cpus = cpus
         self.workdir_mb = workdir_mb
+        self.owns_lifecycle = owns_lifecycle
         self.cid = None
+
+    @property
+    def dead(self):
+        """True once the container is gone - exec() kills it on timeout/overflow.
+
+        The caller cannot reuse a box in that state, so it asks instead of
+        inferring it from the verdict it just got back.
+        """
+        return self.cid is None
 
     def __enter__(self):
         self.create()
         return self
 
     def __exit__(self, *exc):
-        self.destroy()
+        if self.owns_lifecycle:
+            self.destroy()
         return False
 
     def create(self):

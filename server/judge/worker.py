@@ -1,11 +1,15 @@
+import socket
+import subprocess
 import time
 
+import click
 from flask import current_app
 
 from . import verdicts as V
 from .runner import TestCase, judge, run_once
-from ..models import (JudgeJob, Problem, ScratchRun, _utcnow, db,
-                      first_accepted, replace_test_results, attempts_on)
+from ..models import (JudgeJob, Problem, ScratchRun, _utcnow, beat_judge, db,
+                      first_accepted, judge_is_live, replace_test_results,
+                      attempts_on)
 from ..progress import award_xp, bump_combo
 from .. import economy, mastery, speedrun
 
@@ -13,6 +17,8 @@ from .. import economy, mastery, speedrun
 # would for scored submissions.
 POLL_SECONDS = 1
 MAX_ATTEMPTS = 2
+
+IDLE_SLEEP_SEC = 0.15
 
 # A run is the learner's own input, so it gets less rope than a graded
 # submission: shorter wall clock, and no per-problem override.
@@ -197,31 +203,97 @@ def tick():
     return True
 
 
+BEAT_EVERY_SEC = 5
+_last_beat = 0.0
+
+
+def _beat(name):
+    """Stamp the heartbeat, but not on every pass of a busy loop."""
+    global _last_beat
+    now = time.monotonic()
+    if now - _last_beat < BEAT_EVERY_SEC:
+        return
+    _last_beat = now
+    beat_judge(name)
+
+
 def register_cli(app):
     @app.cli.command("judge-worker")
-    def _worker():
-        """Run forever, judging queued submissions."""
-        print("judge worker started; polling every %ds" % POLL_SECONDS)
-        while True:
-            try:
-                if not tick():
-                    time.sleep(POLL_SECONDS)
-            except KeyboardInterrupt:
-                print("stopping")
-                break
-            except Exception:
-                app.logger.exception("worker loop error")
-                time.sleep(POLL_SECONDS)
+    @click.option("--warm/--no-warm", default=True,
+                  help="pre-start containers before taking work")
+    def _worker(warm):
+        from .pool import POOL, pull_images
+
+        missing = pull_images()
+        if missing:
+            print("WARNING: could not pull %s" % ", ".join(missing))
+        if warm:
+            POOL.warm()
+            print("warming %d container(s) per image" % POOL.warm_per_image)
+        
+        name = socket.gethostname()[:80]
+        print("judge worker %s started; idle poll %.2fs" % (name, IDLE_SLEEP_SEC))
+        try:
+            while True:
+                try:
+                    _beat(name)
+                    if not tick():
+                        time.sleep(IDLE_SLEEP_SEC)
+                except KeyboardInterrupt:
+                    break
+                except Exception:
+                    app.logger.exception("worker loop error")
+                    db.session.rollback()
+                    time.sleep(1)
+        finally:
+            print("stopping; removing warm containers")
+            print("removed %d" % POOL.drain())
+
+
+
+    @app.cli.command("judge-doctor")
+    def _doctor():
+        import shutil
+
+        from .pool import pull_images
+        from .sandbox import DOCKER
+
+        if shutil.which(DOCKER) is None:
+            print("FAIL  docker is not on PATH")
+            return
+        probe = subprocess.run([DOCKER, "info"], capture_output=True)
+        if probe.returncode != 0:
+            print("FAIL  docker is installed but not running")
+            print("      start Docker Desktop, then run this again")
+            return
+        print("ok    docker is running")
+
+        missing = pull_images()
+        if missing:
+            print("FAIL  missing images: %s" % ", ".join(missing))
+            return
+        print("ok    every judge image is present")
+
+        result = run_once("print(6*7)", "python", stdin="")
+        if result.stdout.strip() == "42":
+            print("ok    python round trip in %dms" % result.time_ms)
+        else:
+            print("FAIL  python round trip: %s %s"
+                  % (result.verdict, result.message or result.stderr))
+            return
+
+        if judge_is_live():
+            print("ok    a worker is alive")
+        else:
+            print("WARN  no worker heartbeat - start `flask judge-worker`")
 
     @app.cli.command("judge-prune")
     def _prune():
-        """Delete scratch runs older than a few hours."""
         from ..models import prune_scratch_runs
         print("pruned %d scratch runs" % prune_scratch_runs())
 
     @app.cli.command("judge-drain")
     def _drain():
-        """Run every queued job once and exit - handy in CI and in tests."""
         count = 0
         while tick():
             count += 1
