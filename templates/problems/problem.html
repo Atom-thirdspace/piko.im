@@ -90,6 +90,17 @@
         </section>
       {% endif %}
 
+      {% if editorial %}
+        <details class="editorial">
+          <summary class="editorial__head">Editorial</summary>
+          <article class="prose editorial__body">{{ editorial }}</article>
+        </details>
+      {% elif problem.editorial_published and problem.editorial_md %}
+        <p class="editorial editorial--locked">
+          There is an editorial for this one. Solve it and it opens up.
+        </p>
+      {% endif %}
+
       {% if recent %}
         <section class="submissions">
           <h2>Your recent submissions</h2>

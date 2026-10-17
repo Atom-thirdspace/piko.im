@@ -1,6 +1,8 @@
-"""Generate candidate problems and park them for review."""
-
 import random
+
+import click
+
+from ..models import db
 
 from .base import REGISTRY, Draft            # noqa: F401  (re-exported)
 from .verify import Rejected, verify
@@ -8,7 +10,6 @@ from . import templates                      # noqa: F401  (registers them)
 
 
 def save_draft(draft, source):
-    """Verify, then store as a draft. Returns the row, or raises Rejected."""
     from ..models import GeneratedProblem, db
 
     clash = db.session.execute(
@@ -72,3 +73,41 @@ def register_cli(app):
                 failed += 1
         print("%d drafted, %d rejected - review at /admin/generated/"
               % (made, failed))
+
+    @app.cli.command("gen-bulk")
+    @click.option("--rounds", default=5, show_default=True,
+              help="how many seeds per generator")
+    @click.option("--publish", is_flag=True,
+              help="publish immediately instead of parking for review")
+    def _gen_bulk(rounds, publish):
+        """Draft every template generator over several seeds."""
+        from ..models import User, publish_generated
+
+        reviewer = None
+        if publish:
+            from ..admin_gate import admin_emails
+            emails = admin_emails()
+            reviewer = db.session.execute(
+                db.select(User).where(User.email.in_(emails)).limit(1)
+            ).scalar_one_or_none() if emails else None
+            if reviewer is None:
+                print("no admin user found - drafting for review instead")
+                publish = False
+        made, live, failed = 0, 0, 0
+        for name, fn in sorted(REGISTRY.items()):
+            for _ in range(rounds):
+                seed = random.randrange(1 << 30)
+                try:
+                    row = save_draft(fn(seed), "template:%s" % name)
+                except Rejected as exc:
+                    print("REJECTED %s: %s" % (name, exc))
+                    failed += 1
+                    continue
+                made += 1
+                if publish and publish_generated(row, reviewer) is not None:
+                    live += 1
+                print("drafted %s (%d tests)%s"
+                      % (row.slug, len(row.payload["tests"]),
+                         " - published" if publish else ""))
+
+        print("%d drafted, %d published, %d rejected" % (made, live, failed))

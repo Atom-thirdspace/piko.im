@@ -315,3 +315,119 @@ body {
 @media (max-width: 60rem) {
     .topnav__account { right: 1rem; }
 }
+
+.rusty__lede {
+    margin: 0 0 .8rem;
+    color: var(--ink-soft);
+    font-size: .85rem;
+}
+
+.rusty__list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+
+.rusty__row {
+    display: grid;
+    grid-template-columns: 7rem 1fr auto;
+    align-items: center;
+    gap: .6rem;
+}
+
+.rusty__topic {
+    color: var(--ink);
+    font-weight: 600;
+    font-size: .88rem;
+    text-transform: capitalize;
+}
+
+.rusty__bar {
+    position: relative;
+    height: .45rem;
+    border-radius: 999px;
+    background: var(--surface-3);
+    overflow: hidden;
+}
+
+.rusty__peak,
+.rusty__now {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+}
+
+.rusty__peak { background: var(--line-strong); }
+.rusty__now  { background: var(--brand); }
+
+.rusty__meta {
+    color: var(--ink-soft);
+    font-size: .75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.editorial { margin: 1.4rem 0; }
+
+.editorial__head {
+    cursor: pointer;
+    font-weight: 600;
+    padding: .55rem .8rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+}
+
+.editorial__body { margin-top: .9rem; }
+
+.editorial--locked {
+    padding: .6rem .8rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-size: .86rem;
+}
+
+@media (max-width: 40rem) {
+    .rusty__row { grid-template-columns: 1fr auto; }
+    .rusty__bar { grid-column: 1 / -1; }
+}
+
+.profile-actions { display: flex; align-items: center; gap: .5rem; }
+
+.profile-share {
+    padding: .4rem .9rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: .85rem;
+    cursor: pointer;
+}
+
+.profile-share:hover { background: var(--surface-2); }
+
+.profile-embed { margin: 1rem 0 1.6rem; }
+
+.profile-embed > summary {
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: .85rem;
+}
+
+.profile-embed__hint { margin: .6rem 0 .4rem; color: var(--ink-soft);
+    font-size: .8rem; }
+
+.profile-embed__code {
+    margin: 0 0 .8rem;
+    padding: .7rem .8rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-2);
+    overflow-x: auto;
+    font-size: .78rem;
+}
+
+.profile-embed__preview {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+}

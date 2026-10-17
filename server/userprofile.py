@@ -145,6 +145,71 @@ def public_profile(username):
     )
 
 
+CARD_W, CARD_H = 600, 240
+
+
+def _esc(text):
+    return (str(text if text is not None else "")
+            .replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+@profile_bp.route("/u/<username>/card.svg")
+def profile_card(username):
+    """A stat card people can drop in a README or a social post.
+
+    SVG rather than a raster: no imaging dependency, and it stays sharp.
+    """
+    user = find_by_username(username)
+    if user is None:
+        abort(404)
+
+    counts = _counts(user)
+    level = level_progress(user.xp_total or 0)
+    track_row = _current_track(user)
+    track_name = (track_row["track"].title if track_row
+                  else "learning the basics")
+
+    figures = [
+        (counts["problems_solved"], "solved"),
+        (counts["lessons_done"], "lessons"),
+        (user.streak_days or 0, "day streak"),
+        (user.xp_total or 0, "XP"),
+    ]
+    cells = []
+    for i, (value, label) in enumerate(figures):
+        x = 40 + i * 135
+        cells.append('<text x="%d" y="150" class="n">%s</text>'
+                     '<text x="%d" y="172" class="l">%s</text>'
+                     % (x, _esc(value), x, _esc(label)))
+
+    svg = """<svg xmlns="http://www.w3.org/2000/svg" width="%(w)d" height="%(h)d"
+     viewBox="0 0 %(w)d %(h)d" role="img" aria-label="%(name)s on Piko">
+  <style>
+    .bg   { fill: #161310; }
+    .card { fill: #1f1b17; stroke: #332c25; }
+    .name { fill: #f4efe8; font: 700 28px system-ui, sans-serif; }
+    .sub  { fill: #a0968a; font: 400 14px system-ui, sans-serif; }
+    .n    { fill: #f4efe8; font: 700 26px system-ui, sans-serif; }
+    .l    { fill: #a0968a; font: 400 12px system-ui, sans-serif; }
+    .tag  { fill: #a52a2a; font: 700 13px system-ui, sans-serif; }
+  </style>
+  <rect class="bg" width="%(w)d" height="%(h)d" rx="16"/>
+  <rect class="card" x="8" y="8" width="%(iw)d" height="%(ih)d" rx="12"/>
+  <text x="40" y="62" class="name">%(name)s</text>
+  <text x="40" y="86" class="sub">Level %(level)d &#183; %(track)s</text>
+  %(cells)s
+  <text x="40" y="208" class="tag">piko.im</text>
+</svg>
+""" % {"w": CARD_W, "h": CARD_H, "iw": CARD_W - 16, "ih": CARD_H - 16,
+       "name": _esc(user.username), "level": level["level"],
+       "track": _esc(track_name), "cells": "\n  ".join(cells)}
+
+    resp = current_app.response_class(svg, mimetype="image/svg+xml")
+    resp.headers["Cache-Control"] = "public, max-age=600"
+    return resp
+
+
 @profile_bp.route("/me/")
 @login_required
 def me():

@@ -4,6 +4,19 @@
 
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% set share_url = url_for('profile.public_profile', username=profile_user.username, _external=True) %}
+  {% set card_url = url_for('profile.profile_card', username=profile_user.username, _external=True) %}
+  {% set blurb = "%s has solved %d problems and finished %d lessons on Piko."
+                 % (profile_user.username, stats.problems_solved, stats.lessons_done) %}
+  <meta property="og:type" content="profile">
+  <meta property="og:title" content="{{ profile_user.username }} on Piko">
+  <meta property="og:description" content="{{ blurb }}">
+  <meta property="og:url" content="{{ share_url }}">
+  <meta property="og:image" content="{{ card_url }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ profile_user.username }} on Piko">
+  <meta name="twitter:description" content="{{ blurb }}">
+  <meta name="twitter:image" content="{{ card_url }}">
 {% endblock head %}
 
 {% block content %}
@@ -26,10 +39,23 @@
       </p>
     </div>
 
-    {% if is_self %}
-      <a class="profile-edit" href="{{ url_for('profile.settings') }}">Settings</a>
-    {% endif %}
+    <div class="profile-actions">
+      <button type="button" class="profile-share js-share"
+              data-share-url="{{ url_for('profile.public_profile', username=profile_user.username, _external=True) }}"
+              data-share-title="{{ profile_user.username }} on Piko">Share</button>
+      {% if is_self %}
+        <a class="profile-edit" href="{{ url_for('profile.settings') }}">Settings</a>
+      {% endif %}
+    </div>
   </header>
+
+  <details class="profile-embed">
+    <summary>Embed this profile</summary>
+    <p class="profile-embed__hint">Paste into a README or a post.</p>
+    <pre class="profile-embed__code"><code>[![Piko]({{ url_for('profile.profile_card', username=profile_user.username, _external=True) }})]({{ url_for('profile.public_profile', username=profile_user.username, _external=True) }})</code></pre>
+    <img class="profile-embed__preview" alt="Your Piko stat card"
+         src="{{ url_for('profile.profile_card', username=profile_user.username) }}">
+  </details>
 
   <section class="profile-level">
     <div class="profile-level-line">
@@ -142,3 +168,7 @@
   </section>
 </main>
 {% endblock content %}
+
+{% block js %}
+  <script defer src="{{ url_for('static', filename='share.js') }}"></script>
+{% endblock js %}

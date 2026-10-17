@@ -156,6 +156,7 @@ def _dashboard_data(user):
         "coins": economy.balance(user),
         "mastery": topics[:6],
         "rusty": mastery.rusty(user, rows=topics),
+        "half_life": int(mastery.HALF_LIFE_DAYS),
         "combo": {"now": user.solve_combo or 0, "best": user.combo_best or 0},
         "season": seasons.card(user),
         "rival": rivals.card(user),

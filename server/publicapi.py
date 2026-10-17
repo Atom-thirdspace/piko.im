@@ -235,15 +235,22 @@ def _problem_brief(p):
 
 def _problem_full(p):
     samples = [t for t in p.tests if t.is_sample]
-    return dict(_problem_brief(p),
-                statement_md=p.statement_md,
-                statement_html=str(render_md(p.statement_md or "")),
-                time_limit_sec=p.time_limit_sec,
-                memory_mb=p.memory_mb,
-                total_tests=len(p.tests),     # the count, never the cases
-                samples=[{"stdin": t.stdin,
-                          "expected_stdout": t.expected_stdout}
-                         for t in samples])
+    out = dict(_problem_brief(p),
+               statement_md=p.statement_md,
+               statement_html=str(render_md(p.statement_md or "")),
+               time_limit_sec=p.time_limit_sec,
+               memory_mb=p.memory_mb,
+               total_tests=len(p.tests),     # the count, never the cases
+               has_editorial=bool(p.editorial_published and p.editorial_md),
+               samples=[{"stdin": t.stdin,
+                         "expected_stdout": t.expected_stdout}
+                        for t in samples])
+
+    # Same gate as the website: solved it, or Pro.
+    if (getattr(g, "api_user", None) is not None
+            and p.editorial_md and may_read_editorial(g.api_user, p)):
+        out["editorial_md"] = p.editorial_md
+    return out
 
 def _sub_payload(problem, sub):
     ordered = list(problem.tests)
@@ -384,7 +391,10 @@ def problem(problem_slug):
     ).scalar_one_or_none()
     if p is None:
         return _error("not_found", "No problem %r." % problem_slug, 404)
-    return _ok(_problem_full(p))
+    body = _problem_full(p)
+    # The body varies by caller once an editorial is in it, so it must not
+    # land in a shared cache.
+    return _ok(body, private="editorial_md" in body)
 
 
 @api_bp.route("/health")
@@ -511,7 +521,7 @@ def submission(sub_id):
     problem = db.session.get(Problem, sub.problem_id)
     if problem is None:
         return _error("not_found", "That problem has been removed.", 404)
-    return _json(_sub_payload)
+    return _json(_sub_payload(problem, sub))
 
 @api_bp.route("/me/next")
 @require_scope("me:read")
@@ -547,7 +557,7 @@ def next_up():
         "reason": pick["reason"] if pick else None,
     })
 
-@api_bp.route("me/streak")
+@api_bp.route("/me/streak")
 @require_scope("me:read")
 def my_streak():
     from .activity import heatmap

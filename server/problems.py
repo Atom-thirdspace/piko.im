@@ -89,6 +89,10 @@ def page(slug):
         db.select(Lesson).where(Lesson.problem_id == problem.id).limit(1)
     ).scalar_one_or_none()
 
+    editorial = None
+    if problem.editorial_md and may_read_editorial(user, problem):
+        editorial = render_md(problem.editorial_md)
+
     return render_template(
         "problems/problem.html",
         problem=problem,
@@ -100,6 +104,7 @@ def page(slug):
         solved=solved,
         recent=recent,
         lesson=lesson,
+        editorial=editorial,
         verdict_labels=V.LABELS,
         hints=problem.hints,
         revealed_hints=revealed,

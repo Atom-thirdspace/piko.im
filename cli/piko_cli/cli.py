@@ -244,6 +244,12 @@ def _print_verdict(body):
     passed, total = body.get("passed" , 0), body.get("total", 0)
     tally = "  %d/%d tests" % (passed, total)
 
+    if body.get("status") == "pending":
+        print(amber("  " + label) + "  not judged yet")
+        output.note("Check again with `piko submit --check %s`."
+                    % body.get("submission_id"))
+        return 0
+
     if body.get("verdict") == "accepted":
         print(green("  Accepted") + tally)
         if body.get("max_time_ms"):
@@ -406,6 +412,23 @@ def cmd_lesson(args):
     return 0
 
 
+def cmd_editorial(args):
+    data = api.problem(args.slug, fresh=True)
+    text = data.get("editorial_md")
+    if text:
+        output.header("%s - editorial" % data["title"])
+        print()
+        print(text)
+        return 0
+
+    output.header(data["title"])
+    if data.get("has_editorial"):
+        output.note("There is one, but you have to solve it first.")
+    else:
+        output.note("No editorial for this problem yet.")
+    return 0
+
+
 def cmd_watch(args):
     folder = Path(args.folder or ".")
     meta = _load_meta(folder)
@@ -504,6 +527,10 @@ def build_parser():
     subs.add_parser("next", help="what to do right now").set_defaults(fn=cmd_next)
     subs.add_parser("streak", help="your streak and today's goal").set_defaults(fn=cmd_streak)
     subs.add_parser("potd", help="the problem of the day").set_defaults(fn=cmd_potd)
+
+    p = subs.add_parser("editorial", help="read the explanation")
+    p.add_argument("slug")
+    p.set_defaults(fn=cmd_editorial)
 
     p = subs.add_parser("lesson", help="read a lesson here")
     p.add_argument("path", help="track/unit/lesson")

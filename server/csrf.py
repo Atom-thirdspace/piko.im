@@ -28,6 +28,11 @@ def init_csrf(app):
     def _guard():
         if request.method not in UNSAFE:
             return
+        # The public API authenticates on a Bearer header, which a cross-site
+        # form cannot set, and reads nothing from the session. CSRF has
+        # nothing to defend there.
+        if request.blueprint == "publicapi":
+            return
         view = app.view_functions.get(request.endpoint)
         if view is not None and getattr(view, "csrf_exempt", False):
             return

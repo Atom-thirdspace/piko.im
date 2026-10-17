@@ -38,6 +38,15 @@
     <label for="memory_mb">Memory (MB)</label>
     <input id="memory_mb" name="memory_mb" type="number" value="{{ p.memory_mb if p else 256 }}">
 
+    <label for="editorial_md">Editorial (Markdown)</label>
+    <textarea id="editorial_md" name="editorial_md" rows="12">{{ form.get('editorial_md', p.editorial_md if p else '') }}</textarea>
+    <small>The idea, why the obvious approach is too slow, and the complexity.
+      Shown once someone has solved it; Pro members can read it without.</small>
+
+    <label><input type="checkbox" name="editorial_published" value="1"
+                  {{ 'checked' if p and p.editorial_published }}>
+      Publish this editorial</label>
+
     <button type="submit">Save problem</button>
   </form>
 

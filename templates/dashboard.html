@@ -152,6 +152,35 @@
             <p class="card__foot">No problem has been published for today yet.</p>
           {% endif %}
         </section>
+        <!-- ---------- topics going cold ---------- -->
+        {% if rusty %}
+          <section data-aos="fade-in" data-aos-delay="650"
+                   class="dash__rusty card cardstyle" aria-labelledby="rusty-h">
+            <div class="card__head">
+              <h2 class="card__title" id="rusty-h">Going cold</h2>
+              <span class="card__meta">{{ rusty|length }} topic{{ "" if rusty|length == 1 else "s" }}</span>
+            </div>
+            <p class="rusty__lede">
+              You were stronger here once. Mastery halves every {{ half_life }}
+              days without practice.
+            </p>
+            <ul class="rusty__list">
+              {% for row in rusty %}
+                <li class="rusty__row">
+                  <span class="rusty__topic">{{ row.topic }}</span>
+                  <span class="rusty__bar" aria-hidden="true">
+                    <span class="rusty__peak" style="width: {{ (row.peak / 300 * 100)|round|int }}%"></span>
+                    <span class="rusty__now" style="width: {{ (row.fraction * 100)|round|int }}%"></span>
+                  </span>
+                  <span class="rusty__meta">{{ row.value }} / {{ row.peak }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+            <p class="card__foot">
+              <a href="{{ url_for('gamify.mastery_page') }}">See every topic</a>
+            </p>
+          </section>
+        {% endif %}
     </div>
   </div>
 

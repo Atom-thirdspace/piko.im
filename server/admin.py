@@ -374,6 +374,8 @@ def problem_form(problem_id=None):
     problem.xp_override = _xp_override(form.get("xp"))
     problem.time_limit_sec = float(form.get("time_limit_sec") or 2.0)
     problem.memory_mb = int(form.get("memory_mb") or 256)
+    problem.editorial_md = form.get("editorial_md") or ""
+    problem.editorial_published = bool(form.get("editorial_published"))
     db.session.commit()
 
     log_action("save_problem", problem.id, problem.slug)

@@ -130,8 +130,10 @@ def problems(topic=None, difficulty=None, q=None, page=1, per_page=25):
     return get("/problems", params=params, auth=False)
 
 
-def problem(slug):
-    return get("/problems/%s" % slug, auth=False)
+def problem(slug, fresh=False):
+    # Sent with the key: the server adds the editorial when you have earned
+    # it. The ETag cache is keyed on the url alone, so that read skips it.
+    return get("/problems/%s" % slug, use_cache=not fresh)
 
 def potd():
     return get("/potd", use_cache=False)
