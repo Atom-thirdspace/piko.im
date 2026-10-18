@@ -488,6 +488,7 @@
     background-color: var(--page)   !important;
     border-radius: 0.85rem;
 }
+
 .ribbon {
     position: absolute;
     right: -3vw;
