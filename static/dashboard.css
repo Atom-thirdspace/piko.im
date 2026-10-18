@@ -489,7 +489,6 @@
     border-radius: 0.85rem;
 }
 
-
 .ribbon {
     position: absolute;
     right: -3vw;
@@ -521,3 +520,18 @@
 .rb5{
     top: 50vh;
 }
+/* The minimap fills its grid row rather than deriving height from the
+   artwork's 2.99:1 ratio - that ratio is taller than four rows of this
+   fixed-height grid, so it overflowed and the next card painted over it. */
+.map { align-self: stretch; }
+
+.map .map__link { height: 100%; }
+
+.map .mapart {
+    height: 100%;
+    aspect-ratio: auto;
+}
+
+/* cover, not contain: the box is now shorter than the art, and contain
+   would shrink it to a strip across the top. */
+.map .mapart__art { background-size: cover; background-position: center; }
