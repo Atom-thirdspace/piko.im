@@ -639,3 +639,8 @@ button:hover { background: var(--brand-press); }
 
 button--quiet { border-color: var(--line-strong); color: var(--ink-soft); padding: .45rem .9rem; }
 
+.landing-nav {
+    display: flex;
+    gap: 1.5rem;
+}
+
