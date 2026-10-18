@@ -129,6 +129,12 @@
             {% endfor %}
           </select>
           <button type="button" class="ws__ghost" id="reset">Reset</button>
+
+          <label class="ws__optin" id="browserrun-optin" hidden
+                 title="Downloads clang and wasm-ld (about 26MB, once). Run happens in this tab; Submit always uses the judge.">
+            <input type="checkbox" id="browserrun-toggle">
+            Run C++ here
+          </label>
           {% if can_race %}
             <button type="button" class="ws__ghost" id="race"
                     data-race-url="{{ url_for('gamify.speedrun_start', slug=problem.slug) }}"
@@ -215,6 +221,9 @@
 
 {% block js %}
 <script src="{{ url_for('static', filename='editor.js') }}"></script>
+<script src="{{ url_for('static', filename='browserrun.js') }}"
+        data-worker-python="{{ url_for('static', filename='pyrun.worker.js') }}"
+        data-worker-cpp="{{ url_for('static', filename='cpprun.worker.js') }}"></script>
 <script>
 (function () {
   "use strict";
@@ -278,6 +287,55 @@
     editor.setValue(window.PikoEditor.starter(lang));
     editor.focus();
   });
+
+  /* ------------------------------------------------- python in the tab */
+
+  var brs = document.querySelector('script[data-worker-python]');
+  if (window.PikoRun && brs) {
+    window.PikoRun.configure('python', brs.dataset.workerPython);
+    window.PikoRun.configure('cpp', brs.dataset.workerCpp);
+  }
+
+  /* Pyodide is 9.6MB of wasm, so it waits for a sign they mean to write
+     code rather than taxing everyone who opens the page to read it. */
+  var warmed = {};
+
+  function warmBrowserRun() {
+    if (warmed[lang] || !window.PikoRun) { return; }
+    if (!window.PikoRun.supports(lang)) { return; }
+    warmed[lang] = true;
+    window.PikoRun.preload(lang);
+  }
+
+  var area = document.querySelector('#editor .ed__area');
+  if (area) { area.addEventListener('focus', warmBrowserRun); }
+  runBtn.addEventListener('mouseenter', warmBrowserRun);
+
+  /* ------------------------------------------- the C++ toolchain opt-in */
+
+  var optBox = document.getElementById('browserrun-optin');
+  var optChk = document.getElementById('browserrun-toggle');
+
+  function syncOptIn() {
+    if (!optBox || !window.PikoRun) { return; }
+    var offered = window.PikoRun.offers(lang);
+    optBox.hidden = !offered;
+    if (offered) { optChk.checked = window.PikoRun.enabled(lang); }
+  }
+
+  if (optChk) {
+    optChk.addEventListener('change', function () {
+      window.PikoRun.setEnabled(lang, optChk.checked);
+      warmed[lang] = false;
+      if (optChk.checked) { warmBrowserRun(); }
+    });
+  }
+
+  langSel.addEventListener('change', function () {
+    syncOptIn();
+    warmBrowserRun();
+  });
+  syncOptIn();
 
   /* -------------------------------------------------------------- tabs */
 
@@ -356,6 +414,18 @@
   var POLL_MS = 400;
   var RUN_TRIES = 60;          /* 400ms x 60 = 24s */
 
+  /* The server sends a label with every verdict; the browser path has to
+     name its own. */
+  var LABELS = {
+    ok: 'Finished',
+    compile_error: 'Compilation Error',
+    runtime_error: 'Runtime Error',
+    time_limit_exceeded: 'Time Limit Exceeded',
+    memory_limit_exceeded: 'Memory Limit Exceeded',
+    output_limit_exceeded: 'Output Limit Exceeded',
+    internal_error: 'Internal Error'
+  };
+
   function poll(url, id, tries) {
     return fetch(url + id, { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
@@ -395,6 +465,11 @@
     if (data.compile_output) { out.appendChild(block('Compiler', data.compile_output, true)); }
     if (data.error) { out.appendChild(block('Judge', data.error, true)); }
 
+    if (data.where === 'browser') {
+      out.appendChild(el('p', 'out__idle', 'Ran in your browser. Submit runs '
+        + 'it on the judge against the hidden tests.'));
+    }
+
     if (data.verdict === 'time_limit_exceeded') {
       out.appendChild(el('p', 'out__idle', 'It was still running when the clock ran out.'));
     } else if (data.verdict === 'memory_limit_exceeded') {
@@ -416,9 +491,34 @@
 
     runBtn.disabled = subBtn.disabled = true;
     runBtn.textContent = 'Running…';
-    busy('Starting a container…');
 
     try {
+      if (window.PikoRun && window.PikoRun.supports(lang)) {
+        if (!warmed[lang]) {
+          busy(lang === 'cpp'
+            ? 'Fetching the C++ toolchain (first run only, ~26MB)…'
+            : 'Loading Python (first run only)…');
+        } else {
+          busy(lang === 'cpp' ? 'Compiling here in your browser…'
+                              : 'Running here in your browser…');
+        }
+        warmed[lang] = true;
+
+        var local = await window.PikoRun.run(
+          lang, source, stdinBox.value,
+          function (phase) {
+            if (phase === 'running') { busy('Running here in your browser…'); }
+          });
+
+        if (local && local.verdict !== 'internal_error') {
+          local.label = LABELS[local.verdict] || local.verdict;
+          renderRun(local);
+          return;
+        }
+        /* The engine could not start - fall through to the judge. */
+      }
+
+      busy('Starting a container…');
       var res = await post(page.dataset.runUrl, {
         language: lang, source: source, stdin: stdinBox.value
       });
