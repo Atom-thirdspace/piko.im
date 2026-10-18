@@ -217,6 +217,21 @@
     </div>
   </div>
 </main>
+{% if hints %}
+  <dialog class="hintdlg" id="hint-dialog" aria-labelledby="hintdlg-title">
+    <h2 class="hintdlg__title" id="hintdlg-title">Open this hint?</h2>
+    <p class="hintdlg__lede" data-hintdlg-lede></p>
+
+    <dl class="hintdlg__lines" data-hintdlg-lines></dl>
+
+    <p class="hintdlg__error" data-hintdlg-error hidden></p>
+
+    <div class="hintdlg__actions">
+      <button type="button" class="ws__ghost" data-hintdlg-cancel>Keep trying</button>
+      <button type="button" class="ws__run" data-hintdlg-confirm>Open hint</button>
+    </div>
+  </dialog>
+{% endif %}
 {% endblock content %}
 
 {% block js %}
@@ -465,10 +480,6 @@
     if (data.compile_output) { out.appendChild(block('Compiler', data.compile_output, true)); }
     if (data.error) { out.appendChild(block('Judge', data.error, true)); }
 
-    if (data.where === 'browser') {
-      out.appendChild(el('p', 'out__idle', 'Ran in your browser. Submit runs '
-        + 'it on the judge against the hidden tests.'));
-    }
 
     if (data.verdict === 'time_limit_exceeded') {
       out.appendChild(el('p', 'out__idle', 'It was still running when the clock ran out.'));
@@ -843,54 +854,94 @@
 
   /* -------------------------------------------------------------- race */
 
-  var raceBtn = document.getElementById('race');
-  if (raceBtn) {
-    var raceTimer = null;
-
-    raceBtn.addEventListener('click', async function () {
-      if (raceTimer) { return; }
-      raceBtn.disabled = true;
-      try {
-        var res = await post(raceBtn.dataset.raceUrl, {});
-        var data = await res.json();
-        if (!res.ok) {
-          window.alert(data.error || 'Could not start a race.');
-          raceBtn.disabled = false;
-          return;
-        }
-
-        var startedAt = Date.now();
-        raceBtn.classList.add('is-racing');
-        raceTimer = setInterval(function () {
-          var s = Math.floor((Date.now() - startedAt) / 1000);
-          raceBtn.textContent = 'Racing ' + Math.floor(s / 60)
-            + ':' + String(s % 60).padStart(2, '0');
-        }, 500);
-      } catch (err) {
-        raceBtn.disabled = false;
-      }
-    });
-  }
-
   /* ------------------------------------------------------------- hints */
 
   var hintBox = document.querySelector('.hints');
+  var hintDlg = document.getElementById('hint-dialog');
+
+  function hintDialogAsk(cost, coins, affordable) {
+    var lede = hintDlg.querySelector('[data-hintdlg-lede]');
+    var lines = hintDlg.querySelector('[data-hintdlg-lines]');
+    var errBox = hintDlg.querySelector('[data-hintdlg-error]');
+    var ok = hintDlg.querySelector('[data-hintdlg-confirm]');
+    var no = hintDlg.querySelector('[data-hintdlg-cancel]');
+
+    errBox.hidden = true;
+    errBox.textContent = '';
+    ok.disabled = !affordable;
+    ok.textContent = affordable ? 'Open hint' : 'Not enough coins';
+
+    lede.textContent = affordable
+      ? 'This gives up the no-hints bonus on this problem. That cannot be undone.'
+      : 'You need ' + (cost - coins) + ' more coin'
+        + ((cost - coins) === 1 ? '' : 's') + ' to open this one.';
+
+    lines.textContent = '';
+    var rows = [];
+    if (cost) {
+      rows.push(['Cost', cost + ' coins']);
+      rows.push(['Your balance', coins + ' coins']);
+      if (affordable) { rows.push(['After', (coins - cost) + ' coins']); }
+    }
+    var award = hintBox.querySelector('[data-award]');
+    if (award) { rows.push(['This problem pays', award.textContent + ' XP now']); }
+
+    rows.forEach(function (row) {
+      var dt = document.createElement('dt');
+      dt.textContent = row[0];
+      var dd = document.createElement('dd');
+      dd.textContent = row[1];
+      lines.appendChild(dt);
+      lines.appendChild(dd);
+    });
+
+    return new Promise(function (resolve) {
+      function done(answer) {
+        ok.removeEventListener('click', yes);
+        no.removeEventListener('click', nope);
+        hintDlg.removeEventListener('cancel', nope);
+        resolve(answer);
+      }
+      function yes() { done(true); }
+      function nope(ev) { if (ev) { ev.preventDefault(); } hintDlg.close(); done(false); }
+
+      ok.addEventListener('click', yes);
+      no.addEventListener('click', nope);
+      hintDlg.addEventListener('cancel', nope);   // Esc
+      hintDlg.showModal();
+      (affordable ? ok : no).focus();
+    });
+  }
+
+  function hintDialogError(message) {
+    var errBox = hintDlg.querySelector('[data-hintdlg-error]');
+    var ok = hintDlg.querySelector('[data-hintdlg-confirm]');
+    errBox.textContent = message;
+    errBox.hidden = false;
+    ok.disabled = true;
+  }
+
   if (hintBox) {
     hintBox.addEventListener('click', async function (ev) {
       var btn = ev.target.closest('.hint__open');
       if (!btn) { return; }
       var card = btn.closest('.hint');
       var award = hintBox.querySelector('[data-award]');
-
       var cost = parseInt(hintBox.dataset.hintCost, 10) || 0;
-      var ask = cost
-        ? 'Open this hint? It costs ' + cost
-          + ' coins and lowers what this problem pays.'
-        : 'Open this hint? It lowers what this problem pays.';
+      var coins = parseInt(hintBox.dataset.coins, 10) || 0;
 
-      // Confirm only while it still costs something.
-      if (award && !window.confirm(ask)) {
-        return;
+      /* Solved already: hints are free, so there is nothing to weigh up. */
+      if (award) {
+        var answered;
+        if (hintDlg && typeof hintDlg.showModal === 'function') {
+          answered = await hintDialogAsk(cost, coins, coins >= cost);
+        } else {
+          answered = window.confirm(cost
+            ? 'Open this hint? It costs ' + cost
+              + ' coins and lowers what this problem pays.'
+            : 'Open this hint? It lowers what this problem pays.');
+        }
+        if (!answered) { return; }
       }
 
       btn.disabled = true;
@@ -901,13 +952,20 @@
         });
 
         if (!res.ok) {
-          var problem_ = await res.json().catch(function () { return {}; });
+          var bad = await res.json().catch(function () { return {}; });
           btn.disabled = false;
-          if (problem_.error) { window.alert(problem_.error); }
+          if (bad.coins !== undefined) { hintBox.dataset.coins = bad.coins; }
+          var message = bad.error || 'Could not open that hint.';
+          if (hintDlg && hintDlg.open) { hintDialogError(message); }
+          else if (hintDlg && hintDlg.showModal) {
+            hintDialogAsk(cost, parseInt(hintBox.dataset.coins, 10) || 0, false);
+            hintDialogError(message);
+          } else { window.alert(message); }
           return;
         }
 
         var data = await res.json();
+        if (hintDlg && hintDlg.open) { hintDlg.close(); }
         if (data.coins !== undefined) { hintBox.dataset.coins = data.coins; }
         var body = card.querySelector('.hint__body');
         body.innerHTML = data.body;
@@ -919,6 +977,9 @@
         if (note) { note.textContent = data.award_note; }
       } catch (err) {
         btn.disabled = false;
+        if (hintDlg && hintDlg.open) {
+          hintDialogError('Lost contact with Piko. Try again.');
+        }
       }
     });
   }
