@@ -488,3 +488,34 @@
     background-color: var(--page)   !important;
     border-radius: 0.85rem;
 }
+.ribbon {
+    position: absolute;
+    right: -3vw;
+    height: 12vh;
+    transition: 0.3s;
+}
+
+.ribbon:hover {
+    right: 0vw;
+}
+
+
+.rb1 {
+    top: 10vh;
+}
+
+.rb2 {
+    top: 20vh;
+}
+
+.rb3 {
+    top: 30vh;
+}
+
+.rb4 {
+    top: 40vh;
+}
+
+.rb5{
+    top: 50vh;
+}
