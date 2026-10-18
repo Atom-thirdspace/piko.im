@@ -2,6 +2,9 @@
     position: relative;
     width: 100%;
     aspect-ratio: 2169 / 725;
+    /* A floor, so the panel can never collapse to nothing and leave the
+       step markers stacked on one line with no art behind them. */
+    min-height: 9rem;
     container-type: inline-size;
 }
 
