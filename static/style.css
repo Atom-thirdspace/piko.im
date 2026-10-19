@@ -652,13 +652,21 @@ button--quiet { border-color: var(--line-strong); color: var(--ink-soft); paddin
     position: relative;
 }
 
-.section-2 h1 {
+.h11  {
     font-family: face;
     font-weight: 1;
     font-size: 6vw;
     position: absolute;
     left: 20vw;
     top: 6vh;
+    width: fit-content;
+}.h12  {
+    font-family: face;
+    font-weight: 1;
+    font-size: 6vw;
+    position: absolute;
+    left: 20vw;
+    top: 70vh;
     width: fit-content;
 }
 
@@ -697,4 +705,74 @@ button--quiet { border-color: var(--line-strong); color: var(--ink-soft); paddin
 .ght.is-visible path {
     opacity: 1;
     stroke-dashoffset: 0;
+}
+
+.logo-marquee {
+    --logo-height: 20rem;
+    --logo-gap: 76px;
+    --marquee-speed: 45s;
+
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    padding: 28px 0;
+    position: absolute;
+    top: 30vh;
+    z-index: -2;
+
+    mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+);
+-webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+);
+}
+
+.logo-marquee__track {
+    display: flex;
+    width: max-content;
+    animation: logo-marquee-scroll var(--marquee-speed) linear infinite;
+    will-change: transform;
+}
+.logo-marquee__group {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-shrink: 0;
+    gap: var(--logo-gap);
+    padding-right: var(--logo-gap);
+}
+.logo-marquee__group img {
+    display: block;
+    width: auto;
+    height: var(--logo-height);
+    max-width: 150px;
+    object-fit: contain;
+    flex-shrink: 0;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+.logo-marquee__group img:hover{
+    opacity: 1;
+}
+@keyframes logo-marquee-scroll {
+    from{
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .logo-marquee__track {
+        animation: none;
+    }
 }
