@@ -1,6 +1,7 @@
 import json
 import os
 import stat
+import time
 from pathlib import Path
 
 DEFAULT_API = "https://piko.aryan.my/api/v1"
@@ -37,12 +38,6 @@ def save_token(value, api=None):
         data["api"] = api.rstrip("/")
     _write(data)
 
-def clear_token():
-    data = _read()
-    data.pop("token", None)
-    _write(data)
-    return bool(CONFIG.exists())
-
 def masked(value=None):
     raw = value or token()
     if not raw:
@@ -55,3 +50,31 @@ def set_api(url):
     data = _read()
     data["api"] = url.rstrip("/")
     _write(data)
+
+
+def site():
+    """The web origin, for pages a browser visits rather than API calls."""
+    return api_base().replace("/api/v1", "")
+
+
+def save_oauth(access, refresh, expires_in, api=None):
+    data = _read()
+    data["token"] = (access or "").strip()
+    data["refresh_token"] = (refresh or "").strip()
+    data["expires_at"] = int(time.time()) + int(expires_in or 0)
+    if api:
+        data["api"] = api.rstrip("/")
+    _write(data)
+
+
+def oauth_state():
+    data = _read()
+    return data.get("refresh_token", ""), int(data.get("expires_at") or 0)
+
+
+def clear_token():
+    data = _read()
+    for key in ("token", "refresh_token", "expires_at"):
+        data.pop(key, None)
+    _write(data)
+    return bool(CONFIG.exists())

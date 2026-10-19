@@ -11,29 +11,71 @@ from .output import Fail, amber, bold, dim, green, red
 POLL_EVERY = 1.0
 POLL_LIMIT = 120
 
-def cmd_login(args):
-    print("Make a key at %s/settings/#api"
-          % config.api_base().replace("/api/v1", ""))
-    print(dim("catalog:read and me:read to browse; add submissions:write "
-              "to submit from here."))
-    raw = args.token or input("Paste your key: ").strip()
-    if not raw.startswith("piko_sk_"):
-        raise Fail("That doesn't look like a Piko key (they start piko_sk_).")
+SCOPES = ["catalog:read", "me:read", "submissions:read", "submissions:write"]
 
-    config.save_token(raw, api=args.api)
+
+def _signed_in():
     who = api.whoami()
     print(green("Signed in as ") + bold(who.get("username") or "?")
           + dim("  (%s)" % config.masked()))
     scopes = (who.get("key") or {}).get("scopes") or []
+    output.note("scopes: " + (", ".join(scopes) or "none"))
     if "submissions:write" not in scopes:
-        output.note("This key cannot submit. Add submissions:write to use "
-                    "`piko submit`.")
+        output.note("This key cannot submit.")
     return 0
 
 
+def cmd_login(args):
+    """Sign in through the browser, or take a pasted key with --token."""
+    if args.token:
+        if not args.token.startswith("piko_sk_"):
+            raise Fail("That doesn't look like a Piko key (they start piko_sk_).")
+        config.save_token(args.token, api=args.api)
+        return _signed_in()
+
+    from urllib.parse import urlencode
+
+    from . import oauth
+
+    verifier, challenge = oauth.make_pkce()
+    state = oauth.make_pkce()[0][:32]
+
+    # The socket is bound before we ask for a code, so the redirect can
+    # never arrive at a port nothing is listening on.
+    server, port = oauth.listen()
+    redirect_uri = "http://127.0.0.1:%d/callback" % port
+
+    url = config.site() + "/oauth/authorize?" + urlencode({
+        "response_type": "code",
+        "client_id": api.CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "scope": " ".join(SCOPES),
+        "state": state,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+    })
+
+    print("Opening your browser to approve this sign-in...")
+    if not oauth.open_browser(url):
+        print("Couldn't open a browser. Go to:")
+        print("  " + bold(url))
+    output.note("Waiting... press Ctrl-C to stop.")
+
+    code = oauth.wait_for_code(server, state)
+    body = api.exchange_code(code, verifier, redirect_uri)
+    config.save_oauth(body["access_token"], body.get("refresh_token", ""),
+                      body.get("expires_in", 3600), api=args.api)
+    return _signed_in()
+
+
 def cmd_logout(_args):
+    # Tell the server first - clearing the file alone leaves a live key.
+    if api.revoke_token():
+        print("Signed out and the key was revoked.")
+    else:
+        print("Key removed from %s" % config.CONFIG)
+        output.note("Nothing to revoke on the server.")
     config.clear_token()
-    print("Key removed from %s" % config.CONFIG)
     return 0
 
 

@@ -140,6 +140,35 @@
       </table>
     {% endif %}
 
+    {% if connected_apps %}
+      <h3 class="key-sub">Connected apps</h3>
+      <p class="key-note">
+        Apps you signed in to with your Piko account. Disconnecting one
+        revokes everything it holds, straight away.
+      </p>
+      <table class="key-table">
+        <tr><th>App</th><th>Allowed</th><th></th></tr>
+        {% for app in connected_apps %}
+          <tr>
+            <td>
+              {{ app.name }}
+              {% if not app.trusted %}
+                <span class="key-warn">unverified</span>
+              {% endif %}
+            </td>
+            <td>{{ app.max_scopes|join(', ') }}</td>
+            <td>
+              <form method="post"
+                    action="{{ url_for('profile.app_disconnect', client_id=app.id) }}">
+                {{ csrf_field() }}
+                <button type="submit">Disconnect</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% endif %}
+
     <form class="auth-form" method="post"
           action="{{ url_for('profile.api_key_create') }}">
       {{ csrf_field() }}

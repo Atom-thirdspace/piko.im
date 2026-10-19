@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="gate">
+  <h1>That sign-in cannot continue</h1>
+  <p class="gate__error">{{ message }}</p>
+  <p class="gate__foot">
+    Nothing was shared, and you can close this tab. If an app sent you here,
+    its setup is wrong rather than anything you did.
+  </p>
+</main>
+{% endblock content %}

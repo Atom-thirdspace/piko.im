@@ -38,6 +38,8 @@ from server.notification_routes import notifications_bp
 from server.search import search_bp
 from server.contests import contests_bp
 from server.health import health_bp
+from server.oauthserver import oauth_bp
+from server.oauthserver import register_cli as register_oauth_cli
 from server import notify as _notify
 from server.models import unread_count as _unread
 from server.memo import per_request
@@ -89,6 +91,7 @@ app.register_blueprint(notifications_bp)
 app.register_blueprint(search_bp)
 app.register_blueprint(contests_bp)
 app.register_blueprint(health_bp)
+app.register_blueprint(oauth_bp)
 app.register_blueprint(tutor_pages_bp)
 app.register_blueprint(arena_bp)
 app.register_blueprint(gamify_bp)
@@ -101,6 +104,7 @@ register_achievement_cli(app)
 register_arena_cli(app)
 register_similarity_cli(app)
 register_generation_cli(app)
+register_oauth_cli(app)
 app.jinja_env.globals["current_user"] = current_user
 app.jinja_env.globals["is_admin"] = is_admin
 app.jinja_env.filters["interest_labels"] = interest_labels

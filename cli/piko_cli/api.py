@@ -1,5 +1,6 @@
 import hashlib
 import json
+import time
 
 import requests
 
@@ -28,8 +29,68 @@ def _save_cache(url, etag, body):
     except OSError:
         pass
 
+CLIENT_ID = "piko-cli"
+
+
+def _oauth(form):
+    """Talk to /oauth/token, which lives on the site, not under /api/v1."""
+    try:
+        resp = requests.post(config.site() + "/oauth/token", data=form,
+                             timeout=TIMEOUT)
+    except requests.Timeout:
+        raise Fail("Piko took too long to answer. Try again.")
+    except requests.RequestException:
+        raise Fail("Couldn't reach Piko at %s." % config.site())
+
+    try:
+        body = resp.json() if resp.content else {}
+    except ValueError:
+        raise Fail("Piko sent back something unreadable.")
+
+    if resp.status_code != 200:
+        raise Fail(body.get("error_description") or body.get("error")
+                   or "Sign-in failed (%s)." % resp.status_code)
+    return body
+
+
+def exchange_code(code, verifier, redirect_uri):
+    return _oauth({"grant_type": "authorization_code", "client_id": CLIENT_ID,
+                   "code": code, "code_verifier": verifier,
+                   "redirect_uri": redirect_uri})
+
+
+def refresh_if_needed():
+    """Swap a nearly-dead access token for a fresh one, quietly.
+
+    Access tokens last an hour, so without this every command would start
+    failing mid-session an hour after signing in.
+    """
+    refresh, expires_at = config.oauth_state()
+    if not refresh or expires_at - time.time() > 60:
+        return
+    body = _oauth({"grant_type": "refresh_token", "client_id": CLIENT_ID,
+                   "refresh_token": refresh})
+    config.save_oauth(body["access_token"], body.get("refresh_token", refresh),
+                      body.get("expires_in", 3600))
+
+
+def revoke_token():
+    refresh, _ = config.oauth_state()
+    if not refresh:
+        return False
+    try:
+        requests.post(config.site() + "/oauth/revoke",
+                      data={"token": refresh, "client_id": CLIENT_ID},
+                      timeout=TIMEOUT)
+    except requests.RequestException:
+        return False
+    return True
+
+
 def _headers(auth=True):
     headers = {"Accept": "application/json", "User-Agent": "piko-cli"}
+    if auth:
+        refresh_if_needed()
     tok = config.token() if auth else ""
     if tok:
         headers["Authorization"] = "Bearer " + tok

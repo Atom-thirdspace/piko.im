@@ -8,6 +8,8 @@ from . import twofa
 from .achievements import describe
 from .apikeys import masked as mask, mint, revoke as revoke_key, user_keys
 from .admin_gate import is_admin
+from .oauthserver import connected_apps as oauth_connected_apps
+from .oauthserver import disconnect as oauth_disconnect
 from .webauthn_keys import KeyError_ as WebAuthnError
 from .webauthn_keys import begin_registration, configured as webauthn_configured
 from .webauthn_keys import finish_registration
@@ -249,6 +251,7 @@ def _render_settings(errors=None, form=None, status=200):
         webauthn_on=webauthn_configured(),
         api_keys=user_keys(user),
         api_scopes=API_SCOPES,
+        connected_apps=oauth_connected_apps(user),
         mask=mask,
         # Popped, not read: the raw key exists nowhere else and must not
         # survive a refresh of the settings page.
@@ -587,3 +590,17 @@ def buy_streak_freeze():
     ok, message = buy_freeze(current_user())
     flash(message, "success" if ok else "error")
     return redirect(request.referrer or url_for("dashboard.index"))
+
+
+@profile_bp.route("/settings/apps/<int:client_id>/disconnect", methods=["POST"])
+@login_required
+def app_disconnect(client_id):
+    """Kill every token this app holds for this person, not just the latest."""
+    from .models import OAuthClient
+
+    client = db.session.get(OAuthClient, client_id)
+    if client is None:
+        abort(404)
+    oauth_disconnect(current_user(), client)
+    flash("Disconnected %s." % client.name, "success")
+    return redirect(url_for("profile.settings") + "#api")

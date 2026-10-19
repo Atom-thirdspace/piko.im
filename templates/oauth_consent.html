@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="gate gate--wide">
+  <h1>Allow {{ client.name }} to use your Piko account?</h1>
+
+  <p class="gate__sub">
+    Signed in as <b>{{ current_user().username }}</b>.
+    {% if client.owner %}Made by <b>{{ client.owner.username }}</b>.{% endif %}
+  </p>
+
+  {% if not client.trusted %}
+    <p class="gate__error">
+      This app has not been reviewed by Piko. Only allow it if you trust
+      whoever gave you the link.
+    </p>
+  {% endif %}
+
+  {% if client.description %}<p>{{ client.description }}</p>{% endif %}
+
+  <ul class="cliauth__scopes">
+    {% for scope in scopes %}
+      <li><code>{{ scope }}</code> &middot; {{ labels.get(scope, scope) }}</li>
+    {% endfor %}
+  </ul>
+
+  <p class="gate__foot">
+    It will be sent back to
+    <b>{{ params.get('redirect_uri', '')|replace('https://', '')|truncate(60) }}</b>.
+    You can disconnect it any time in Settings.
+  </p>
+
+  <form method="post" class="cliauth__actions">
+    {{ csrf_field() }}
+    {% for name in ['client_id', 'redirect_uri', 'response_type', 'scope',
+                    'state', 'code_challenge', 'code_challenge_method'] %}
+      <input type="hidden" name="{{ name }}" value="{{ params.get(name, '') }}">
+    {% endfor %}
+    <button type="submit" name="answer" value="no" class="ws__ghost">Cancel</button>
+    <button type="submit" name="answer" value="yes" class="ws__run">Allow</button>
+  </form>
+</main>
+{% endblock content %}

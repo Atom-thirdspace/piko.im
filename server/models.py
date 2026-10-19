@@ -1601,6 +1601,9 @@ class ApiKey(db.Model):
     expires_at = db.Column(db.DateTime(timezone=True))
     revoked_at = db.Column(db.DateTime(timezone=True))
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+    oauth_client_id = db.Column(
+        db.Integer, db.ForeignKey("oauth_clients.id", ondelete="CASCADE"),
+        index=True)
 
     user = db.relationship("User")
 
@@ -1611,6 +1614,73 @@ class ApiKey(db.Model):
 
     def allows(self, scope):
         return self.is_live and scope in (self.scopes or [])
+
+class OAuthClient(db.Model):
+    __tablename__ = "oauth_clients"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.String(40), unique=True, nullable=False)
+    secret_hash = db.Column(db.String(64))
+    name = db.Column(db.String(80), nullable=False)
+    description = db.Column(db.String(300), nullable=False, default="")
+    homepage_url = db.Column(db.String(300), nullable=False, default="")
+    redirect_uris = db.Column(ARRAY(db.Text), nullable=False, default=list)
+    max_scopes = db.Column(ARRAY(db.Text), nullable=False, default=list)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"))
+    first_party = db.Column(db.Boolean, nullable=False, default=False)
+    verified_at = db.Column(db.DateTime(timezone=True))
+    revoked_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    owner = db.relationship("User")
+
+    @property
+    def confidential(self):
+        return bool(self.secret_hash)
+
+    @property
+    def trusted(self):
+        return self.first_party or self.verified_at is not None
+
+    @property
+    def is_live(self):
+        return self.revoked_at is None
+
+
+class OAuthCode(db.Model):
+    __tablename__ = "oauth_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    code_hash = db.Column(db.String(64), unique=True, nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey("oauth_clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    redirect_uri = db.Column(db.String(300), nullable=False)
+    scopes = db.Column(ARRAY(db.Text), nullable=False, default=list)
+    code_challenge = db.Column(db.String(128), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+
+
+class OAuthRefresh(db.Model):
+    __tablename__ = "oauth_refresh_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    family = db.Column(db.String(32), nullable=False, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("oauth_clients.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    api_key_id = db.Column(db.Integer, db.ForeignKey("api_keys.id", ondelete="SET NULL"))
+    scopes = db.Column(ARRAY(db.Text), nullable=False, default=list)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used_at = db.Column(db.DateTime(timezone=True))
+    revoked_at = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = db.relationship("User")
+    client = db.relationship("OAuthClient")
 
 
 CLASSROOM_SOURCES = ("polar", "academic")

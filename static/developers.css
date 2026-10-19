@@ -110,3 +110,26 @@
 .key-scopes { border: 0; padding: 0; margin: .6rem 0; }
 .key-scopes legend { font-size: .82rem; color: var(--ink-soft); padding: 0; }
 .key-scopes label { display: block; font-size: .88rem; margin: .25rem 0; }
+
+.key-sub {
+    margin: 1.6rem 0 .3rem;
+    font-size: 1rem;
+}
+
+.key-note {
+    margin: 0 0 .6rem;
+    color: var(--ink-soft);
+    font-size: .85rem;
+}
+
+.key-warn {
+    display: inline-block;
+    margin-left: .4rem;
+    padding: .05rem .45rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}

@@ -15,14 +15,24 @@ TOUCH_EVERY = timedelta(minutes=5)
 def _hash(raw):
     return hashlib.sha256((raw or "").encode("utf-8")).hexdigest()
 
-def mint(user, name="", scopes=None, days=None):
-    live = [k for k in user_keys(user) if k.is_live]
-    if len(live) >= MAX_KEYS_PER_USER:
-        raise ValueError("You already have %d live keys." % MAX_KEYS_PER_USER)
+def mint(user, name="", scopes=None, days=None, expires_in=None,
+         oauth_client=None):
+    if oauth_client is None:
+        live = [k for k in user_keys(user)
+                if k.is_live and k.oauth_client_id is None]
+        if len(live) >= MAX_KEYS_PER_USER:
+            raise ValueError("You already have %d live keys." % MAX_KEYS_PER_USER)
 
     wanted = [s for s in (scopes or DEFAULT_SCOPES) if s in API_SCOPES]
     if not wanted:
         wanted = list(DEFAULT_SCOPES)
+
+    if expires_in is not None:
+        expires = _utcnow() + expires_in
+    elif days:
+        expires = _utcnow() + timedelta(days=int(days))
+    else:
+        expires = None
 
     secret = secrets.token_urlsafe(SECRET_BYTES)
     raw = PREFIX + secret
@@ -32,7 +42,8 @@ def mint(user, name="", scopes=None, days=None):
         prefix=secret[:PREFIX_LEN],
         key_hash=_hash(raw),
         scopes=wanted,
-        expires_at=(_utcnow() + timedelta(days=int(days))) if days else None,
+        expires_at=expires,
+        oauth_client_id=oauth_client.id if oauth_client is not None else None,
     )
     db.session.add(row)
     db.session.commit()
@@ -93,7 +104,7 @@ def revoke(row):
 
 def user_keys(user):
     return db.session.execute(
-        db.select(ApiKey).filter_by(user_id=user.id)
+        db.select(ApiKey).filter_by(user_id=user.id, oauth_client_id=None)
         .order_by(ApiKey.created_at.desc())
     ).scalars().all()
 
