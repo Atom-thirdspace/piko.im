@@ -644,3 +644,32 @@ button--quiet { border-color: var(--line-strong); color: var(--ink-soft); paddin
     gap: 1.5rem;
 }
 
+
+
+.section-2 {
+    height: 100vh;
+    margin-top: 12.5vh;
+    position: relative;
+}
+
+.section-2 h1 {
+    font-family: face;
+    font-weight: 1;
+    font-size: 6vw;
+    position: absolute;
+    left: 20vw;
+    top: 6vh;
+    width: fit-content;
+}
+
+.imf {
+    width: 100%;
+    position: absolute;
+    top: 0;
+    z-index: -1;
+}
+
+.ght {
+    position: absolute;
+    top: 25vh;
+}
