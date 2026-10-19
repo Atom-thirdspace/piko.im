@@ -455,7 +455,7 @@ body {
     box-sizing: border-box;
     padding: .5rem .65rem;
     border-radius: 10px;
-    color: var(--ink);
+    color: #2a1a10;
     text-align: left;
     text-decoration: none;
     font-size: .88rem;
