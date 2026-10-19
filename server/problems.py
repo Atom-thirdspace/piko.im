@@ -3,7 +3,6 @@ import hashlib
 from flask import (Blueprint, abort, flash, jsonify, redirect, render_template,
                    request, url_for)
 
-from .content import visible
 from .judge import LANGUAGES, verdicts as V
 from .learning.markdown import render as render_md
 from .models import (JudgeJob, Lesson, Problem, ProblemHint, SavedTest,
@@ -15,14 +14,13 @@ from .ratelimit import run_block_reason, run_headroom, submit_block_reason
 from .progress import streak_state, user_today
 from .xp_rules import solve_award, summarise, total
 from .session import current_user, login_required
-from .content import may_see
+from .content import may_see, visible
+from .models import ProblemSolve
 
 problems_bp = Blueprint("problems", __name__)
 
 
 def _projected(user, problem):
-    """What the *next* submission would pay, so the panel tells the truth
-    after a failed attempt as well as before the first one."""
     parts = solve_award(problem, used_hints(user.id, problem.id),
                         attempts_on(user.id, problem.id) + 1)
     return {"total": total(parts), "summary": summarise(parts)}
@@ -32,6 +30,8 @@ MAX_STDIN_BYTES = 16 * 1024
 
 MAX_SAVED_TESTS = 20
 MAX_BATCH_RUN = 10
+
+BROWSE_PAGE_SIZE = 24
 
 
 def _problem_or_404(slug):
@@ -47,6 +47,71 @@ def _problem_or_404(slug):
         return problem
     abort(404)
 
+
+@problems_bp.route("/problems/")
+def index():
+    from .learning.catalog import TOPICS
+
+    user = current_user()
+    topic = (request.args.get("topic") or "").strip()
+    difficulty = (request.args.get("difficulty") or "").strip()
+    query = (request.args.get("q") or "").strip()
+    try:
+        page_no = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page_no = 1
+
+    stmt = visible(db.select(Problem), Problem, user)
+    if topic:
+        stmt = stmt.where(Problem.topic == topic)
+    if difficulty in ("easy", "medium", "hard"):
+        stmt = stmt.where(Problem.difficulty == difficulty)
+    if query:
+        like = "%%%s%%" % query.replace("%", "").replace("_", "")
+        stmt = stmt.where(db.or_(Problem.title.ilike(like),
+                                 Problem.slug.ilike(like)))
+
+    order = {"easy": 0, "medium": 1, "hard": 2}
+    stmt = stmt.order_by(
+        db.case(order, value=Problem.difficulty, else_=3), Problem.title)
+
+    total = db.session.execute(
+        db.select(db.func.count()).select_from(stmt.subquery())).scalar() or 0
+    rows = db.session.execute(
+        stmt.limit(BROWSE_PAGE_SIZE)
+        .offset((page_no - 1) * BROWSE_PAGE_SIZE)).scalars().all()
+
+    solved = set()
+    if user is not None and rows:
+        solved = set(db.session.execute(
+            db.select(ProblemSolve.problem_id).where(
+                ProblemSolve.user_id == user.id,
+                ProblemSolve.problem_id.in_([p.id for p in rows]))
+        ).scalars())
+
+    def link(**over):
+        """This page's url with some filters changed and the rest kept.
+
+        Lives here rather than in a Jinja macro: templates have no dict
+        comprehension and macros take no **kwargs.
+        """
+        args = {"topic": topic, "difficulty": difficulty,
+                "q": query, "page": page_no}
+        args.update(over)
+        return url_for("problems.index", **{
+            k: v for k, v in args.items()
+            if v and not (k == "page" and v == 1)})
+
+    return render_template(
+        "problems/index.html",
+        problems=rows,
+        solved=solved,
+        topics=TOPICS,
+        link=link,
+        filters={"topic": topic, "difficulty": difficulty, "q": query},
+        pager={"page": page_no, "total": total,
+               "pages": max(1, -(-total // BROWSE_PAGE_SIZE))},
+    )
 
 
 @problems_bp.route("/problems/today/")

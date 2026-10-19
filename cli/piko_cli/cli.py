@@ -506,7 +506,7 @@ def cmd_watch(args):
 
 def cmd_open(args):
     site = config.api_base().replace("/api/v1", "")
-    url = site + ("/problems/%s/" % args.slug if args.slug else "/")
+    url = site + ("/problems/%s/" % args.slug if args.slug else "/problems/")
     print("Opening " + url)
     webbrowser.open(url)
     return 0

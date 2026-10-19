@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='problems.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="pl">
+  <header class="pl__head">
+    <h1>Problems</h1>
+    <p class="pl__lede">
+      {{ pager.total }} problem{{ '' if pager.total == 1 else 's' }}
+      {%- if filters.topic or filters.difficulty or filters.q %} matching your filters{% endif %}.
+    </p>
+  </header>
+
+  <form class="pl__search" method="get" action="{{ url_for('problems.index') }}">
+    <input type="search" name="q" value="{{ filters.q }}"
+           placeholder="Search problems" aria-label="Search problems">
+    {% if filters.topic %}<input type="hidden" name="topic" value="{{ filters.topic }}">{% endif %}
+    {% if filters.difficulty %}<input type="hidden" name="difficulty" value="{{ filters.difficulty }}">{% endif %}
+    <button type="submit">Search</button>
+  </form>
+
+  <nav class="pl__filters" aria-label="Filters">
+    <div class="pl__row">
+      <span class="pl__label">Difficulty</span>
+      <a class="pl__chip {{ 'is-on' if not filters.difficulty }}"
+         href="{{ link(difficulty=None, page=None) }}">Any</a>
+      {% for level in ['easy', 'medium', 'hard'] %}
+        <a class="pl__chip pl__chip--{{ level }} {{ 'is-on' if filters.difficulty == level }}"
+           href="{{ link(difficulty=level, page=None) }}">{{ level }}</a>
+      {% endfor %}
+    </div>
+
+    <div class="pl__row">
+      <span class="pl__label">Topic</span>
+      <a class="pl__chip {{ 'is-on' if not filters.topic }}"
+         href="{{ link(topic=None, page=None) }}">All</a>
+      {% for key, label in topics %}
+        <a class="pl__chip {{ 'is-on' if filters.topic == key }}"
+           href="{{ link(topic=key, page=None) }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </nav>
+
+  {% if problems %}
+    <ul class="pl__list">
+      {% for p in problems %}
+        <li class="pl__item {{ 'is-solved' if p.id in solved }}">
+          <a class="pl__link" href="{{ url_for('problems.page', slug=p.slug) }}">
+            <span class="pl__tick" aria-hidden="true">{{ '&#10003;' | safe if p.id in solved }}</span>
+            <span class="pl__name">
+              {{ p.title }}
+              {% if p.status != 'published' %}<span class="pl__draft">draft</span>{% endif %}
+            </span>
+            <span class="pl__topic">{{ p.topic or '&mdash;' | safe }}</span>
+            <span class="pl__diff pill pill-{{ p.difficulty }}">{{ p.difficulty }}</span>
+            <span class="pl__xp">{{ p.xp }} XP</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+
+    {% if pager.pages > 1 %}
+      <nav class="pl__pager" aria-label="Pages">
+        {% if pager.page > 1 %}
+          <a href="{{ link(page=pager.page - 1) }}">&larr; Previous</a>
+        {% endif %}
+        <span>Page {{ pager.page }} of {{ pager.pages }}</span>
+        {% if pager.page < pager.pages %}
+          <a href="{{ link(page=pager.page + 1) }}">Next &rarr;</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="pl__empty">
+      <p class="pl__empty-head">Nothing matches that.</p>
+      {% if filters.topic or filters.difficulty or filters.q %}
+        <p><a href="{{ url_for('problems.index') }}">Clear the filters</a></p>
+      {% else %}
+        <p>The catalogue is still being written.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</main>
+{% endblock content %}
