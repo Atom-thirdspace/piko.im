@@ -671,5 +671,30 @@ button--quiet { border-color: var(--line-strong); color: var(--ink-soft); paddin
 
 .ght {
     position: absolute;
-    top: 25vh;
+    top: 24vh;
+    left: 20vw;
+    width: clamp(260px, 31vw, 520px);
+    height: 30px;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.ght path {
+    fill: none;
+    stroke: #f7c865;
+    stroke-width: 7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    filter: url("#rough-land-jobs");
+    stroke-dasharray: 1200;
+    stroke-dashoffset: 1200;
+    opacity: 0;
+    animation: none;
+    transition: stroke-dashoffset 1.1s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.2s ease;
+}
+
+.ght.is-visible path {
+    opacity: 1;
+    stroke-dashoffset: 0;
 }

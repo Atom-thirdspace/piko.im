@@ -187,10 +187,10 @@
 </div>
 </main>
 <section class="section-2">
-  <h1>Land Jobs in</h1>
+  <h1 data-aos="fade" data-aos-delay="200" >Land Jobs in</h1>
   <svg class="pencil-line ght" viewBox="0 0 1000 30" preserveAspectRatio="none">
             <defs>
-                <filter id="rough">
+                <filter id="rough-land-jobs">
                     <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3" result="noise"></feTurbulence>
                     <feDisplacementMap in="SourceGraphic" in2="noise" scale="2"></feDisplacementMap>
                 </filter>
@@ -249,6 +249,20 @@
     };
 
     requestAnimationFrame(animateGallery);
+  }
+
+  const landJobsLine = document.querySelector(".ght");
+  if (landJobsLine && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const landJobsObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          landJobsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.45 });
+
+    landJobsObserver.observe(landJobsLine);
   }
 
   AOS.init();
