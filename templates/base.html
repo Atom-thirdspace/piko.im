@@ -172,6 +172,7 @@
         <span>{{ viewer.xp_total or 0 }} XP</span>
       </p>
       <a href="{{ url_for('profile.me') }}">Profile</a>
+      <a href="{{ url_for('problems.my_submissions') }}">Submissions</a>
       <a href="{{ url_for('profile.settings') }}">Settings</a>
       <hr class="accountmenu__rule">
       <form method="post" action="{{ url_for('auth.logout') }}">

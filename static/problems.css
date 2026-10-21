@@ -129,3 +129,22 @@
     .pl__diff { grid-column: 2 / 4; justify-self: start; }
     .pl__label { width: auto; }
 }
+
+.sub__link { grid-template-columns: 1.4rem 1fr 9rem 5rem 4rem 7rem; }
+
+.sub__verdict { font-size: .8rem; font-weight: 600; color: var(--ink-soft); }
+.sub__verdict--accepted { color: var(--good-solid); }
+.sub__verdict--wrong_answer,
+.sub__verdict--runtime_error,
+.sub__verdict--compile_error { color: var(--brand-ink); }
+
+.sub__score {
+    font-size: .82rem;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 48rem) {
+    .sub__link { grid-template-columns: 1.2rem 1fr auto; }
+    .sub__score { display: none; }
+}

@@ -9,7 +9,7 @@ from .models import (JudgeJob, Lesson, Problem, ProblemHint, SavedTest,
                      ScratchRun, StreakFreezeUse, Submission, User,
                      attempts_on, db, judge_is_live, may_read_editorial,
                      reveal_hint, revealed_hint_ids, saved_tests_for,
-                     solve_percentile, used_hints)
+                     solve_percentile, solve_rates, used_hints)
 from .ratelimit import run_block_reason, run_headroom, submit_block_reason
 from .progress import streak_state, user_today
 from .xp_rules import solve_award, summarise, total
@@ -31,6 +31,7 @@ MAX_STDIN_BYTES = 16 * 1024
 MAX_SAVED_TESTS = 20
 MAX_BATCH_RUN = 10
 
+SUBMISSIONS_PAGE_SIZE = 30
 BROWSE_PAGE_SIZE = 24
 
 
@@ -46,6 +47,47 @@ def _problem_or_404(slug):
     if problem.id in unlocked_problem_ids(user):
         return problem
     abort(404)
+
+
+@problems_bp.route("/submissions/")
+@login_required
+def my_submissions():
+    user = current_user()
+    verdict = (request.args.get("verdict") or "").strip()
+    try:
+        page_no = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        page_no = 1
+
+    stmt = (db.select(Submission, Problem)
+            .join(Problem, Problem.id == Submission.problem_id)
+            .where(Submission.user_id == user.id)
+            .order_by(Submission.created_at.desc()))
+    if verdict:
+        stmt = stmt.where(Submission.verdict == verdict)
+
+    total = db.session.execute(
+        db.select(db.func.count()).select_from(stmt.subquery())).scalar() or 0
+    rows = db.session.execute(
+        stmt.limit(SUBMISSIONS_PAGE_SIZE)
+        .offset((page_no - 1) * SUBMISSIONS_PAGE_SIZE)).all()
+
+    def link(**over):
+        args = {"verdict" : verdict, "page": page_no}
+        args.update(over)
+        return url_for("problems.my_submissions", **{
+            k: v for k, v in args.items()
+            if v and not (k == "page" and v == 1)})
+
+    return render_template(
+        "problems/submissions.html",
+        rows=rows,
+        link=link,
+        verdict=verdict,
+        labels=V.LABELS,
+        pager={"page": page_no, "total": total,
+               "pages": max(1, -(-total // SUBMISSIONS_PAGE_SIZE))},
+    )
 
 
 @problems_bp.route("/problems/")
@@ -89,12 +131,9 @@ def index():
                 ProblemSolve.problem_id.in_([p.id for p in rows]))
         ).scalars())
 
-    def link(**over):
-        """This page's url with some filters changed and the rest kept.
+    rates = solve_rates([p.id for p in rows]) if rows else {}
 
-        Lives here rather than in a Jinja macro: templates have no dict
-        comprehension and macros take no **kwargs.
-        """
+    def link(**over):
         args = {"topic": topic, "difficulty": difficulty,
                 "q": query, "page": page_no}
         args.update(over)
@@ -106,6 +145,7 @@ def index():
         "problems/index.html",
         problems=rows,
         solved=solved,
+        rates=rates,
         topics=TOPICS,
         link=link,
         filters={"topic": topic, "difficulty": difficulty, "q": query},
@@ -133,6 +173,7 @@ def page(slug):
     problem = _problem_or_404(slug)
     user = current_user()
     pro = is_pro(user)
+    rate = solve_rates([problem.id]).get(problem.id)
 
     solved = db.session.execute(
         db.select(Submission.id).filter_by(
@@ -169,6 +210,7 @@ def page(slug):
         solved=solved,
         recent=recent,
         lesson=lesson,
+        rate=rate,
         editorial=editorial,
         verdict_labels=V.LABELS,
         hints=problem.hints,
@@ -195,19 +237,12 @@ def _sha(text):
 
 
 def _tests_fingerprint(problem):
-    """Changes whenever a test is added, edited or reordered - so a cached
-    result from before the edit is never reused."""
     parts = ["%s\x1f%s\x1f%d" % (t.stdin, t.expected_stdout, int(t.is_sample))
              for t in problem.tests]
     return _sha("\x1e".join(parts))
 
 
 def _cached(user, problem, language, source_hash, tests_hash):
-    """The same person resubmitting byte-identical code against unchanged tests.
-
-    Deliberately not shared across users: a cross-user cache would turn the
-    judge into an oracle for whether someone else's exact source passes.
-    """
     return db.session.execute(
         db.select(Submission).filter_by(
             user_id=user.id, problem_id=problem.id, language=language,
@@ -218,12 +253,6 @@ def _cached(user, problem, language, source_hash, tests_hash):
 
 
 def _streak_payload(user, since):
-    """The streak as it stands, plus any freeze this submission's job spent.
-
-    XP and streaks are settled by the worker, so the request cannot know what
-    happened - but freezes are ledgered, and rows written after the
-    submission was created belong to this attempt.
-    """
     state = streak_state(user, user_today(user))
     spent = 0
     if since is not None:

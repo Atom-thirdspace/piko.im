@@ -2651,3 +2651,19 @@ class CustomPathItem(db.Model):
 
     path = db.relationship("CustomPath", back_populates="items")
     lesson = db.relationship("Lesson")
+
+
+def solve_rates(problem_ids):
+    if not problem_ids:
+        return {}
+    rows = db.session.execute(
+        db.select(
+            Submission.problem_id,
+            db.func.count(db.distinct(Submission.user_id)).label("tried"),
+            db.func.count(db.distinct(
+                db.case((Submission.verdict == "accepted", Submission.user_id))
+            )).label("solved"))
+        .where(Submission.problem_id.in_(problem_ids))
+        .group_by(Submission.problem_id)
+    ).all()
+    return {r.problem_id: (r.solved, r.tried) for r in rows}

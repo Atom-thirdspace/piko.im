@@ -36,6 +36,10 @@
       {% if problem.topic %}· {{ problem.topic }}{% endif %}
       · {{ problem.xp }} XP
       · {{ problem.time_limit_sec }}s / {{ problem.memory_mb }}MB
+      {% if rate and rate[1] >= 5 %}
+        · <span class="prob__rate">{{ (100 * rate[0] / rate[1]) | round | int }}%
+          of {{ rate[1] }} solved it</span>
+      {% endif %}
       {% if solved %}· <span class="pill pill-done">Solved</span>{% endif %}
       {% if solved %}
         · <a href="{{ url_for('problems.solutions', slug=problem.slug) }}">Solutions</a>

@@ -56,7 +56,14 @@
             </span>
             <span class="pl__topic">{{ p.topic or '&mdash;' | safe }}</span>
             <span class="pl__diff pill pill-{{ p.difficulty }}">{{ p.difficulty }}</span>
-            <span class="pl__xp">{{ p.xp }} XP</span>
+                        <span class="pl__xp">
+              {%- set rate = rates.get(p.id) -%}
+              {%- if rate and rate[1] >= 5 -%}
+                {{ (100 * rate[0] / rate[1]) | round | int }}%
+              {%- else -%}
+                {{ p.xp }} XP
+              {%- endif -%}
+            </span>
           </a>
         </li>
       {% endfor %}

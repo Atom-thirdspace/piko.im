@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='problems.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="pl">
+  <header class="pl__head">
+    <h1>Your submissions</h1>
+    <p class="pl__lede">
+      {{ pager.total }} submission{{ '' if pager.total == 1 else 's' }}
+      {%- if verdict %} with this verdict{% endif %}.
+    </p>
+  </header>
+
+  <nav class="pl__filters" aria-label="Filters">
+    <div class="pl__row">
+      <span class="pl__label">Verdict</span>
+      <a class="pl__chip {{ 'is-on' if not verdict }}"
+         href="{{ link(verdict=None, page=None) }}">All</a>
+      {% for key in ['accepted', 'wrong_answer', 'time_limit_exceeded',
+                     'runtime_error', 'compile_error'] %}
+        <a class="pl__chip {{ 'is-on' if verdict == key }}"
+           href="{{ link(verdict=key, page=None) }}">{{ labels.get(key, key) }}</a>
+      {% endfor %}
+    </div>
+  </nav>
+
+  {% if rows %}
+    <ul class="pl__list">
+      {% for sub, problem in rows %}
+        <li class="pl__item {{ 'is-solved' if sub.verdict == 'accepted' }}">
+          <a class="pl__link sub__link"
+             href="{{ url_for('problems.page', slug=problem.slug) }}">
+            <span class="pl__tick" aria-hidden="true">{{ '&#10003;' | safe if sub.verdict == 'accepted' }}</span>
+            <span class="pl__name">{{ problem.title }}</span>
+            <span class="sub__verdict sub__verdict--{{ sub.verdict }}">
+              {{ labels.get(sub.verdict, sub.verdict) }}
+            </span>
+            <span class="pl__topic">{{ sub.language }}</span>
+            <span class="sub__score">{{ sub.passed }}/{{ sub.total }}</span>
+            <span class="pl__xp">{{ sub.created_at.strftime('%d %b %H:%M') }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+
+    {% if pager.pages > 1 %}
+        <nav class="pl__pager" aria-label="Pages">
+        {% if pager.page > 1 %}<a href="{{ link(page=pager.page - 1) }}">&larr; Previous</a>{% endif %}
+        <span>Page {{ pager.page }} of {{ pager.pages }}</span>
+        {% if pager.page < pager.pages %}<a href="{{ link(page=pager.page + 1) }}">Next &rarr;</a>{% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="pl__empty">
+      <p class="pl__empty-head">
+        {{ 'Nothing with that verdict yet.' if verdict else 'No submissions yet.' }}
+      </p>
+      <p><a href="{{ url_for('problems.index') }}">Find a problem to solve</a></p>
+    </div>
+  {% endif %}
+</main>
+{% endblock content %}
