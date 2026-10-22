@@ -12,7 +12,7 @@ from .learning.catalog import TOPICS
 from .learning.markdown import render as render_md
 from .models import (API_SCOPES, PUBLISHED, Enrollment, JudgeJob, Lesson,
                      Problem, Submission, Track, Unit, db,
-                     judge_is_live, may_read_editorial)
+                     judge_is_live, may_read_editorial, _utcnow)
 
 api_bp = Blueprint("publicapi",__name__, url_prefix="/api/v1")
 
@@ -301,6 +301,15 @@ def index():
             "submissions": "/api/v1/me/submissions?verdict=&page=&per_page=",
             "submit": "POST /api/v1/submissions",
             "submission": "/api/v1/submissions/<id>",
+            "leaderboard": "/api/v1/leaderboard",
+            "search": "/api/v1/search?q=",
+            "mastery": "/api/v1/me/mastery",
+            "achievements": "/api/v1/me/achievements",
+            "coins": "/api/v1/me/coins",
+            "stats": "/api/v1/me/stats",
+            "notifications": "/api/v1/me/notifications",
+            "hints": "/api/v1/problems/{slug}/hints",
+
         },
         "auth": {
             "scheme": "Authorization: Bearer piko_sk_...",
@@ -598,3 +607,228 @@ def problem_of_the_day():
             "problem": _problem_brief(card["problem"])}
 
     return _json(body) if g.api_user is not None else _ok(body)
+
+@api_bp.route("/me/mastery")
+@require_scope("progress:read")
+def my_mastery():
+    from . import mastery as mastery_mod
+
+    rows = mastery_mod.for_user(g.api_user)
+    return _json({
+        "half_life_days": mastery_mod.HALF_LIFE_DAYS,
+        "bands": [name for _, name in mastery_mod.BANDS],
+        "items": [{"topic": r["topic"], "value": r["value"], "band": r["band"],
+                   "peak": r["peak"], "fraction": round(r["fraction"], 3),
+                   "faded": r["faded"], "updated_at": r["updated_at"]}
+                  for r in rows],
+        "rusty": [r["topic"] for r in mastery_mod.rusty(g.api_user, rows=rows)],
+    })
+
+@api_bp.route("/me/achievements")
+@require_scope("progress:read")
+def my_achievements():
+    from . import achievements as ach
+    from .models import earned_keys
+
+    def brief(a):
+        return {"key": a.key, "title": a.title,
+                "description": a.description, "group": a.group}
+
+    earned = earned_keys(g.api_user)
+    return _json({
+        "total": len(ach.REGISTRY),
+        "earned": [brief(a) for a in ach.REGISTRY if a.key in earned],
+        "locked": [brief(a) for a in ach.REGISTRY if a.key not in earned],
+    })
+
+@api_bp.route("/me/coins")
+@require_scope("progress:read")
+def my_coins():
+    from . import economy
+
+    user = g.api_user
+    return _json({
+        "balance": economy.balance(user),
+        "costs": {"hint": economy.HINT_COST,
+                  "streak_freeze": economy.FREEZE_COST,
+                  "arena_retry": economy.ARENA_RETRY_COST},
+        "recent": [{"amount": e.amount, "reason": e.reason,
+                    "label": economy.LABELS.get(e.reason, e.reason),
+                    "ref": e.ref, "created_at": e.created_at}
+                   for e in economy.recent(user, limit=20)],
+    })
+
+@api_bp.route("/me/stats")
+@require_scope("submissions:read")
+def my_stats():
+    user = g.api_user
+    by_verdict = db.session.execute(
+        db.select(Submission.verdict, db.func.count())
+        .where(Submission.user_id == user.id)
+        .group_by(Submission.verdict)).all()
+
+    by_language = db.session.execute(
+        db.select(Submission.language, db.func.count(),
+                  db.func.count(db.distinct(
+                      db.case((Submission.verdict == V.AC,
+                               Submission.problem_id)))))
+        .where(Submission.user_id == user.id)
+        .group_by(Submission.language)).all()
+
+    by_difficulty = db.session.execute(
+        db.select(Problem.difficulty,
+                  db.func.count(db.distinct(Submission.problem_id)))
+        .join(Problem, Problem.id == Submission.problem_id)
+        .where(Submission.user_id == user.id, Submission.verdict == V.AC)
+        .group_by(Problem.difficulty)).all()
+
+    total = sum(n for _, n in by_verdict)
+    accepted = dict(by_verdict).get(V.AC, 0)
+    return _json({
+        "submissions": total,
+        "accepted": accepted,
+        "accuracy": round(accepted / total, 3) if total else None,
+        "solved": sum(n for _, n in by_difficulty),
+        "verdicts": [{"verdict": k, "label": V.LABELS.get(k, k), "count": n}
+                     for k, n in sorted(by_verdict, key=lambda r: -r[1])],
+        "languages": [{"language": lang, "submissions": n, "solved": s}
+                      for lang, n, s in sorted(by_language,
+                                               key=lambda r: -r[1])],
+        "difficulty": {k: n for k, n in by_difficulty},
+    })
+
+@api_bp.route("/me/notifications")
+@require_scope("notification:read")
+def my_notifications():
+    from .models import Notification
+
+    page, per_page = _page_args()
+    stmt = (db.select(Notification)
+            .where(Notification.user_id == g.api_user.id)
+            .order_by(Notification.created_at.desc()))
+    if (request.args.get("unread") or "").lower() in ("1", "true", "yes"):
+        stmt = stmt.where(Notification.read_at.is_(None))
+
+    rows, meta = _paginate(stmt, page, per_page)
+    unread = db.session.execute(
+        db.select(db.func.count()).select_from(Notification)
+        .where(Notification.user_id == g.api_user.id,
+               Notification.read_at.is_(None))).scalar() or 0
+
+    return _json(dict(meta, unread=unread, items=[{
+        "id": n.id, "kind": n.kind, "title": n.title, "body": n.body,
+        "url": n.url, "read": n.read_at is not None,
+        "created_at": n.created_at} for n in rows]))
+
+@api_bp.route("/me/notifications/read", methods=["POST"])
+@require_scope("notifications:write")
+def read_notifications():
+    from .models import Notification
+
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get("ids")
+
+    stmt = (db.update(Notification)
+            .where(Notification.user_id == g.api_user.id,
+                   Notification.read_at.is_(None)))
+    if ids is not None:
+        if not isinstance(ids, list) or not all(isinstance(i, int)
+                                                for i in ids):
+            return _error("bad_request", "ids must be a list of integers.", 400)
+        if not ids:
+            return _json({"marked": 0})
+        stmt = stmt.where(Notification.id.in_(ids[:500]))
+
+    marked = db.session.execute(stmt.values(read_at=_utcnow())).rowcount
+    db.session.commit()
+    return _json({"marked": marked or 0})
+
+
+@api_bp.route("/leaderboard")
+def leaderboard():
+    from . import leaderboard as board_mod
+
+    scope = request.args.get("scope", "week")
+    if scope not in board_mod.SCOPES:
+        return _error("bad_scope", "scope must be one of %s."
+                      % ", ".join(sorted(board_mod.SCOPES)), 400)
+    try:
+        limit = int(request.args.get("limit", 25))
+    except (TypeError, ValueError):
+        limit = 25
+    limit = min(max(limit, 1), board_mod.BOARD_SIZE)
+
+    body = {"scope": scope, "label": board_mod.SCOPES[scope],
+            "items": board_mod.board(scope, limit)}
+
+    if g.api_user is None:
+        return _ok(body)
+    body["you"] = board_mod.standing(scope, g.api_user)
+    return _json(body)
+
+@api_bp.route("/search")
+def search():
+    from . import search as search_mod
+    q = (request.args.get("q") or "").strip()
+    term = search_mod._term(q)
+    if len(term) < search_mod.MIN_CHARS:
+        return _error("too_short", "Give it at least %d characters."
+                      % search_mod.MIN_CHARS, 400)
+
+    groups = dict(search_mod.results_for(term, g.api_user))
+    if g.api_key is None:
+        groups.pop("person", None)
+
+    body = {"q": q, "groups": groups,
+            "counts": {k: len(v) for k, v in groups.items()},
+            "total": sum(len(v) for v in groups.values())}
+    return _ok(body) if g.api_key is None else _json(body)
+
+@api_bp.route("/problems/<slug>/hints")
+@require_scope("progress:read")
+def problem_hints(slug):
+    from . import economy
+    from .models import revealed_hint_ids
+
+    problem = _published_problem(slug)
+    if problem is None:
+        return _error("not_found", "No problem %r." % slug, 404)
+
+    revealed = revealed_hint_ids(g.api_user, problem)
+    return _json({
+        "problem": problem.slug,
+        "cost": economy.HINT_COST,
+        "balance": economy.balance(g.api_user),
+        "items": [{"id": h.id, "position": h.position,
+                   "free": not h.cost_xp,
+                   "revealed": h.id in revealed,
+                   "body_md": h.body_md if h.id in revealed else None}
+                  for h in sorted(problem.hints, key=lambda h: h.position)],
+    })
+
+@api_bp.route("/problems/<slug>/hints/<int:hint_id>", methods=["POST"])
+@require_scope("progress:write")
+def reveal_problem_hint(slug, hint_ids):
+    from . import economy
+    from .models import ProblemHint, reveal_hint, revealed_hint_ids
+
+    problem = _published_problem(slug)
+    if problem is None:
+        return _error("not_found", "No problem %r." % slug, 404)
+
+    hint = db.session.get(ProblemHint, hint_id)
+    if hint is None or hint.problem_id != problem.id:
+        return _error("not_found", "No such hint on %s." % slug, 404)
+
+    user = g.api_user
+    if hint.id not in revealed_hint_ids(user, problem):
+        if hint.cost_xp and not economy.spend(user, economy.HINT_COST,
+                                              "hint", str(hint.id)):
+            return _error("insufficient_coins",
+                          "That hint costs %d coins and you have %d."
+                          % (economy.HINT_COST, economy.balance(user)), 402)
+        reveal_hint(user, hint)
+
+    return _json({"id": hint.id, "position": hint.position,
+                  "body_md": hint.body_md,
+                  "balance": economy.balance(user)})

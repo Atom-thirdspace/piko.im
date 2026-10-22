@@ -1577,11 +1577,16 @@ def active_subscription(user):
 
 
 API_SCOPES = {
-    "catalog:read":     "Read problems, courses and lessons",
-    "me:read":          "Read your profile, XP and streak",
-    "submissions:read": "Read your own submissions",
-    "submissions:write": "Submit solutions to the judge as you"
+    "catalog:read":        "Read problems, courses and lessons",
+    "me:read":             "Read your profile, XP and streak",
+    "submissions:read":    "Read your own submissions",
+    "submissions:write":   "Submit solutions to the judge as you",
+    "progress:read":       "Read your mastery, badges and coin balance",
+    "progress:write":      "Spend your coins on hints",
+    "notifications:read":  "Read your notifications",
+    "notifications:write": "Mark your notifications as read",
 }
+
 DEFAULT_SCOPES = ["catalog:read"]
 MAX_KEYS_PER_USER = 10
 

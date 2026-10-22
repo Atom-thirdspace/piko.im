@@ -9,6 +9,8 @@ from .output import Fail
 
 TIMEOUT = 20
 
+STALE = False
+
 def _cache_path(url):
     key = hashlib.blake2b(url.encode("utf-8"), digest_size=16).hexdigest()
     return config.CACHE / (key + ".json")
@@ -20,12 +22,11 @@ def _load_cache(url):
         return None
 
 def _save_cache(url, etag, body):
-    if not etag:
-        return
     try:
         config.CACHE.mkdir(parents=True, exist_ok=True)
         _cache_path(url).write_text(
-            json.dumps({"etag": etag, "body": body}), encoding="utf-8")
+            json.dumps({"etag": etag or "", "body": body,
+                        "at": int(time.time())}), encoding="utf-8")
     except OSError:
         pass
 
@@ -33,7 +34,6 @@ CLIENT_ID = "piko-cli"
 
 
 def _oauth(form):
-    """Talk to /oauth/token, which lives on the site, not under /api/v1."""
     try:
         resp = requests.post(config.site() + "/oauth/token", data=form,
                              timeout=TIMEOUT)
@@ -135,9 +135,11 @@ def get(path, params=None, auth=True, use_cache=True):
     try:
         resp = requests.get(url, params=params, headers=headers,
                             timeout=TIMEOUT)
-    except requests.Timeout:
-        raise Fail("Piko took too long to answer. Try again.")
-    except requests.RequestException:
+    except (requests.Timeout, requests.RequestException):
+        if cached:
+            global STALE
+            STALE = True
+            return cached["body"]
         raise Fail("Couldn't reach Piko at %s." % config.api_base())
 
     if resp.status_code == 304 and cached:
@@ -211,4 +213,28 @@ def submit(slug, language, source):
 
 def submission(sub_id):
     return get("/submissions/%d" % sub_id, use_cache=False)
- 
+
+
+def mastery():
+    return get("/me/mastery", use_cache=False)
+
+def achievements():
+    return get("/me/achievements", use_cache=False)
+
+def coins():
+    return get("/me/coins", use_cache=False)
+
+def leaderboard():
+    return get("/leaderboard", params={"scope": scope, "limit": limit})
+
+def mark_read(ids=None):
+    return post("/me/notifications/read", {"ids": ids} if ids else {})
+
+def search(q):
+    return get("/search", params={"q": q}, auth=True)
+
+def hints(slug):
+    return get("/problems/%s/hints" % slug, use_cache=False)
+
+def reveal_hint(slug, hint_id):
+    return post("/problems/%s/hints/%d" % (slug, hint_id), {})

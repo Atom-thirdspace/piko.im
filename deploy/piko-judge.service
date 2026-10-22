@@ -1,0 +1,21 @@
+[Unit]
+Description=Piko judge worker
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/piko.im
+EnvironmentFile=/home/ubuntu/piko.im/.env
+ExecStart=/home/ubuntu/piko.im/.venv/bin/flask --app app judge-worker
+Restart=always
+RestartSec=5
+
+# SIGINT, not SIGTERM: the worker catches KeyboardInterrupt and that is what
+# runs POOL.drain(). A SIGTERM leaves warm containers behind on every deploy.
+KillSignal=SIGINT
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target
