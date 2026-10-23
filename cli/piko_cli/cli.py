@@ -480,6 +480,8 @@ def cmd_editorial(args):
 
 
 def cmd_watch(args):
+    if not args.plain and sys.stdout.isatty():
+        return _watch_tui(args)
     folder = Path(args.folder or ".")
     meta = _load_meta(folder)
     language = _resolve_language(folder, meta, args.lang)
@@ -669,6 +671,18 @@ def build_parser():
     p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
     p.add_argument("--difficulty", choices=("easy", "medium", "hard"))
     p.set_defaults(fn=cmd_sync)
+
+    p = subs.add_parser("ui", help="browse problems in a full-screen panel")
+    p.add_argument("--lang", default="python", choices=tuple(runner.LANGUAGES))
+    p.set_defaults(fn=cmd_ui)
+
+    p = subs.add_parser("watch", help="re-run samples whenever you save")
+    p.add_argument("folder", nargs="?")
+    p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
+    p.add_argument("--plain", action="store_true",
+                   help="scrolling output instead of the panel")
+    p.set_defaults(fn=cmd_watch)
+
 
     subs.add_parser("status", help="what's solved across the workspace"
                     ).set_defaults(fn=cmd_status)
@@ -1165,3 +1179,37 @@ def cmd_status(_args):
         output.row(state, bold(slug.ljust(28)),
                    dim(meta.get("title") or ""))
     return 0
+
+def cmd_ui(args):
+    if not sys.stdout.isatty():
+        raise Fail("`piko ui` needs a real terminal.")
+
+    from .tui.browse import Browser
+    from .tui.screen import Screen
+
+    with Screen() as screen:
+        chosen = Browser(screen).run()
+
+    if not chosen:
+        return 0
+    return cmd_get(argparse.Namespace(slug=chosen, lang=args.lang, into=None))
+
+def _watch_tui(args):
+    from .tui.screen import Screen
+    from .tui.testrun import Live
+
+    folder = Path(args.folder or ".")
+    meta = _load_meta(folder)
+    language = _resolve_language(folder, meta, args.lang)
+    cases = _sample_cases(folder)
+    if not cases:
+        raise Fail("No sample cases in %s/samples." % folder)
+
+    with Screen() as screen:
+        action = Live(screen, folder, language, cases, meta).run()
+
+    if action != "submit":
+        return 0
+    return cmd_submit(argparse.Namespace(
+        slug=meta.get("slug"), folder=str(folder), lang=language,
+        force=False, check=None, notify=False))
