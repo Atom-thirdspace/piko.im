@@ -10,6 +10,38 @@
 
 {% block content %}
 <main class="auth">
+
+  <img id="l1" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l2" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l3" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l4" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l5" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l6" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l7" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l8" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l9" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l10" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l11" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l12" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l13" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+  <img id="l14" src="https://cdn.hackclub.com/01a0e5b2-6701-75d9-99ea-a7cd2b813111/leaf.avif" alt="">
+
+  <img id="l15" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l16" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l17" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l18" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l19" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l20" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l21" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l22" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l23" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l24" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l25" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l26" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l27" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  <img id="l28" src="https://cdn.hackclub.com/01a16549-e4c5-72b7-b0fe-8ce4bb62a4b1/inverted_leaf.avif" alt="">
+  
+
   <h1>Create your Piko account</h1>
 
   <form class="auth-form" method="post" action="{{ url_for('accounts.signup') }}">
@@ -17,35 +49,50 @@
     <input type="hidden" name="next" value="{{ next }}">
 
     <label for="name">Name</label>
-    <input id="name" name="name" type="text" autocomplete="name"
+    <input class="curve bold" id="identifier" name="identifier" type="text" autocomplete="name"
            value="{{ form.get('name', '') }}" required>
     {% if errors.name %}<p class="field-error">{{ errors.name }}</p>{% endif %}
 
     <label for="email">Email</label>
-    <input id="email" name="email" type="email" autocomplete="email"
+    <input class="curve bold" id="identifier" name="identifier" type="text" autocomplete="email"
            value="{{ form.get('email', '') }}" required>
     {% if errors.email %}<p class="field-error">{{ errors.email }}</p>{% endif %}
 
     <label for="password">Password</label>
-    <input id="password" name="password" type="password"
+    <input class="curve bold" id="password" name="password" type="password"
            autocomplete="new-password" minlength="8" required>
     {% if errors.password %}<p class="field-error">{{ errors.password }}</p>{% endif %}
 
-    <button type="submit">Sign up</button>
+    <button id="sub" class="curve bold signup-button" type="submit">Sign up</button>
   </form>
 
   {% if providers %}
     <div class="auth-divider"><span>or sign up with</span></div>
-    {% for name, label in providers %}
-      <a class="oauth-btn oauth-{{ name }}"
-         href="{{ url_for('auth.login', provider=name, next=next) }}">
-        Sign up with {{ label }}
-      </a>
-    {% endfor %}
+
+    <div class="providers">
+  {% for name, label in providers %}
+    <a class="oauth-btn oauth-{{ name }} curve"
+   href="{{ url_for('auth.login', provider=name, next=next) }}"
+   aria-label="Continue with {{ label }}">
+
+  {% if name == "google" %}
+    <img src="https://cdn.hackclub.com/01a0e4b1-6d35-77d1-8b46-7ed949e4257b/google-icon-logo-svgrepo-com.svg" alt="">
+  {% elif name == "github" %}
+    <img src="https://cdn.hackclub.com/01a0e4b2-ff4d-7c38-9aed-0887a6c921f1/github.svg" alt="">
+  {% elif name == "discord" %}
+    <img src="https://cdn.hackclub.com/01a0e4b3-862f-7a28-bf13-b8649d628c39/discord-icon-svgrepo-com.svg" alt="">
+  {% elif name == "hackclub" %}
+    <img src="https://cdn.hackclub.com/01a0e4b4-8748-7a91-aeb8-c33ba9230a37/icon-rounded.svg" alt="">
   {% endif %}
 
-  <p class="auth-alt">
-    Already have an account? <a href="{{ url_for('auth.login_page', next=next) }}">Log in</a>
-  </p>
+      </a>
+    {% endfor %}
+
+    <p class="auth-alt">
+    Already have an account? <a class="green" href="{{ url_for('auth.login_page', next=next) }}">Log in</a>
+    </p>
+  {% endif %}
+
+  
 </main>
 {% endblock content %}
