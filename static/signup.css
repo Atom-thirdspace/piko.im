@@ -145,8 +145,8 @@ label{
 #l1{
     width: 15rem;
     position: absolute;
-    left: 21rem;
-    top: 20rem;
+    left: 61rem;
+    top: 36rem;
     z-index: -2;
     transition: 0.2s;
 }
@@ -154,8 +154,8 @@ label{
 #l2{
     width: 15rem;
     position: absolute;
-    left: 21rem;
-    top: 16rem;
+    left: 61rem;
+    top: 32rem;
     z-index: -3;
     transition: 0.2s;
 
@@ -165,8 +165,8 @@ label{
 #l3{
     width: 15rem;
     position: absolute;
-    left: 23rem;
-    top: 12rem;
+    left: 63rem;
+    top: 28rem;
     z-index: -4;
     transition: 0.2s;
 
@@ -176,8 +176,8 @@ label{
 #l4{
     width: 15rem;
     position: absolute;
-    left: 20rem;
-    top: 10rem;
+    left: 60rem;
+    top: 26rem;
     z-index: -5;
     transition: 0.2s;
 
@@ -187,8 +187,8 @@ label{
 #l5{
     width: 15rem;
     position: absolute;
-    left: 27rem;
-    top: 5rem;
+    left: 67rem;
+    top: 21rem;
     z-index: -11;
     transition: 0.2s;
 
@@ -198,8 +198,8 @@ label{
 #l6{
     width: 15rem;
     position: absolute;
-    left: 31rem;
-    top: 8rem;
+    left: 71rem;
+    top: 24rem;
     z-index: -10;
     transition: 0.2s;
 
@@ -209,8 +209,8 @@ label{
 #l7{
     width: 15rem;
     position: absolute;
-    left: 30rem;
-    top: 12rem;
+    left: 70rem;
+    top: 28rem;
     z-index: -9;
     transition: 0.2s;
 }
@@ -218,8 +218,8 @@ label{
 #l8{
     width: 15rem;
     position: absolute;
-    left: 31rem;
-    top: 15rem;
+    left: 71rem;
+    top: 31rem;
     z-index: -8;
     transition: 0.2s;
 
@@ -229,8 +229,8 @@ label{
 #l9{
     width: 15rem;
     position: absolute;
-    left: 29rem;
-    top: 19rem;
+    left: 69rem;
+    top: 35rem;
     z-index: -7;
     transition: 0.2s;
 
@@ -240,8 +240,8 @@ label{
 #l10{
     width: 15rem;
     position: absolute;
-    left: 30rem;
-    top: 22rem;
+    left: 70rem;
+    top: 38rem;
     z-index: -6;
     transition: 0.2s;
 
@@ -251,8 +251,8 @@ label{
 #l11{
     width: 15rem;
     position: absolute;
-    left: 35rem;
-    top: 12rem;
+    left: 75rem;
+    top: 28rem;
     z-index: -15;
     transition: 0.2s;
 
@@ -262,8 +262,8 @@ label{
 #l12{
     width: 15rem;
     position: absolute;
-    left: 38rem;
-    top: 16rem;
+    left: 78rem;
+    top: 32rem;
     z-index: -13;
     transition: 0.2s;
 
@@ -273,8 +273,8 @@ label{
 #l13{
     width: 15rem;
     position: absolute;
-    left: 36rem;
-    top: 19rem;
+    left: 76rem;
+    top: 35rem;
     z-index: -13;
     transition: 0.2s;
 
@@ -284,8 +284,8 @@ label{
 #l14{
     width: 15rem;
     position: absolute;
-    left: 36rem;
-    top: 23rem;
+    left: 76rem;
+    top: 39rem;
     z-index: -12;
     transition: 0.2s;
 
@@ -358,18 +358,18 @@ label{
 #l15 {
     width: 15rem;
     position: absolute;
-    right: 21rem;
-    top: 20rem;
-    z-index: -2;
+    right: 61rem;
+    top: 16rem;
+    z-index: 20;
     transition: 0.2s;
 }
 
 #l16{
     width: 15rem;
     position: absolute;
-    right: 21rem;
-    top: 16rem;
-    z-index: -3;
+    right: 61rem;
+    top: 12rem;
+    z-index: 19;
     transition: 0.2s;
 
     transform: rotate(10deg);
@@ -378,9 +378,9 @@ label{
 #l17{
     width: 15rem;
     position: absolute;
-    right: 23rem;
-    top: 12rem;
-    z-index: -4;
+    right: 63rem;
+    top: 8rem;
+    z-index: 18;
     transition: 0.2s;
 
     transform: rotate(20deg);
@@ -389,9 +389,9 @@ label{
 #l18{
     width: 15rem;
     position: absolute;
-    right: 20rem;
-    top: 10rem;
-    z-index: -5;
+    right: 60rem;
+    top: 6rem;
+    z-index: 17;
     transition: 0.2s;
 
     transform: rotate(30deg);
@@ -400,9 +400,9 @@ label{
 #l19{
     width: 15rem;
     position: absolute;
-    right: 27rem;
-    top: 5rem;
-    z-index: -11;
+    right: 67rem;
+    top: 1rem;
+    z-index: 10;
     transition: 0.2s;
 
     transform: rotate(20deg);
@@ -411,9 +411,9 @@ label{
 #l20{
     width: 15rem;
     position: absolute;
-    right: 31rem;
-    top: 8rem;
-    z-index: -10;
+    right: 71rem;
+    top: 4rem;
+    z-index: 11;
     transition: 0.2s;
 
     transform: rotate(10deg);
@@ -422,18 +422,18 @@ label{
 #l21{
     width: 15rem;
     position: absolute;
-    right: 30rem;
-    top: 12rem;
-    z-index: -9;
+    right: 70rem;
+    top: 8rem;
+    z-index: 12;
     transition: 0.2s;
 }
 
 #l22{
     width: 15rem;
     position: absolute;
-    right: 31rem;
-    top: 15rem;
-    z-index: -8;
+    right: 71rem;
+    top: 11rem;
+    z-index: 13;
     transition: 0.2s;
 
     transform: rotate(-10deg);
@@ -442,9 +442,9 @@ label{
 #l23{
     width: 15rem;
     position: absolute;
-    right: 29rem;
-    top: 19rem;
-    z-index: -7;
+    right: 69rem;
+    top: 15rem;
+    z-index: 14;
     transition: 0.2s;
 
     transform: rotate(-20deg);
@@ -453,9 +453,9 @@ label{
 #l24{
     width: 15rem;
     position: absolute;
-    right: 30rem;
-    top: 22rem;
-    z-index: -6;
+    right: 70rem;
+    top: 18rem;
+    z-index: 15;
     transition: 0.2s;
 
     transform: rotate(-30deg);
@@ -464,9 +464,9 @@ label{
 #l25{
     width: 15rem;
     position: absolute;
-    right: 35rem;
-    top: 12rem;
-    z-index: -15;
+    right: 75rem;
+    top: 8rem;
+    z-index: 7;
     transition: 0.2s;
 
     transform: rotate(-10deg);
@@ -475,9 +475,9 @@ label{
 #l26{
     width: 15rem;
     position: absolute;
-    right: 38rem;
-    top: 16rem;
-    z-index: -13;
+    right: 78rem;
+    top: 12rem;
+    z-index: 8;
     transition: 0.2s;
 
     transform: rotate(-20deg);
@@ -486,9 +486,9 @@ label{
 #l27{
     width: 15rem;
     position: absolute;
-    right: 36rem;
-    top: 19rem;
-    z-index: -13;
+    right: 76rem;
+    top: 15rem;
+    z-index: 8;
     transition: 0.2s;
 
     transform: rotate(-30deg);
@@ -497,9 +497,9 @@ label{
 #l28{
     width: 15rem;
     position: absolute;
-    right: 36rem;
-    top: 23rem;
-    z-index: -12;
+    right: 76rem;
+    top: 19rem;
+    z-index: 9;
     transition: 0.2s;
 
     transform: rotate(-40deg);
