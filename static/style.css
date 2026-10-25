@@ -776,3 +776,19 @@ button--quiet { border-color: var(--line-strong); color: var(--ink-soft); paddin
         animation: none;
     }
 }
+
+.igf {
+    animation: hover 2s infinite;
+}
+
+@keyframes hover {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
