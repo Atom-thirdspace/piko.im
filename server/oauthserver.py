@@ -185,8 +185,13 @@ def _authenticate_client():
     return client
 
 def _issue(client, user, scopes, family=None):
-    api_key, access = mint(user, name=client.name, scopes=scopes,
-                           expires_in=ACCESS_TTL, oauth_client=client)
+    try:
+        api_key, access = mint(user, name=client.name, scopes=scopes,
+                               expires_in=ACCESS_TTL, oauth_client=client)
+    except ValueError as exc:
+        # mint refuses admin scopes for anyone not on the allowlist. Without
+        # this the token endpoint answers 500 instead of saying why.
+        return _oauth_error("invalid_scope", str(exc))
     refresh = secrets.token_urlsafe(48)
     db.session.add(OAuthRefresh(
         token_hash=_sha(refresh), family=family or secrets.token_hex(8),
@@ -366,17 +371,30 @@ def disconnect(user, client):
 def register_cli(app):
     @app.cli.command("oauth-seed")
     def _seed():
-        """Create the first-party client the Piko CLI signs in with."""
-        if _find_client("piko-cli") is not None:
-            print("piko-cli already exists")
+        wanted = sorted(API_SCOPES)
+        client = _find_client("piko-cli")
+
+        if client is None:
+            db.session.add(OAuthClient(
+                client_id="piko-cli", name="Piko CLI",
+                description="The official command-line tool.",
+                redirect_uris=["http://127.0.0.1/callback"],
+                max_scopes=wanted, first_party=True))
+            db.session.commit()
+            print("created piko-cli with %d scopes" % len(wanted))
             return
-        db.session.add(OAuthClient(
-            client_id="piko-cli", name="Piko CLI",
-            description="The official command-line tool.",
-            redirect_uris=["http://127.0.0.1/callback"],
-            max_scopes=sorted(API_SCOPES), first_party=True))
+
+        have = list(client.max_scopes or [])
+        added = [s for s in wanted if s not in have]
+        dropped = [s for s in have if s not in wanted]
+        if not added and not dropped:
+            print("piko-cli already current (%d scopes)" % len(wanted))
+            return
+
+        client.max_scopes = wanted
         db.session.commit()
-        print("created piko-cli")
+        print("updated piko-cli  +%s  -%s"
+              % (", ".join(added) or "none", ", ".join(dropped) or "none"))
 
     @app.cli.command("oauth-prune")
     def _prune():
