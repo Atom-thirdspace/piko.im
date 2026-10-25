@@ -196,6 +196,12 @@ def cmd_get(args):
     source = folder / spec["source"]
     if source.exists():
         output.note("kept your existing %s" % spec["source"])
+    elif getattr(args, "template", None):
+        from . import templates
+
+        source.write_text(templates.load(args.template, language),
+                          encoding="utf-8")
+        output.note("from template %s" % args.template)
     else:
         source.write_text(spec["stub"], encoding="utf-8")
 
@@ -747,6 +753,27 @@ def build_parser():
     p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
     p.add_argument("--plain", action="store_true",
                    help="scrolling output instead of the panel")
+
+    p = subs.add_parser("upgrade", help="install the newest piko-cli")
+    p.add_argument("--force", action="store_true",
+                   help="reinstall even when already current")
+    p.add_argument("--dry-run", action="store_true",
+                   help="print the pip command without running it")
+    p.set_defaults(fn=cmd_upgrade)
+
+    p = subs.add_parser("template", help="reusable boilerplate for new folders")
+    p.add_argument("action", choices=("list", "save", "show", "rm"),
+                   nargs="?", default="list")
+    p.add_argument("name", nargs="?")
+    p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
+    p.add_argument("--file", help="save this file instead of the default source")
+    p.set_defaults(fn=cmd_template)
+
+    p.add_argument("--template", metavar="NAME",
+                   help="start from a saved template instead of the stub")
+
+
+
     p.set_defaults(fn=cmd_watch)
 
     parser.add_argument("--version", action="store_true")
@@ -1533,4 +1560,78 @@ def _open_editor(path):
         subprocess.call(editor.split()) + [str(path)]
     except OSError:
         raise Fail("Couldn't start %r. Set $EDITOR." % editor)
+    return 0
+
+
+def cmd_upgrade(args):
+    import subprocess
+    from . import version
+
+    here = version.current()
+    latest = version.newer_available()
+
+    if latest is None and not args.force:
+        output.header("piko-cli %s" % here)
+        output.note("Already current, as far as PyPI says.")
+        output.note("`piko upgrade --force` reinstalls anyway.")
+        return 0
+
+    print("Upgrading piko-cli %s -> %s" % (here, latest or "latest"))
+    command = version.upgrade_command()
+    output.note(" ".join(command))
+    if args.dry_run:
+        return 0
+
+    try:
+        code = subprocess.call(command)
+    except OSError as exc:
+        raise Fail("Couldn't run pip: %s" % exc)
+    if code != 0:
+        raise Fail("pip exited %d. If this is a system Python, try "
+                   "`pipx upgrade piko-cli`." % code)
+    output.ok("done - run `piko --version` to confirm")
+    return 0
+
+
+def cmd_template(args):
+    from . import templates
+
+    if args.action == "list":
+        rows = templates.listing()
+        if output.as_json([{"name": n, "language": l} for n, l in rows]):
+            return 0
+        output.header("Templates  %s" % dim(str(templates.folder())))
+        if not rows:
+            output.note("None yet. `piko template save <name>` keeps the "
+                        "file you are in.")
+            return 0
+        for name, language in rows:
+            output.row(bold(name.ljust(20)),
+                       dim(runner.LANGUAGES[language]["label"]))
+        return 0
+
+    if not args.name:
+        raise Fail("Which template? `piko template %s <name>`" % args.action)
+
+    language = args.lang or "python"
+
+    if args.action == "show":
+        print(templates.load(args.name, language), end="")
+        return 0
+
+    if args.action == "rm":
+        if templates.remove(args.name, language):
+            output.ok("removed %s" % args.name)
+        else:
+            output.note("no %s template %r" % (language, args.name))
+        return 0
+
+    source = (Path(args.file) if args.file
+              else Path(runner.LANGUAGES[language]["source"]))
+    if not source.exists():
+        raise Fail("No %s here to save. Pass --file." % source.name)
+    target = templates.save(args.name, language,
+                            source.read_text(encoding="utf-8"))
+    output.ok("saved %s" % target)
+    output.note("use it with `piko get <slug> --template %s`" % args.name)
     return 0

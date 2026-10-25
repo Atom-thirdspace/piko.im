@@ -47,3 +47,7 @@ def newer_available():
     if latest and _parts(latest) > _parts(current()):
         return latest
     return None
+
+def upgrade_command():
+    import sys
+    return [sys.executable, "-m", "pip", "install", "--upgrade", "piko-cli"]
