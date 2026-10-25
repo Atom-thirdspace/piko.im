@@ -19,7 +19,12 @@
          long leash. The program itself does not. */
       compileMs: 120000, runMs: 5000,
       worker: null, booting: null
-    }
+    },
+    javascript : {
+      url: null, module: false, optIn: false,
+      compileMs: 0, runMs: 5000,
+      worker: null, booting: null
+    },
   };
 
   var OUTPUT_LIMIT = 256 * 1024;
@@ -29,7 +34,7 @@
   /* Languages cheap enough to fetch before the learner has asked for
      anything. C++ is not one of them: 26MB on hover is a hostile default
      on a phone or a metered connection, so it waits for a real Run. */
-  var EAGER = { python: true };
+  var EAGER = { python: true, javascript: true };
 
   function warmable(lang) {
     if (!EAGER[lang]) { return false; }

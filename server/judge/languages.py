@@ -38,6 +38,55 @@ LANGUAGES = {
         default_memory_mb=512,      # JVM overhead blows past 256m on its own
         compile_timeout_sec=25,
     ),
+    "c": Language(
+        key="c",
+        image="gcc:13",                 # already pulled for C++
+        source_name="main.c",
+        compile_cmd=("gcc", "-O2", "-std=c17", "-o", "/work/main",
+                     "/work/main.c", "-lm"),
+        run_cmd=("/work/main",),
+    ),
+    "javascript": Language(
+        key="javascript",
+        label="JavaScript (Node 22)",
+        image="node:22-alpine",
+        source_name="main.js",
+        run_cmd=("node", "--stack-size=65500", "/work/main.js"),
+        default_memory_mb=320,          # V8 reserves more than CPython does
+    ),
+    "go": Language(
+        key="go",
+        label="Go 1.23",
+        image="golang:1.23-alpine",
+        source_name="main.go",
+        # GOCACHE must be writable and GOFLAGS must not reach for the
+        # network: the sandbox has none.
+        compile_cmd=("sh", "-c",
+                     "GOCACHE=/tmp/gocache GOPATH=/tmp/gopath "
+                     "CGO_ENABLED=0 GOFLAGS=-mod=mod "
+                     "go build -o /work/main /work/main.go"),
+        run_cmd=("/work/main",),
+        compile_timeout_sec=30,       
+    ),
+    "rust": Language(
+        key="rust",
+        label="Rust 1.83",
+        image="rust:1.83-slim",
+        source_name="main.rs",
+        compile_cmd=("rustc", "-O", "--edition", "2021",
+                     "-o", "/work/main", "/work/main.rs"),
+        run_cmd=("/work/main",),
+        default_memory_mb=320,
+        compile_timeout_sec=40,         # rustc is the slowest of the set
+    ),
+    "typescript": Language(
+        key="typescript",
+        label="TypeScript (Node 22)",
+        image="node:22-alpine",
+        source_name="main.ts",
+        run_cmd=("node", "--experimental-strip-types", "/work/main.ts"),
+        default_memory_mb=320,
+    ),
 }
 
 

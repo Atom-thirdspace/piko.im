@@ -69,7 +69,62 @@ LANGUAGES = {
                  "        // your solution here\n"
                  "    }\n}\n"),
     },
-}
+        "c": {
+        "label": "C17",
+        "source": "main.c",
+        "compile": lambda d: ["gcc", "-O2", "-std=c17", "-o",
+                              str(d / _exe("main")), str(d / "main.c"), "-lm"],
+        "run": lambda d: [str(d / _exe("main"))],
+        "stub": ("#include <stdio.h>\n#include <stdlib.h>\n"
+                 "#include <string.h>\n\n"
+                 "int main(void) {\n"
+                 "    // your solution here\n"
+                 "    return 0;\n}\n"),
+    },
+    "javascript": {
+        "label": "JavaScript (Node)",
+        "source": "main.js",
+        "compile": None,
+        "run": lambda d: ["node", str(d / "main.js")],
+        "stub": ("const data = require('fs').readFileSync(0, 'utf8')"
+                 ".split(/\\s+/);\n\n"
+                 "function main() {\n"
+                 "    // your solution here\n"
+                 "}\n\nmain();\n"),
+    },
+    "go": {
+        "label": "Go",
+        "source": "main.go",
+        "compile": lambda d: ["go", "build", "-o", str(d / _exe("main")),
+                              str(d / "main.go")],
+        "run": lambda d: [str(d / _exe("main"))],
+        "stub": ('package main\n\nimport (\n\t"bufio"\n\t"fmt"\n\t"os"\n)\n\n'
+                 "func main() {\n"
+                 "\treader := bufio.NewReader(os.Stdin)\n"
+                 "\twriter := bufio.NewWriter(os.Stdout)\n"
+                 "\tdefer writer.Flush()\n"
+                 "\t_ = reader\n"
+                 "\t// your solution here\n"
+                 "\tfmt.Fprintln(writer)\n}\n"),
+    },
+    "rust": {
+        "label": "Rust",
+        "source": "main.rs",
+        "compile": lambda d: ["rustc", "-O", "--edition", "2021", "-o",
+                              str(d / _exe("main")), str(d / "main.rs")],
+        "run": lambda d: [str(d / _exe("main"))],
+        "stub": ("use std::io::{self, Read, Write};\n\n"
+                 "fn main() {\n"
+                 "    let mut input = String::new();\n"
+                 "    io::stdin().read_to_string(&mut input).unwrap();\n"
+                 "    let stdout = io::stdout();\n"
+                 "    let mut out = stdout.lock();\n"
+                 "    // your solution here\n"
+                 "    let _ = writeln!(out);\n}\n"),
+    },
+        
+    }
+
 
 def _exe(name):
     return name + ".exe" if platform.system() == "Windows" else name

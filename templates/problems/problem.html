@@ -235,10 +235,10 @@
 {% endblock content %}
 
 {% block js %}
-<script src="{{ url_for('static', filename='editor.js') }}"></script>
 <script src="{{ url_for('static', filename='browserrun.js') }}"
         data-worker-python="{{ url_for('static', filename='pyrun.worker.js') }}"
-        data-worker-cpp="{{ url_for('static', filename='cpprun.worker.js') }}"></script>
+        data-worker-cpp="{{ url_for('static', filename='cpprun.worker.js') }}"
+        data-worker-js="{{ url_for('static', filename='jsrun.worker.js') }}"></script>
 <script>
 (function () {
   "use strict";
@@ -309,6 +309,7 @@
   if (window.PikoRun && brs) {
     window.PikoRun.configure('python', brs.dataset.workerPython);
     window.PikoRun.configure('cpp', brs.dataset.workerCpp);
+    window.PikoRun.configure('javascript', brs.dataset.workerJs);
   }
 
   /* Pyodide is 9.6MB of wasm, so it waits for a sign they mean to write

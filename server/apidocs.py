@@ -49,6 +49,7 @@ def sitemap():
     base = request.url_root.rstrip("/")
     urls = [(base + "/", "daily"),
             (base + "/problems/", "daily"),
+            (base + "/playground/", "monthly"),
             (base + "/blog/", "weekly")]
 
     # Post uses its own "published" string, not the content PUBLISHED flag.

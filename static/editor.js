@@ -68,6 +68,63 @@
       builtins: words("String System out println print Integer Double Long " +
         "Math Scanner List ArrayList Map HashMap Set HashSet Arrays " +
         "Collections StringBuilder length charAt")
+    },
+        c: {
+      line: "//",
+      block: ["/*", "*/"],
+      triple: false,
+      prefix: "#",
+      indentAfter: /[{(]\s*$/,
+      keywords: words("auto break case char const continue default do double " +
+        "else enum extern float for goto if inline int long register " +
+        "restrict return short signed sizeof static struct switch typedef " +
+        "union unsigned void volatile while _Bool"),
+      builtins: words("printf scanf puts putchar getchar malloc calloc " +
+        "realloc free memset memcpy strlen strcmp strcpy qsort size_t NULL " +
+        "stdin stdout stderr FILE fgets sprintf")
+    },
+    javascript: {
+      line: "//",
+      block: ["/*", "*/"],
+      triple: false,
+      prefix: null,
+      indentAfter: /[{([]\s*$/,
+      keywords: words("async await break case catch class const continue " +
+        "debugger default delete do else export extends finally for " +
+        "function get if import in instanceof let new of return set static " +
+        "super switch this throw try typeof var void while with yield true " +
+        "false null undefined"),
+      builtins: words("console log Math JSON Number String Array Object Map " +
+        "Set Promise parseInt parseFloat require process stdin stdout " +
+        "readFileSync split join push pop shift slice length toString")
+    },
+    go: {
+      line: "//",
+      block: ["/*", "*/"],
+      triple: false,
+      prefix: null,
+      indentAfter: /[{(]\s*$/,
+      keywords: words("break case chan const continue default defer else " +
+        "fallthrough for func go goto if import interface map package " +
+        "range return select struct switch type var nil true false"),
+      builtins: words("append cap close complex copy delete int int64 len " +
+        "make new panic print println recover string bool byte float64 rune " +
+        "error fmt Println Printf Scan Sprintf bufio os Stdin Stdout sort")
+    },
+    rust: {
+      line: "//",
+      block: ["/*", "*/"],
+      triple: false,
+      prefix: "#",                       // attributes
+      indentAfter: /[{([]\s*$/,
+      keywords: words("as async await break const continue crate dyn else " +
+        "enum extern false fn for if impl in let loop match mod move mut " +
+        "pub ref return self Self static struct super trait true type " +
+        "unsafe use where while"),
+      builtins: words("Vec String str i32 i64 u32 u64 usize f64 bool char " +
+        "Option Some None Result Ok Err Box HashMap HashSet BTreeMap " +
+        "println print format stdin stdout read_line unwrap expect iter " +
+        "collect push len sort")
     }
   };
 
@@ -75,6 +132,10 @@
     python: "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    \n\nmain()\n",
     cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    \n    return 0;\n}\n",
     java: "import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) throws IOException {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n"
+    c: "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main(void) {\n    \n    return 0;\n}\n",
+    javascript: "const data = require('fs').readFileSync(0, 'utf8').split(/\\s+/);\n\nfunction main() {\n    \n}\n\nmain();\n",
+    go: "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\twriter := bufio.NewWriter(os.Stdout)\n\tdefer writer.Flush()\n\t_ = reader\n\t\n\tfmt.Fprintln(writer)\n}\n",
+    rust: "use std::io::{self, Read, Write};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let stdout = io::stdout();\n    let mut out = stdout.lock();\n    \n    let _ = writeln!(out);\n}\n"
   };
 
   var PAIRS = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'" };

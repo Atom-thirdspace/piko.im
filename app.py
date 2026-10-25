@@ -52,6 +52,7 @@ from server.rivals import register_cli as register_rivals_cli
 from server.raids import register_cli as register_raids_cli
 from server import traffic as traffic_mod
 from server import adminapi
+from server.playground import playground_bp
 
 
 load_dotenv()
@@ -98,6 +99,7 @@ app.register_blueprint(oauth_bp)
 app.register_blueprint(tutor_pages_bp)
 app.register_blueprint(arena_bp)
 app.register_blueprint(gamify_bp)
+app.register_blueprint(playground_bp)
 register_season_cli(app)
 register_rivals_cli(app)
 register_raids_cli(app)

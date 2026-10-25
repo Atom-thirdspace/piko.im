@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+{% block title %}Playground{% endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='playground.css') }}">
+{% endblock head %}
+
+{% block content %}
+<main class="pg" data-run-url="{{ url_for('playground.run') }}"
+      data-run-result-url="{{ url_for('playground.run_result', run_id=0) }}"
+      data-signed-in="{{ '1' if signed_in else '0' }}"
+      data-browser-langs="{{ browser_languages|join(',') }}"
+      data-language="{{ default_language }}">
+
+  <header class="pg__head">
+    <h1>Playground</h1>
+    <p>Write something and run it. Nothing is saved to your account, and you
+      don't need one — Python and C++ run inside this tab.</p>
+  </header>
+
+  <div class="pg__bar">
+    <label for="language">Language</label>
+    <select id="language">
+      {% for lang in languages %}
+        <option value="{{ lang }}"{% if lang == default_language %} selected{% endif %}>{{ lang }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="ws__ghost" id="reset">Reset</button>
+    <button type="button" class="ws__ghost" id="share">Copy link</button>
+    <span class="ws__where" id="run-where" hidden></span>
+    <span class="ws__spacer"></span>
+    <button type="button" class="ws__run" id="run">Run</button>
+  </div>
+
+  <div class="pg__grid">
+    <div id="editor"></div>
+
+    <div class="pg__io">
+      <div class="io__tabs" role="tablist" aria-label="Input and output">
+        <button type="button" class="io__tab" role="tab" id="tab-in"
+                aria-selected="true" aria-controls="panel-in">Input</button>
+        <button type="button" class="io__tab" role="tab" id="tab-out"
+                aria-selected="false" aria-controls="panel-out">Output</button>
+      </div>
+
+      <div class="io__panel" id="panel-in" role="tabpanel" aria-labelledby="tab-in">
+        <p class="io__hint">What your program reads from stdin.</p>
+        <textarea class="io__in" id="stdin" spellcheck="false"
+                  aria-label="Standard input"></textarea>
+      </div>
+
+      <div class="io__panel" id="panel-out" role="tabpanel"
+           aria-labelledby="tab-out" hidden>
+        <div id="out"><p class="out__idle">Run your code to see what it prints.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="pg__note">Ctrl+Enter runs
+    {%- if not signed_in %} &middot;
+      <a href="{{ url_for('auth.login_page') }}">Sign in</a> to save work and
+      track progress
+    {%- endif %}
+  </p>
+</main>
+{% endblock content %}
+
+{% block js %}
+<script src="{{ url_for('static', filename='editor.js') }}"></script>
+<script src="{{ url_for('static', filename='browserrun.js') }}"
+        data-worker-python="{{ url_for('static', filename='pyrun.worker.js') }}"
+        data-worker-cpp="{{ url_for('static', filename='cpprun.worker.js') }}"
+        data-worker-js="{{ url_for('static', filename='jsrun.worker.js') }}"></script>
+<script>
+(function () {
+  "use strict";
+  
+  var page = document.querySelector('.pg');
+  var runBtn = document.getElementById('run');
+  var resetBtn = document.getElementById('reset');
+  var shareBtn = document.getElementById('share');
+  var langSel = document.getElementById('language');
+  var stdinBox = document.getElementById('stdin');
+  var out = document.getElementById('out');
+  var tabIn = document.getElementById('tab-in');
+  var tabOut = document.getElementById('tab-out');
+  var panelIn = document.getElementById('panel-in');
+  var panelOut = document.getElementById('panel-out');
+  var whereTag = document.getElementById('run-where');
+
+  var SIGNED_IN = page.dataset.signedIn === '1';
+  var RUN_TRIES = 24;
+  var SHARE_MAX = 6000;
+
+  function encodeState(lang, source) {
+    var bytes = new TextEncoder().encode(JSON.stringify({ l: lang, s: source }));
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) {
+      bin += String.fromCharCode(bytes[i]);
+    }
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function decodeState(text) {
+    try {
+      var bin = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) { bytes[i] = bin.charCodeAt(i); }
+      var data = JSON.parse(new TextDecoder().decode(bytes));
+      if (!data || typeof data.s !== 'string') { return null; }
+      return data;
+    } catch (err) { return null; }
+  }
+
+  var shared = window.location.hash.length > 1
+    ? decodeState(window.location.hash.slice(1)) : null;
+
+  function key(lang) { return 'piko:playground:' + lang; }
+
+  function loadDraft(lang) {
+    try {
+      var saved = localStorage.getItem(key(lang));
+      if (saved !== null) { return saved; }
+    } catch (err) { /* private window, or storage is off */ }
+    return window.PikoEditor.starter(lang);
+  }
+
+  function saveDraft(lang, text) {
+    try { localStorage.setItem(key(lang), text); } catch (err) { /* ignore */ }
+  }
+
+  var lang = (shared && shared.l) || langSel.value
+    || page.dataset.language || 'python';
+  langSel.value = lang;
+
+  var editor = window.PikoEditor.create(document.getElementById('editor'), {
+    language: lang,
+    value: shared ? shared.s : loadDraft(lang),
+    label: 'Your code',
+    onRun: function () { doRun(); },
+    onChange: function (ed) { saveDraft(lang, ed.getValue()); }
+  });
+
+  langSel.addEventListener('change', function () {
+    saveDraft(lang, editor.getValue());
+    lang = langSel.value;
+    editor.setLanguage(lang);
+    editor.setValue(loadDraft(lang));
+    showWhere();
+    warmBrowserRun();
+    editor.focus();
+  });
+
+  resetBtn.addEventListener('click', function () {
+    if (!window.confirm('Replace your code with the starter template?')) { return; }
+    editor.setValue(window.PikoEditor.starter(lang));
+    editor.focus();
+  });
+
+  shareBtn.addEventListener('click', function () {
+    var source = editor.getValue();
+    var hash = encodeState(lang, source);
+    if (hash.length > SHARE_MAX) {
+      shareBtn.textContent = 'Too long to link';
+      setTimeout(function () { shareBtn.textContent = 'Copy link'; }, 1600);
+      return;
+    }
+    var url = window.location.origin + window.location.pathname + '#' + hash;
+    history.replaceState(null, '', '#' + hash);
+
+    function done(text) {
+      shareBtn.textContent = text;
+      setTimeout(function () { shareBtn.textContent = 'Copy link'; }, 1600);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () { done('Copied'); },
+                                              function () { done('In the bar'); });
+    } else {
+        done('In the bar');
+    }
+});
+
+var brs = document.querySelector('script[data-worker-python]');
+  if (window.PikoRun && brs) {
+    window.PikoRun.configure('python', brs.dataset.workerPython);
+    window.PikoRun.configure('cpp', brs.dataset.workerCpp);
+    window.PikoRun.configure('javascript', brs.dataset.workerJs);
+
+  }
+
+  var warmed = {};
+
+  function warmBrowserRun() {
+    if (warmed[lang] || !window.PikoRun) { return; }
+    if (!window.PikoRun.supports(lang)) { return; }
+    if (!window.PikoRun.warmable(lang)) { return; }
+    warmed[lang] = true;
+    window.PikoRun.preload(lang);
+  }
+
+  var area = document.querySelector('#editor .ed__area');
+  if (area) { area.addEventListener('focus', warmBrowserRun); }
+  runBtn.addEventListener('mouseenter', warmBrowserRun);
+
+  function showWhere() {
+    if (!whereTag || !window.PikoRun) { return; }
+    var here = window.PikoRun.offers(lang);
+    whereTag.hidden = false;
+     whereTag.textContent = here ? 'runs in your browser'
+      : (SIGNED_IN ? 'runs on the judge' : 'sign in to run this one');
+  }
+
+  function token() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json',
+                 'X-CSRF-Token': token() },
+      body: JSON.stringify(body)
+    });
+  }
+
+  async function poll(template, runId, tries) {
+    var url = template.replace(/0$/, String(runId));
+    for (var i = 0; i < tries; i++) {
+      await new Promise(function (r) { setTimeout(r, 1000); });
+      var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) { continue; }
+      var data = await res.json();
+      if (data.status === 'done') { return data; }
+    }
+    var err = new Error('timed out');
+    err.timedOut = true;
+    throw err;
+}
+
+function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) { node.className = cls; }
+    if (text != null) { node.textContent = text; }
+    return node;
+  }
+
+  // Always textContent: this is the visitor's own program output.
+  function block(title, text, bad) {
+    var wrap = el('div', 'out__block' + (bad ? ' is-err' : ''));
+    wrap.appendChild(el('b', null, title));
+    var pre = el('pre');
+    if (text === '' || text == null) {
+      pre.appendChild(el('span', 'out__empty', '(no output)'));
+    } else {
+      pre.textContent = text;
+    }
+    wrap.appendChild(pre);
+    return wrap;
+  }
+
+  function head(label, ok, meta) {
+    var wrap = el('p', 'out__head');
+    wrap.appendChild(el('span', 'out__verdict ' + (ok ? 'is-ok' : 'is-fail'), label));
+    if (meta) { wrap.appendChild(el('span', 'out__meta', meta)); }
+    return wrap;
+  }
+
+  function show(which) {
+    var isIn = which === 'in';
+    tabIn.setAttribute('aria-selected', isIn ? 'true' : 'false');
+    tabOut.setAttribute('aria-selected', isIn ? 'false' : 'true');
+    panelIn.hidden = !isIn;
+    panelOut.hidden = isIn;
+  }
+
+  tabIn.addEventListener('click', function () { show('in'); });
+  tabOut.addEventListener('click', function () { show('out'); });
+
+  function busy(text) {
+    show('out');
+    out.textContent = '';
+    out.appendChild(el('p', 'out__idle', text));
+    }
+
+  function fail(message) {
+    show('out');
+    out.textContent = '';
+    out.appendChild(head('Could not run', false, ''));
+    out.appendChild(el('p', 'out__idle', message));
+  }
+
+  var LABELS = {
+    ok: 'Finished',
+    compile_error: 'Compilation Error',
+    runtime_error: 'Runtime Error',
+    time_limit_exceeded: 'Time Limit Exceeded',
+    memory_limit_exceeded: 'Memory Limit Exceeded',
+    output_limit_exceeded: 'Output Limit Exceeded'
+  };
+
+  function render(data) {
+    show('out');
+    out.textContent = '';
+
+    var ok = data.verdict === 'ok';
+    var meta = data.time_ms ? data.time_ms + ' ms' : '';
+    if (data.cached) { meta = meta ? meta + ' · cached build' : 'cached build'; }
+    out.appendChild(head(data.label || data.verdict, ok, meta));
+
+    if (data.compile_output) { out.appendChild(block('Compiler', data.compile_output, true)); }
+    if (data.error) { out.appendChild(block('Judge', data.error, true)); }
+
+    if (data.verdict === 'time_limit_exceeded') {
+      out.appendChild(el('p', 'out__idle', 'It was still running when the clock ran out.'));
+    } else if (data.verdict === 'output_limit_exceeded') {
+      out.appendChild(el('p', 'out__idle', 'It printed far too much — check for a runaway loop.'));
+    }
+
+    if (data.verdict !== 'compile_error') {
+      out.appendChild(block('Output', data.stdout));
+      if (data.stderr) { out.appendChild(block('Errors', data.stderr, true)); }
+    }
+  }
+
+   async function doRun() {
+    var source = editor.getValue();
+    if (!source.trim()) { return; }
+
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running…';
+
+    try {
+      if (window.PikoRun && window.PikoRun.supports(lang)) {
+        busy(warmed[lang]
+          ? (lang === 'cpp' ? 'Compiling here in your browser…'
+                            : 'Running here in your browser…')
+          : (lang === 'cpp' ? 'Fetching the C++ toolchain (first run only, ~26MB)…'
+                            : 'Loading Python (first run only)…'));
+        warmed[lang] = true;
+
+        var local = await window.PikoRun.run(
+          lang, source, stdinBox.value,
+          function (phase) {
+            if (phase === 'running') { busy('Running here in your browser…'); }
+          });
+        if (local && local.verdict !== 'internal_error') {
+          local.label = LABELS[local.verdict] || local.verdict;
+          render(local);
+          return;
+        }
+        /* The engine could not start - fall through if we are allowed to. */
+      }
+
+      if (!SIGNED_IN) {
+        fail('That language needs the judge, and the judge needs an account. '
+           + 'Python and C++ run here without one.');
+        return;
+      }
+
+      busy('Starting a container…');
+      var res = await post(page.dataset.runUrl, {
+        language: lang, source: source, stdin: stdinBox.value
+      });
+      var data = await res.json();
+      if (!res.ok) { fail(data.error || 'Something went wrong.'); return; }
+
+      if (data.status === 'queued') {
+        busy('Waiting for a judge…');
+        data = await poll(page.dataset.runResultUrl, data.run_id, RUN_TRIES);
+      }
+      render(data);
+    } catch (err) {
+      if (err && err.timedOut) {
+        fail('Still waiting on the judge after 24 seconds. Your code is safe — '
+           + 'try again in a moment.');
+      } else {
+        fail('Lost contact with Piko. Check your connection and try again.');
+      }
+    } finally {
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run';
+    }
+  }
+
+  runBtn.addEventListener('click', doRun);
+  showWhere();
+})();
+</script>
+{% endblock js %}
+

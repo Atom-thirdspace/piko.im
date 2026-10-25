@@ -1,0 +1,61 @@
+.pg {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+}
+
+.pg__head h1 {
+    margin: 0 0 .35rem;
+    font-size: 1.6rem;
+}
+
+.pg__head p {
+    margin: 0 0 1.25rem;
+    max-width: 58ch;
+    color: var(--ink-soft);
+}
+
+.pg__bar {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    flex-wrap: wrap;
+    padding: .55rem .7rem;
+    border: 1px solid var(--line);
+    border-radius: 10px 10px 0 0;
+    background: var(--surface-2);
+}
+
+.pg__bar label { font-size: .8rem; color: var(--ink-soft); }
+
+.pg__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 0;
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+    overflow: hidden;
+    min-height: 26rem;
+}
+
+.pg__io {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--line);
+    background: var(--surface);
+    min-width: 0;
+}
+
+.pg__note {
+    margin: .7rem 0 0;
+    font-size: .8rem;
+    color: var(--ink-soft);
+}
+
+/* One column once there is no room for two: the editor needs the width
+   more than the output does. */
+@media (max-width: 900px) {
+    .pg__grid { grid-template-columns: minmax(0, 1fr); }
+    .pg__io { border-left: 0; border-top: 1px solid var(--line); }
+}
