@@ -2,9 +2,10 @@
    Nothing here is scored: Submit still goes to the server, because a
    browser cannot be trusted to say whether a hidden test passed.
 
-   Python loads on intent (9.6MB). C++ is opt-in and remembered, because
-   clang and wasm-ld are themselves WebAssembly - about 26MB over the wire
-   and ~100MB resident once unpacked. */
+   Python loads on intent (9.6MB). C++ always runs here too, but it is
+   fetched only when Run is actually pressed: clang and wasm-ld are
+   themselves WebAssembly, about 26MB over the wire and ~100MB resident
+   once unpacked. */
 (function () {
   var ENGINES = {
     python: {
@@ -13,7 +14,7 @@
       worker: null, booting: null
     },
     cpp: {
-      url: null, module: true, optIn: true,
+      url: null, module: true, optIn: false,
       /* The first call downloads a toolchain, so the build phase gets a
          long leash. The program itself does not. */
       compileMs: 120000, runMs: 5000,
@@ -24,6 +25,22 @@
   var OUTPUT_LIMIT = 256 * 1024;
   var OPT_IN_KEY = 'piko:browserrun:';
   var seq = 0;
+
+  /* Languages cheap enough to fetch before the learner has asked for
+     anything. C++ is not one of them: 26MB on hover is a hostile default
+     on a phone or a metered connection, so it waits for a real Run. */
+  var EAGER = { python: true };
+
+  function warmable(lang) {
+    if (!EAGER[lang]) { return false; }
+    try {
+      var link = navigator.connection;
+      if (link && (link.saveData || /2g/.test(link.effectiveType || ''))) {
+        return false;
+      }
+    } catch (err) { /* no Network Information API: assume it is fine */ }
+    return true;
+  }
 
   function engine(lang) {
     return Object.prototype.hasOwnProperty.call(ENGINES, lang)
@@ -169,11 +186,13 @@
     },
     /* Known to this build and allowed by the learner. */
     supports: function (lang) { return !!window.Worker && enabled(lang); },
-    /* Known to this build, whether or not they have said yes yet. */
+    /* This build has an engine for it, so Run will happen in the tab. */
     offers: function (lang) {
       var eng = engine(lang);
-      return !!window.Worker && !!eng && !!eng.url && eng.optIn;
+      return !!window.Worker && !!eng && !!eng.url;
     },
+    /* Cheap enough to fetch before Run is pressed. */
+    warmable: warmable,
     enabled: enabled,
     setEnabled: setEnabled,
     preload: preload,

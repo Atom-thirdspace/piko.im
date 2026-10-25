@@ -134,11 +134,7 @@
           </select>
           <button type="button" class="ws__ghost" id="reset">Reset</button>
 
-          <label class="ws__optin" id="browserrun-optin" hidden
-                 title="Downloads clang and wasm-ld (about 26MB, once). Run happens in this tab; Submit always uses the judge.">
-            <input type="checkbox" id="browserrun-toggle">
-            Run C++ here
-          </label>
+          <span class="ws__where" id="run-where" hidden></span>
           {% if can_race %}
             <button type="button" class="ws__ghost" id="race"
                     data-race-url="{{ url_for('gamify.speedrun_start', slug=problem.slug) }}"
@@ -322,6 +318,9 @@
   function warmBrowserRun() {
     if (warmed[lang] || !window.PikoRun) { return; }
     if (!window.PikoRun.supports(lang)) { return; }
+    /* C++ is not warmable: its toolchain is 26MB and waits for a real Run
+       rather than downloading because the cursor passed over a button. */
+    if (!window.PikoRun.warmable(lang)) { return; }
     warmed[lang] = true;
     window.PikoRun.preload(lang);
   }
@@ -330,31 +329,22 @@
   if (area) { area.addEventListener('focus', warmBrowserRun); }
   runBtn.addEventListener('mouseenter', warmBrowserRun);
 
-  /* ------------------------------------------- the C++ toolchain opt-in */
+  /* ------------------------------------------------- where Run happens */
 
-  var optBox = document.getElementById('browserrun-optin');
-  var optChk = document.getElementById('browserrun-toggle');
+  var whereTag = document.getElementById('run-where');
 
-  function syncOptIn() {
-    if (!optBox || !window.PikoRun) { return; }
-    var offered = window.PikoRun.offers(lang);
-    optBox.hidden = !offered;
-    if (offered) { optChk.checked = window.PikoRun.enabled(lang); }
-  }
-
-  if (optChk) {
-    optChk.addEventListener('change', function () {
-      window.PikoRun.setEnabled(lang, optChk.checked);
-      warmed[lang] = false;
-      if (optChk.checked) { warmBrowserRun(); }
-    });
+  function showWhere() {
+    if (!whereTag || !window.PikoRun) { return; }
+    var here = window.PikoRun.offers(lang);
+    whereTag.hidden = !here;
+    whereTag.textContent = here ? 'runs in your browser' : 'runs on the judge';
   }
 
   langSel.addEventListener('change', function () {
-    syncOptIn();
+    showWhere();
     warmBrowserRun();
   });
-  syncOptIn();
+  showWhere();
 
   /* -------------------------------------------------------------- tabs */
 
