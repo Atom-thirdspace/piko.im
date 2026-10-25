@@ -28,6 +28,8 @@ def admin_read(view):
 
 def admin_write(view):
     from functools import wraps
+
+    @wraps(view)
     def inner(*args, **kwargs):
         key = getattr(g, "api_key", None)
         if key is None or not key.allows("admin:write"):

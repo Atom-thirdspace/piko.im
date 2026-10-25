@@ -2,5 +2,29 @@ Metadata-Version: 2.4
 Name: piko-cli
 Version: 0.1.0
 Summary: Work on Piko problems from your own machine.
+Author: Aryan Brite, Adhdhyan Jain, Pranjal
+License-Expression: BUSL-1.1
+Project-URL: Homepage, https://piko.aryan.my
+Project-URL: Source, https://github.com/Atom-thirdspace/piko.im
+Project-URL: Issues, https://github.com/Atom-thirdspace/piko.im/issues
+Keywords: piko,competitive-programming,dsa,judge,cli
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Education
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Topic :: Education
+Classifier: Topic :: Utilities
 Requires-Python: >=3.9
+Description-Content-Type: text/markdown
 Requires-Dist: requests>=2.31
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: build>=1.2; extra == "dev"
+Requires-Dist: twine>=5; extra == "dev"
