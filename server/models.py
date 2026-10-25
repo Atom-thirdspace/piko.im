@@ -1585,10 +1585,15 @@ API_SCOPES = {
     "progress:write":      "Spend your coins on hints",
     "notifications:read":  "Read your notifications",
     "notifications:write": "Mark your notifications as read",
+    "admin:read":  "Read site statistics and traffic (admins only)",
+    "admin:write": "Act as an administrator (admins only, needs unlock)",
 }
 
 DEFAULT_SCOPES = ["catalog:read"]
+
 MAX_KEYS_PER_USER = 10
+
+ADMIN_SCOPES = {"admin:read", "admin:write"}
 
 class ApiKey(db.Model):
     __tablename__ = "api_keys"
@@ -1609,6 +1614,7 @@ class ApiKey(db.Model):
     oauth_client_id = db.Column(
         db.Integer, db.ForeignKey("oauth_clients.id", ondelete="CASCADE"),
         index=True)
+    admin_elevated_until = db.Column(db.DateTime(timezone=True))
 
     user = db.relationship("User")
 
@@ -2701,3 +2707,22 @@ class OAuthDevice(db.Model):
     def is_live(self):
         return (self.consumed_at is None and self.denied_at is None
                 and self.expires_at > _utcnow())        
+
+class PageEvent(db.Model):
+    __tablename__ = "page_events"
+
+    id = db.Column(db.BigInteger, primary_key=True)
+    at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    route = db.Column(db.String(120), nullable=False, index=True)
+    method = db.Column(db.String(8), nullable=False, default="GET")
+    status = db.Column(db.SmallInteger, nullable=False)
+    ms = db.Column(db.Integer, nullable=False, default=0)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey("users.id", ondelete="SET NULL"),
+                        index=True)
+    visitor = db.Column(db.String(32), nullable=False, default="",
+                        server_default="")
+    referrer = db.Column(db.String(120), nullable=False, default="",
+                         server_default="")
+    bot = db.Column(db.Boolean, nullable=False, default=False,
+                    server_default="false")

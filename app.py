@@ -50,6 +50,9 @@ from server.gamify_routes import gamify_bp
 from server.seasons import register_cli as register_season_cli
 from server.rivals import register_cli as register_rivals_cli
 from server.raids import register_cli as register_raids_cli
+from server import traffic as traffic_mod
+from server import adminapi
+
 
 load_dotenv()
 
@@ -112,6 +115,8 @@ app.jinja_env.globals["is_pro"] = lambda: _is_pro(current_user())
 app.jinja_env.globals["billing_state"] = lambda: _sub_state(current_user())
 app.jinja_env.globals["unread_notifications"] = lambda: _unread_cached(current_user())
 _notify.register_cli(app)
+traffic_mod.install(app)
+traffic_mod.register_cli(app)
 
 
 @app.errorhandler(404)

@@ -22,6 +22,10 @@ MARKS = {"ok": lambda: green("ok  "), "warn": lambda: amber("warn"),
 BANDS = {"mastered": green, "strong": green, "solid": amber,
          "learning": amber, "touched": dim}
 
+ADMIN_SCOPES = ["admin:read", "admin:write"]
+
+
+
 
 def _bar(fraction, width=22):
     filled = int(round(max(0.0, min(1.0, fraction)) * width))
@@ -45,8 +49,10 @@ def cmd_login(args):
         config.save_token(args.token, api=args.api)
         return _signed_in()
 
+    scopes = SCOPES + (ADMIN_SCOPES if args.admin else [])
+
     if args.device:
-        return _login_device(args)
+        return _login_device(args, scopes)
 
     from urllib.parse import urlencode
 
@@ -64,7 +70,7 @@ def cmd_login(args):
         "response_type": "code",
         "client_id": api.CLIENT_ID,
         "redirect_uri": redirect_uri,
-        "scope": " ".join(SCOPES),
+        "scope": " ".join(scopes),
         "state": state,
         "code_challenge": challenge,
         "code_challenge_method": "S256",
@@ -580,6 +586,8 @@ def build_parser():
     p.add_argument("--token")
     p.add_argument("--device", action="store_true",
                    help="sign in with a code instead of a browser redirect")
+    p.add_argument("--admin", action="store_true",
+                   help="also request the admin scopes (admins only)")
     p.set_defaults(fn=cmd_login)
 
     subs.add_parser("logout", help="forget the saved key").set_defaults(fn=cmd_logout)
@@ -607,6 +615,8 @@ def build_parser():
     p.add_argument("--into")
     p.add_argument("--edit", action="store_true",
                    help="open the stub in $EDITOR straight away")
+    p.add_argument("--template", metavar="NAME",
+                   help="start from a saved template instead of the stub")
     p.set_defaults(fn=cmd_get)
 
     p = subs.add_parser("test", help="run the sample cases")
@@ -753,6 +763,7 @@ def build_parser():
     p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
     p.add_argument("--plain", action="store_true",
                    help="scrolling output instead of the panel")
+    p.set_defaults(fn=cmd_watch)
 
     p = subs.add_parser("upgrade", help="install the newest piko-cli")
     p.add_argument("--force", action="store_true",
@@ -769,12 +780,19 @@ def build_parser():
     p.add_argument("--file", help="save this file instead of the default source")
     p.set_defaults(fn=cmd_template)
 
-    p.add_argument("--template", metavar="NAME",
-                   help="start from a saved template instead of the stub")
+    p = subs.add_parser("admin", help="site statistics and operations")
+    p.add_argument("action", choices=tuple(sorted(ADMIN_ACTIONS)))
+    p.add_argument("target", nargs="?", help="a submission id, slug or user id")
+    p.add_argument("--days", type=int, default=7)
+    p.add_argument("--top", type=int, default=15)
+    p.add_argument("--page", type=int, default=1)
+    p.add_argument("--query", help="filter users")
+    p.add_argument("--amount", type=int)
+    p.add_argument("--reason")
+    p.add_argument("--every", type=float, default=10.0,
+                   help="refresh seconds for `admin watch`")
+    p.set_defaults(fn=cmd_admin)
 
-
-
-    p.set_defaults(fn=cmd_watch)
 
     parser.add_argument("--version", action="store_true")
 
@@ -1489,8 +1507,8 @@ def cmd_doctor(_args):
     return 1
 
 
-def _login_device(args):
-    start = api.device_start(SCOPES)
+def _login_device(args, scopes=None):
+    start = api.device_start(scopes or SCOPES)
     deadline = time.time() + start.get("expires_in", 600)
     interval = max(int(start.get("interval", 5)), 1)
 
@@ -1635,3 +1653,237 @@ def cmd_template(args):
     output.ok("saved %s" % target)
     output.note("use it with `piko get <slug> --template %s`" % args.name)
     return 0
+
+def _sparkline(values):
+    blocks = "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588"
+    if not values:
+        return ""
+    high = max(values) or 1
+    return "".join(blocks[min(int(v / high * (len(blocks) - 1)), 7)]
+                   for v in values)
+
+def cmd_admin(args):
+    return ADMIN_ACTIONS[args.action](args)
+
+def _admin_stats(_args):
+    data = api.admin_stats()
+    if output.as_json(data):
+        return 0
+
+    head = data.get("headline") or {}
+    output.header("Piko")
+    output.row("users".ljust(14), str(head.get("users", 0)),
+               dim("%d active this week" % head.get("active", 0)))
+    output.row("content".ljust(14),
+               "%d problems, %d lessons" % (head.get("problems", 0),
+                                            head.get("lessons", 0)))
+    output.row("submissions".ljust(14), str(head.get("submissions", 0)),
+               dim("%.0f%% accepted" % head.get("accept_rate", 0)))
+    output.row("solves".ljust(14), str(head.get("solves", 0)),
+               dim("%d lessons done" % head.get("lessons_done", 0)))
+
+    rows = data.get("funnel") or []
+    if rows:
+        output.header("Funnel")
+        for row in rows:
+            step = row.get("step")
+            drop = ""
+            if step is not None and step < 100:
+                paint = red if step < 50 else amber
+                drop = paint("  %.0f%% of the step above" % step)
+            output.row(row["label"].ljust(24),
+                       _bar(row["percent"] / 100.0, 18),
+                       ("%d" % row["value"]).ljust(6) + drop)
+
+    judge = data.get("judge") or {}
+    output.header("Judge")
+    output.row("queued", str(judge.get("queued", 0)))
+    output.row("running", str(judge.get("running", 0)))
+    output.row("failed", red(str(judge.get("failed", 0)))
+               if judge.get("failed") else "0")
+    output.row("done 24h", str(judge.get("done_24h", 0)))
+
+    output.header("Content")
+    for row in data.get("content") or []:
+        output.row(row["label"].ljust(12),
+                   dim("draft %d" % row["draft"]).ljust(18),
+                   dim("review %d" % row["review"]).ljust(18),
+                   green("published %d" % row["published"]))
+    return 0
+
+def _admin_traffic(args):
+    data = api.admin_traffic(days=args.days, top=args.top)
+    if output.as_json(data):
+        return 0
+
+    output.header("Traffic  %s" % dim("last %d days" % data.get("days", 7)))
+    output.row("views".ljust(12), str(data.get("views", 0)))
+    output.row("visitors".ljust(12), str(data.get("visitors", 0)),
+               dim("%d signed in" % data.get("signed_in", 0)))
+    output.row("latency".ljust(12), "%.0f ms avg" % data.get("avg_ms", 0),
+               dim("p95 %d ms" % data.get("p95_ms", 0)))
+    output.row("bots".ljust(12), dim("%d views" % data.get("bot_views", 0)))
+
+    by_day = data.get("by_day") or []
+    if by_day:
+        print()
+        output.row("by day", _sparkline([d["views"] for d in by_day]),
+                   dim("%s - %s" % (by_day[0]["day"], by_day[-1]["day"])))
+
+    routes = data.get("routes") or []
+    if routes:
+        output.header("Busiest routes")
+        for row in routes:
+            output.row(row["route"][:38].ljust(40),
+                       ("%d" % row["views"]).rjust(7),
+                       dim("%d visitors" % row["visitors"]).ljust(16),
+                       dim("%.0f ms" % row["avg_ms"]))
+
+    slowest = data.get("slowest") or []
+    if slowest:
+        output.header("Slowest routes")
+        for row in slowest:
+            paint = red if row["avg_ms"] > 1000 else amber
+            output.row(row["route"][:38].ljust(40),
+                       paint("%.0f ms" % row["avg_ms"]),
+                       dim("over %d views" % row["views"]))
+
+    statuses = data.get("statuses") or []
+    if statuses:
+        output.header("Status codes")
+        for row in statuses:
+            code = row["status"]
+            paint = green if code < 400 else (amber if code < 500 else red)
+            output.row(paint(str(code)), str(row["count"]))
+
+    referrers = data.get("referrers") or []
+    if referrers:
+        output.header("Referrers")
+        for row in referrers:
+            output.row(row["host"][:38].ljust(40), str(row["views"]))
+
+    buffer = data.get("buffer") or {}
+    if buffer.get("dropped"):
+        output.note("%d events dropped - the buffer filled up"
+                    % buffer["dropped"])
+    return 0
+
+
+def _admin_health(_args):
+    data = api.admin_health()
+    if output.as_json(data):
+        return 0
+    db_probe = data.get("db") or {}
+    schema = data.get("schema") or {}
+    judge = data.get("judge") or {}
+
+    output.header("Health")
+    output.row(green("ok  ") if db_probe.get("ok") else red("bad "),
+               "database".ljust(12),
+               "%s ms" % db_probe.get("latency_ms", "?"))
+    output.row(green("ok  ") if schema.get("ok") else red("bad "),
+               "schema".ljust(12),
+               "no drift" if schema.get("ok") else "drift")
+    for name in schema.get("missing_tables") or []:
+        output.note("  missing table %s" % name)
+    for name in schema.get("missing_columns") or []:
+        output.note("  missing column %s" % name)
+    output.row(green("ok  ") if judge.get("ok") else red("bad "),
+               "judge".ljust(12),
+               "%s queued, %s stalled" % (judge.get("queued", 0),
+                                          judge.get("stalled", 0)))
+    return 0
+
+def _admin_users(args):
+    data = api.admin_users(query=args.query, page = args.page)
+    if output.as_json(data):
+        return 0
+    output.header("Users  %s" % dim("%d total" % data.get("total", 0)))
+    for row in data.get("items") or []:
+        flags = []
+        if not row.get("verified"):
+            flags.append(amber("unverified"))
+        if row.get("suspended"):
+            flags.append(red("suspended"))
+        output.row(dim("%5d" % row["id"]),
+                   bold((row.get("username") or "-")[:18].ljust(20)),
+                   ("%d XP" % row.get("xp_total", 0)).ljust(12),
+                   dim("last %s" % (row.get("last_active") or "never")),
+                   " ".join(flags))
+    return 0
+
+def _admin_audit(args):
+    data = api.admin_audit(page=args.page)
+    if output.as_json(data):
+        return 0
+    output.header("Audit Log")
+    for row in data.get("items") or []:
+        output.row(dim(str(row["at"])[:19]),
+                   bold(row["action"].ljust(28)),
+                   (row.get("target") or "")[:24].ljust(26),
+                   dim((row.get("detail") or "")[:40]))
+    return 0
+
+
+def _admin_unlock(_args):
+    body = api.admin_unlock_start()
+    output.note(body.get("message") or "Code sent.")
+    if not body.get("sent"):
+        return 1
+    code = input("  Code from your email: ").strip()
+    done = api.admin_unlock_verify(code)
+    output.ok("unlocked for %d minutes" % done.get("minutes", 15))
+    return 0
+
+def _admin_lock(_args):
+    api.admin_lock()
+    output.ok("locked")
+    return 0
+
+def _admin_rejudge(args):
+    if not args.target:
+        raise Fail("Which submission? `piko admin rejudge <id>`")
+    body = api.admin_rejudge(int(args.target))
+    output.ok("submission %s queued" % body.get("submission_id"))
+    return 0
+
+
+def _admin_publish(args):
+    if not args.target:
+        raise Fail("Which problem? `piko admin publish <slug>`")
+    body = api.admin_publish(args.target)
+    output.ok("%s is now %s" % (body["slug"], body["status"]))
+    return 0
+
+
+def _admin_xp(args):
+    if not args.target or args.amount is None:
+        raise Fail("`piko admin xp <user-id> --amount 50 --reason ...`")
+    body = api.admin_grant_xp(int(args.target), args.amount,
+                              args.reason or "admin grant")
+    output.ok("user %s now has %s XP" % (body["user_id"], body["xp_total"]))
+    return 0
+
+def _admin_watch(args):
+    from .tui.admin import Dashboard
+    from .tui.screen import Screen
+
+    if not sys.stdout.isatty():
+        raise Fail("`piko admin watch` needs a terminal.")
+    with Screen() as screen:
+        Dashboard(screen, every=args.every).run()
+    return 0
+
+ADMIN_ACTIONS = {
+    "stats": _admin_stats,
+    "traffic": _admin_traffic,
+    "health": _admin_health,
+    "users": _admin_users,
+    "audit": _admin_audit,
+    "unlock": _admin_unlock,
+    "lock": _admin_lock,
+    "rejudge": _admin_rejudge,
+    "publish": _admin_publish,
+    "xp": _admin_xp,
+    "watch": _admin_watch,
+}

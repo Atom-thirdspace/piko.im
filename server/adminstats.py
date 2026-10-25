@@ -58,18 +58,18 @@ def funnel():
         stages.append((label, _count(User, *conditions) if conditions
                        else _count(User)))
 
-        top = stages[0][1]
-        rows, previous = [], top
-        for i, (label, value) in enumerate(stages):
-            rows.append({
-                "label": label,
-                "value": value,
-                "percent": value * 100.0 / top,
-                "step": (value * 100.0 / previous) if previous else None,
-                "colour": FUNNEL_RAMP[i],
-            })
-            previous = value or None
-        return rows
+    top = stages[0][1]
+    rows, previous = [], top
+    for i, (label, value) in enumerate(stages):
+        rows.append({
+            "label": label,
+            "value": value,
+            "percent": value * 100.0 / top if top else 0.0,
+            "step": (value * 100.0 / previous) if previous else None,
+            "colour": FUNNEL_RAMP[i],
+        })
+        previous = value or None
+    return rows
 
 def _month_buckets(column, *where):
     month = db.func.date_trunc("month", db.func.timezone("UTC", column))
@@ -206,3 +206,72 @@ def engagement():
     best = _scalar(db.select(db.func.max(User.streak_best)))
     xp = _scalar(db.select(db.func.coalesce(db.func.sum(XpEvent.amount), 0)))
     return {"on_a_streak": streaks, "best_streak": best, "xp_awarded": xp}
+
+def traffic(days=7, top=15):
+    from .models import PageEvent
+
+    since = _utcnow() - timedelta(days=days)
+    human = db.and_(PageEvent.at >= since, PageEvent.bot.is_(False))
+
+    totals = db.session.execute(
+        db.select(db.func.count(),
+                  db.func.count(db.distinct(PageEvent.visitor)),
+                  db.func.count(db.distinct(PageEvent.user_id)),
+                  db.func.avg(PageEvent.ms),
+                  db.func.percentile_disc(0.95)
+                  .within_group(PageEvent.ms))
+        .where(human)).one()
+
+    by_day = db.session.execute(
+        db.select(db.func.date_trunc("day", PageEvent.at).label("d"),
+                  db.func.count(),
+                  db.func.count(db.distinct(PageEvent.visitor)))
+        .where(human).group_by("d").order_by("d")).all()
+
+    routes = db.session.execute(
+        db.select(PageEvent.route, db.func.count(),
+                  db.func.count(db.distinct(PageEvent.visitor)),
+                  db.func.avg(PageEvent.ms))
+        .where(human).group_by(PageEvent.route)
+        .order_by(db.func.count().desc()).limit(top)).all()
+
+    statuses = db.session.execute(
+        db.select(PageEvent.status, db.func.count())
+        .where(PageEvent.at >= since)
+        .group_by(PageEvent.status)
+        .order_by(db.func.count().desc())).all()
+
+    referrers = db.session.execute(
+        db.select(PageEvent.referrer, db.func.count())
+        .where(human, PageEvent.referrer != "")
+        .group_by(PageEvent.referrer)
+        .order_by(db.func.count().desc()).limit(top)).all()
+
+    slowest = db.session.execute(
+        db.select(PageEvent.route, db.func.avg(PageEvent.ms),
+                  db.func.count())
+        .where(human).group_by(PageEvent.route)
+        .having(db.func.count() >= 5)
+        .order_by(db.func.avg(PageEvent.ms).desc()).limit(top)).all()
+
+    bots = _scalar(db.select(db.func.count()).select_from(PageEvent)
+                   .where(PageEvent.at >= since, PageEvent.bot.is_(True)))
+
+    return {
+        "days": days,
+        "views": totals[0] or 0,
+        "visitors": totals[1] or 0,
+        "signed_in": totals[2] or 0,
+        "avg_ms": round(float(totals[3] or 0), 1),
+        "p95_ms": int(totals[4] or 0),
+        "bot_views": bots,
+        "by_day": [{"day": d.date().isoformat(), "views": v, "visitors": u}
+                   for d, v, u in by_day],
+        "routes": [{"route": r, "views": v, "visitors": u,
+                    "avg_ms": round(float(ms or 0), 1)}
+                   for r, v, u, ms in routes],
+        "statuses": [{"status": s, "count": n} for s, n in statuses],
+        "referrers": [{"host": h, "views": n} for h, n in referrers],
+        "slowest": [{"route": r, "avg_ms": round(float(ms or 0), 1),
+                     "views": n} for r, ms, n in slowest],
+    }

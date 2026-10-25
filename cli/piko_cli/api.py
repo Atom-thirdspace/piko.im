@@ -290,4 +290,45 @@ def _oauth_raw(path, form):
                    or "Request failed (%s)." % resp.status_code)
     return body
 
+def admin_stats():
+    return get("/admin/stats", use_cache=False)
 
+def admin_traffic(days = 7, top=15):
+    return get("/admin/traffic", params={"days": days, "top" : top })
+
+def admin_health():
+    return get("/admin/health", use_cache=False)
+
+def admin_users(query=None, page=1):
+    params = {"page": page}
+    if query:
+        params["q"] = query
+    return get("/admin/users", params=params)
+
+
+def admin_audit(page=1):
+    return get("/admin/audit", params={"page": page})
+
+
+def admin_unlock_start():
+    return post("/admin/unlock", {})
+
+def admin_unlock_verify(code):
+    return post("/admin/unlock/verify", {"code": code})
+
+
+def admin_lock():
+    return post("/admin/lock", {})
+
+
+def admin_rejudge(sub_id):
+    return post("/admin/submissions/%d/rejudge" % sub_id, {})
+
+
+def admin_grant_xp(user_id, amount, reason):
+    return post("/admin/users/%d/xp" % user_id,
+                {"amount": amount, "reason": reason})
+
+
+def admin_publish(slug):
+    return post("/admin/problems/%s/publish" % slug, {})

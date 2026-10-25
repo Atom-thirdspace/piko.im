@@ -6,6 +6,8 @@ from datetime import timedelta
 
 from .models import (API_SCOPES, DEFAULT_SCOPES, MAX_KEYS_PER_USER, ApiKey,
                      _utcnow, db)
+from .admin_gate import is_admin
+from .models import ADMIN_SCOPES
 
 PREFIX = "piko_sk_"
 SECRET_BYTES = 32
@@ -24,6 +26,9 @@ def mint(user, name="", scopes=None, days=None, expires_in=None,
             raise ValueError("You already have %d live keys." % MAX_KEYS_PER_USER)
 
     wanted = [s for s in (scopes or DEFAULT_SCOPES) if s in API_SCOPES]
+    if any(s in ADMIN_SCOPES for s in wanted) and not is_admin(user):
+        raise ValueError("Admin scopes are only available to administrators.")
+    
     if not wanted:
         wanted = list(DEFAULT_SCOPES)
 
