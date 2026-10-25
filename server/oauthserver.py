@@ -378,7 +378,7 @@ def register_cli(app):
             db.session.add(OAuthClient(
                 client_id="piko-cli", name="Piko CLI",
                 description="The official command-line tool.",
-                redirect_uris=["http://127.0.0.1/callback"],
+                redirect_uris=["https://piko.aryan.my/callback"],
                 max_scopes=wanted, first_party=True))
             db.session.commit()
             print("created piko-cli with %d scopes" % len(wanted))
