@@ -329,6 +329,8 @@
     landJobsObserver.observe(landJobsLine);
   }
 
-  AOS.init();
+  AOS.init({
+    once: true
+  });
 </script>
 {% endblock js %}
