@@ -107,6 +107,7 @@ def _ok(payload, private=False):
         resp.headers["X-RateLimit-Limit"] = str(g.api_limit)
     return resp
 
+
 @api_bp.before_request
 def guard():
     if request.method == "OPTIONS":
@@ -832,3 +833,24 @@ def reveal_problem_hint(slug, hint_ids):
     return _json({"id": hint.id, "position": hint.position,
                   "body_md": hint.body_md,
                   "balance": economy.balance(user)})
+
+@api_bp.route("/users/<username>")
+def public_user(username):
+    from .models import User
+    from .progress import level_for_xp
+
+    row = db.session.execute(
+        db.select(User).where(User.username == username)).scalar_one_or_none()
+    if row is None or not row.discoverable or row.is_suspended:
+        return _error("not_found", "No such profile.", 404)
+
+    solved = db.session.execute(
+        db.select(db.func.count(db.distinct(Submission.problem_id)))
+        .where(Submission.user_id == row.id,
+               Submission.verdict == V.AC)).scalar() or 0
+
+    return _ok({"username": row.username, "name": row.name,
+                "xp_total": row.xp_total, "level": level_for_xp(row.xp_total or 0),
+                "streak_days": row.streak_days, "streak_best": row.streak_best,
+                "solved": solved, "joined": row.created_at,
+                "avatar_url": row.avatar_url})

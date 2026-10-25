@@ -1,6 +1,8 @@
 import os
 import sys
 
+JSON = False
+
 class Fail(Exception):
     """Anything the user should see as a message, not a traceback."""
 
@@ -66,3 +68,15 @@ def side_by_side(expected, got, width=34):
 def _strip(text):
     import re
     return re.sub(r"\033\[[0-9;]*m", "", text or "")
+
+def _tty():
+    return not JSON and sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+def as_json(payload):
+    if not JSON:
+        return False
+    import json as _json
+
+    _json.dump(payload, sys.stdout, indent=2, default=str, sort_keys=True)
+    sys.stdout.write("\n")
+    return True

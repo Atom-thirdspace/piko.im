@@ -11,19 +11,24 @@ from flask import (Blueprint, jsonify, make_response, redirect,
 from . import csrf
 from .apikeys import mint, resolve
 from .apikeys import revoke as revoke_key
-from .models import (API_SCOPES, ApiKey, OAuthClient, OAuthCode, OAuthRefresh,
-                     _utcnow, db)
+from .models import (API_SCOPES, ApiKey, OAuthClient, OAuthCode, OAuthDevice,
+                     OAuthRefresh, _utcnow, db)
 from .publicapi import _client_ip, _rate_limited
 from .session import current_user, login_required
 
 oauth_bp = Blueprint("oauth", __name__)
 
+DEVICE_TTL = timedelta(minutes=10)
+DEVICE_INTERVAL = 5
+DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
 CODE_TTL = timedelta(minutes=2)
 ACCESS_TTL = timedelta(hours=1)
 REFRESH_TTL = timedelta(days=60)
 WRITE_SCOPES = {"submissions:write"}
 TOKEN_PER_MINUTE = 30
 MAX_APPS_PER_OWNER = 5
+
+CODE_ALPHABET = "BCDFGHJKMNPQRSTVWXZ23456789"   
 
 Ctx = namedtuple("Ctx", "client uri state scopes challenge")
 
@@ -74,6 +79,9 @@ def parse_scopes(client, text):
             raise ValueError("%r is only available to verified apps." % scope)
     return asked
 
+def _user_code():
+    raw = "".join(secrets.choice(CODE_ALPHABET) for _ in range(8))
+    return raw[:4] + "-" + raw[4:]
 
 def _error_page(message, status=400):
     resp = make_response(render_template("oauth_error.html", message=message),
@@ -271,6 +279,7 @@ def _grant_refresh(client):
 def token():
     if _rate_limited("oauth:" + _client_ip(), TOKEN_PER_MINUTE):
         return _oauth_error("slow_down", "Too many requests.", 429)
+    
 
     client = _authenticate_client()
     if client is None:
@@ -279,10 +288,12 @@ def token():
     grant = request.form.get("grant_type")
     if grant == "authorization_code":
         return _grant_code(client)
+    if grant == DEVICE_GRANT:
+            return _grant_device(client)
     if grant == "refresh_token":
         return _grant_refresh(client)
     return _oauth_error("unsupported_grant_type")
-
+    
 
 @oauth_bp.route("/oauth/revoke", methods=["POST"])
 @csrf.exempt
@@ -316,14 +327,16 @@ def metadata():
     resp = jsonify(
         issuer=base,
         authorization_endpoint=base + "/oauth/authorize",
+        device_authorization_endpoint=base + "/oauth/device_authorization",
         token_endpoint=base + "/oauth/token",
         revocation_endpoint=base + "/oauth/revoke",
         response_types_supported=["code"],
-        grant_types_supported=["authorization_code", "refresh_token"],
+        grant_types_supported=["authorization_code", "refresh_token", DEVICE_GRANT],
         code_challenge_methods_supported=["S256"],
         token_endpoint_auth_methods_supported=[
             "none", "client_secret_basic", "client_secret_post"],
         scopes_supported=sorted(API_SCOPES))
+        
     resp.headers["Cache-Control"] = "public, max-age=3600"
     return resp
 
@@ -367,7 +380,6 @@ def register_cli(app):
 
     @app.cli.command("oauth-prune")
     def _prune():
-        """Drop spent codes and expired tokens."""
         cutoff = _utcnow() - timedelta(days=1)
         a = db.session.execute(db.delete(OAuthCode).where(
             OAuthCode.expires_at < cutoff)).rowcount
@@ -376,5 +388,124 @@ def register_cli(app):
         c = db.session.execute(db.delete(ApiKey).where(
             ApiKey.oauth_client_id.isnot(None),
             ApiKey.expires_at < cutoff)).rowcount
+        
         db.session.commit()
         print("pruned %d codes, %d refresh tokens, %d access keys" % (a, b, c))
+
+
+@oauth_bp.route("/oauth/device_authorization", methods=["POST"])
+@csrf.exempt
+def device_authorization():
+    if _rate_limited("device:" + _client_ip(), TOKEN_PER_MINUTE):
+        return _oauth_error("slow_down", "Too many requests.", 429)
+
+    client = _find_client(request.form.get("client_id"))
+    if client is None or not client.is_live:
+        return _oauth_error("invalid_client", status=401)
+
+    try:
+        scopes = parse_scopes(client, request.form.get("scope", ""))
+    except ValueError as exc:
+        return _oauth_error("invalid_scope", str(exc))
+
+    raw = secrets.token_urlsafe(32)
+    for _ in range(5):
+        code = _user_code()
+        if db.session.execute(db.select(OAuthDevice.id)
+                              .filter_by(user_code=code)).scalar() is None:
+            break
+    else:
+        return _oauth_error("server_error", "Could not allocate a code.", 500)
+
+    db.session.add(OAuthDevice(
+        client_id=client.id, device_hash=_sha(raw), user_code=code,
+        scopes=scopes, expires_at=_utcnow() + DEVICE_TTL))
+    db.session.commit()
+
+    base = request.url_root.rstrip("/")
+    resp = jsonify(device_code=raw, user_code=code,
+                   verification_uri=base + "/oauth/device",
+                   verification_uri_complete="%s/oauth/device?code=%s"
+                                             % (base, code),
+                   expires_in=int(DEVICE_TTL.total_seconds()),
+                   interval=DEVICE_INTERVAL)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def _device_by_code(code):
+    return db.session.execute(
+        db.select(OAuthDevice).filter_by(
+            user_code=(code or "").strip().upper())).scalar_one_or_none()
+
+
+@oauth_bp.route("/oauth/device", methods=["GET", "POST"])
+@login_required
+def device_verify():
+    code = (request.form.get("user_code") if request.method == "POST"
+            else request.args.get("code")) or ""
+
+    row = _device_by_code(code) if code else None
+    error = None
+    if code and row is None:
+        error = "That code is not one of yours"
+    elif row is not None and not row.is_live:
+        error = "That code has expired. Start again in your terminal."
+        row = None
+
+    if request.method == "POST" and row is not None:
+        if request.form.get("answer") == "yes":
+            row.user_id = current_user().id
+            row.approved_at = _utcnow()
+        else:
+            row.denied_at = _utcnow()
+        db.session.commit()
+        return render_template("oauth_device.html", done=True,
+                               approved=row.approved_at is not None,
+                               client=row.client)
+
+    resp = make_response(render_template(
+        "oauth_device.html", done=False, row=row, code=code, error=error,
+        labels=API_SCOPES, client=row.client if row else None,
+        scopes=row.scopes if row else []))
+    resp.headers["Cache-Control"] = "no-store"
+    resp.headers["X-Frame-Options"] = "DENY"
+    return resp
+
+def _grant_device(client):
+    row = _by_device(request.form.get("device_code", ""))
+    if row is None or row.client_id != client.id:
+        return _oauth_error("invalid_grant", "Unknown device code.")
+
+    now = _utcnow()
+    if row.consumed_at is not None:
+        return _oauth_error("invalid_grant", "That code was already used.")
+    if row.expires_at <= now:
+        return _oauth_error("expired_token", "The code expired.")
+    if row.denied_at is not None:
+        return _oauth_error("access_denied", "The request was declined.")
+
+    if (row.last_poll_at is not None
+            and (now - row.last_poll_at).total_seconds() < DEVICE_INTERVAL - 1):
+        row.last_poll_at = now
+        db.session.commit()
+        return _oauth_error("slow_down", "Poll no faster than %ds."
+                            % DEVICE_INTERVAL, 400)
+
+    row.last_poll_at = now
+    if row.approved_at is None:
+        db.session.commit()
+        return _oauth_error("authorization_pending", "Nobody has approved it yet" )
+    row.consumed_at = now
+    scopes = list(row.scopes)
+    user = row.user
+    db.session.commit()
+    return _issue(client, user, scopes)
+
+def _by_device(raw):
+    if not raw:
+        return None
+    return db.session.execute(
+        db.select(OAuthDevice).filter_by(device_hash=_sha(raw))
+    ).scalar_one_or_none()
+

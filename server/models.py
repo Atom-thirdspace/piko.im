@@ -2672,3 +2672,32 @@ def solve_rates(problem_ids):
         .group_by(Submission.problem_id)
     ).all()
     return {r.problem_id: (r.solved, r.tried) for r in rows}
+
+class OAuthDevice(db.Model):
+    __tablename__ = "oauth_devices"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(
+        db.Integer, db.ForeignKey("oauth_clients.id", ondelete="CASCADE"),
+        nullable=False, index=True)
+    device_hash = db.Column(db.String(64), unique=True, nullable=False)
+    user_code = db.Column(db.String(12), unique=True, nullable=False,
+                          index=True)
+    scopes = db.Column(ARRAY(db.Text), nullable=False, default=list)
+    user_id = db.Column(db.Integer,
+                        db.ForeignKey("users.id", ondelete="CASCADE"))
+    approved_at = db.Column(db.DateTime(timezone=True))
+    denied_at = db.Column(db.DateTime(timezone=True))
+    consumed_at = db.Column(db.DateTime(timezone=True))
+    last_poll_at = db.Column(db.DateTime(timezone=True))
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow,
+                           nullable=False)
+
+    client = db.relationship("OAuthClient")
+    user = db.relationship("User")
+
+    @property
+    def is_live(self):
+        return (self.consumed_at is None and self.denied_at is None
+                and self.expires_at > _utcnow())        

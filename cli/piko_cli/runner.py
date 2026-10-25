@@ -110,3 +110,117 @@ def run_case(folder, language, stdin_text):
         return False, proc.stdout, (proc.stderr or "").strip()[:400]
     return True, proc.stdout, ""
 
+
+def exact(stdin, expected, actual):
+    return normalise(actual) == normalise(expected), ""
+
+def unordered(stdin, expected, actual):
+    want = sorted(normalise(expected).splitlines())
+    got = sorted(normalise(actual).splitlines())
+    if want == got:
+        return True, ""
+    return False, "the same lines were expected, in any order"
+
+def make_float(tolerance):
+    def check(stdin , expected, actual):
+        want, got = normalise(expected).split(), normalise(actual).split()
+        if len(want) != len(got):
+            return False, "expected %d values, got %d" % (len(want), len(got))
+        for a, b in zip(want, got):
+            try:
+                if abs(float(a) - float(b)) > tolerance:
+                    return False, "%s differs from %s by more than %g" % (
+                        b, a, tolerance)
+            except ValueError:
+                if a != b:
+                    return False, "%r where %r was expected" % (b, a)
+        return True, ""
+    return check
+
+BUILTIN = {"exact": exact, "unordered": unordered}
+
+def checker_for(folder, meta):
+    custom = folder / "checker.py"
+    if custom.exists():
+        return _load_checker(custom)
+    
+    spec = meta.get("checker") or "exact"
+
+    if isinstance(spec, dict):
+        kind = spec.get("kind") or "exact"
+        if kind == "float":
+            return make_float(float(spec.get("tolerance", 1e-6)))
+        spec = kind
+    if spec == "float":
+        return make_float(1e-6)
+    if spec not in BUILTIN:
+        raise Fail("Unknown checker %r in piko.json. Try: %s, float."
+                   % (spec, ", ".join(sorted(BUILTIN))))
+    return BUILTIN[spec]
+
+def _load_checker(path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("piko_checker", str(path))
+    module = importlib.util.module_from_spec(spec)
+
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        raise Fail("checker.py would not load: %s" % exc)
+
+    fn = getattr(module, "check", None)
+    if fn is None:
+        raise Fail("checker.py needs a check(stdin, expected, actual).")
+
+    def wrapped(stdin, expected, actual):
+        result = fn(stdin, expected, actual)
+        if isinstance(result, tuple):
+            return bool(result[0]), (result[1] or "")
+        return bool(result), ""
+    return wrapped
+
+CHECKER_STUB = '''\
+"""Decide whether `actual` is a correct answer for `stdin`.
+
+Return True, or (False, "why it is wrong").
+"""
+
+
+def check(stdin, expected, actual):
+    return actual.split() == expected.split()
+'''
+
+def sources_for(folder, language, meta):
+    listed = meta.get("sources")
+    if not listed:
+        return [folder / LANGUAGES[language]["source"]]
+    paths = [folder / name for name in listed]
+    missing = [p.name for p in paths if not p.exists()]
+    if missing:
+        raise Fail("piko.json lists files that aren't here: %s"
+                   % ", ".join(missing))
+    return paths
+
+
+def compile_if_needed(folder, language, meta=None):
+    spec = LANGUAGES[language]
+    if spec["compile"] is None:
+        return
+
+    override = (meta or {}).get("build")
+    if override:
+        cmd = [part.replace("{dir}", str(folder)) for part in override]
+    else:
+        files = sources_for(folder, language, meta or {})
+        cmd = spec["compile"](folder)
+        if len(files) > 1:
+            cmd = cmd + [str(p) for p in files[1:]]
+
+    if not shutil.which(cmd[0]):
+        raise Fail("%s isn't installed, so %s can't be built here."
+                   % (cmd[0], spec["label"]))
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    if proc.returncode != 0:
+        raise Fail("Compile failed:\n\n" + (proc.stderr or proc.stdout))
+    

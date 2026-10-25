@@ -224,7 +224,7 @@ def achievements():
 def coins():
     return get("/me/coins", use_cache=False)
 
-def leaderboard():
+def leaderboard(scope="week", limit=25):
     return get("/leaderboard", params={"scope": scope, "limit": limit})
 
 def mark_read(ids=None):
@@ -238,3 +238,56 @@ def hints(slug):
 
 def reveal_hint(slug, hint_id):
     return post("/problems/%s/hints/%d" % (slug, hint_id), {})
+
+def notifications(unread=False, page=1):
+    params = {"page": page}
+    if unread:
+        params["unread"] = "1"
+    return get("/me/notifications", params=params)
+
+
+def stats():
+    return get("/me/stats", use_cache=False)
+
+def profile(username):
+    return get("/users/%s" % username, auth=False)
+
+def device_start(scopes):
+    return _oauth_raw("/oauth/device_authorization",
+                      {"client_id": CLIENT_ID, "scope": " ".join(scopes)})
+
+def device_poll(device_code):
+    try:
+        resp = requests.post(
+            config.site() + "/oauth/token",
+            data={"grant_type":
+                  "urn:ietf:params:oauth:grant-type:device_code",
+                  "client_id": CLIENT_ID, "device_code": device_code},
+            timeout=TIMEOUT)
+    except requests.RequestException:
+        return None, "network"
+    try:
+        body = resp.json() if resp.content else {}
+    except ValueError:
+        return None, "unreadable"
+    if resp.status_code == 200:
+        return body, ""
+    return None, body.get("error") or "error_%d" % resp.status_code
+
+def _oauth_raw(path, form):
+    import requests
+
+    try:
+        resp = requests.post(config.site() + path, data=form, timeout=TIMEOUT)
+    except requests.RequestException:
+        raise Fail("Couldn't reach Piko at %s." % config.site())
+    try:
+        body = resp.json() if resp.content else {}
+    except ValueError:
+        raise Fail("Piko sent back something unreadable.")
+    if resp.status_code != 200:
+        raise Fail(body.get("error_description") or body.get("error")
+                   or "Request failed (%s)." % resp.status_code)
+    return body
+
+

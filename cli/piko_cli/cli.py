@@ -4,6 +4,7 @@ import sys
 import time
 import webbrowser
 from pathlib import Path
+import os
 
 from . import api, config, output, runner
 from .output import Fail, amber, bold, dim, green, red
@@ -14,6 +15,9 @@ POLL_LIMIT = 120
 SCOPES = ["catalog:read", "me:read", "submissions:read", "submissions:write",
           "progress:read", "progress:write",
           "notifications:read", "notifications:write"]
+
+MARKS = {"ok": lambda: green("ok  "), "warn": lambda: amber("warn"),
+         "bad": lambda: red("bad ")}
 
 BANDS = {"mastered": green, "strong": green, "solid": amber,
          "learning": amber, "touched": dim}
@@ -35,12 +39,14 @@ def _signed_in():
 
 
 def cmd_login(args):
-    """Sign in through the browser, or take a pasted key with --token."""
     if args.token:
         if not args.token.startswith("piko_sk_"):
             raise Fail("That doesn't look like a Piko key (they start piko_sk_).")
         config.save_token(args.token, api=args.api)
         return _signed_in()
+
+    if args.device:
+        return _login_device(args)
 
     from urllib.parse import urlencode
 
@@ -90,6 +96,7 @@ def cmd_logout(_args):
 
 def cmd_whoami(_args):
     who = api.whoami()
+    if output.as_json(who): return 0
     output.header(who.get("username") or "you")
     output.row("xp", str(who.get("xp_total", 0)))
     output.row("streak", "%s days (best %s)"
@@ -102,6 +109,7 @@ def cmd_whoami(_args):
 
 def cmd_tracks(_args):
     data = api.tracks()
+    if output.as_json(data): return 0
     output.header("Course Paths")
     for row in data.get("items", []):
         output.row(bold(row["slug"].ljust(18)), row["title"],
@@ -111,6 +119,7 @@ def cmd_tracks(_args):
 
 def cmd_track(args):
     data = api.track(args.slug)
+    if output.as_json(data): return 0
     output.header(data["title"])
     if data.get("description"):
         output.note(data["description"])
@@ -127,6 +136,7 @@ def cmd_track(args):
 def cmd_problems(args):
     data = api.problems(topic=args.topic, difficulty=args.difficulty,
                         q=args.search, page=args.page)
+    if output.as_json(data): return 0
     items = data.get("items", [])
     output.header("Problems  (page %s of %s, %s total)"
                   % (data.get("page", 1), data.get("pages", 1),
@@ -143,6 +153,7 @@ def cmd_problems(args):
 
 def cmd_show(args):
     data = api.problem(args.slug)
+    if output.as_json(data): return 0
     output.header("%s  (%s, %s xp)"
                   % (data["title"], data.get("difficulty"), data.get("xp")))
     print()
@@ -197,6 +208,10 @@ def cmd_get(args):
 
     print(green("Ready in ") + bold(str(folder)))
     output.note("edit %s, then run `piko test` inside it" % spec["source"])
+    
+    if getattr(args, "edit", False):
+        _open_editor(source)
+
     return 0
 
 def _load_meta(folder):
@@ -221,17 +236,23 @@ def _resolve_language(folder, meta, override):
         raise Fail("This CLI can't run %r locally." % language)
     return language
 
-def _run_samples(folder, language, cases, quiet=False):
+def _run_samples(folder, language, cases, quiet=False, meta=None):
     runner.compile_if_needed(folder, language)
+    verify = runner.checker_for(folder, meta or {})
     passed = 0
     for case in cases:
         expected_file = case.with_suffix(".out")
         expected = (expected_file.read_text(encoding="utf-8")
                     if expected_file.exists() else "")
-        ran, got, why = runner.run_case(
-            folder, language, case.read_text(encoding="utf-8"))
+        stdin_text = case.read_text(encoding="utf-8")
+        ran, got, why = runner.run_case(folder, language, stdin_text)
 
-        if ran and runner.normalise(got) == runner.normalise(expected):
+        if ran:
+            good, note = verify(stdin_text, expected, got)
+        else:
+            good, note = False, why
+
+        if good:
             passed += 1
             if not quiet:
                 output.ok(case.stem)
@@ -239,7 +260,7 @@ def _run_samples(folder, language, cases, quiet=False):
         if quiet:
             continue
 
-        output.bad(case.stem + (("  " + why) if why else ""))
+        output.bad(case.stem + (("  " + note) if note else ""))
         if ran:
             output.side_by_side(runner.normalise(expected),
                                 runner.normalise(got))
@@ -260,7 +281,7 @@ def cmd_test(args):
                      runner.LANGUAGES[language]["label"],
                      len(cases), "" if len(cases) == 1 else "s"))
 
-    passed = _run_samples(folder, language, cases)
+    passed = _run_samples(folder, language, cases, meta=meta)
     print()
     if passed == len(cases):
         print(green("  %d/%d samples pass." % (passed, len(cases))))
@@ -289,6 +310,8 @@ def _await_verdict(sub_id):
                "`piko submit --check %d`." % (POLL_LIMIT, sub_id))
 
 def _print_verdict(body):
+    if output.as_json(body):
+        return 0 if body.get("verdict") == "accepted" else 1
     label = body.get("label") or body.get("verdict") or "?"
     passed, total = body.get("passed" , 0), body.get("total", 0)
     tally = "  %d/%d tests" % (passed, total)
@@ -347,7 +370,8 @@ def cmd_submit(args):
     cases = _sample_cases(folder)
     if cases and not args.force:
         print(dim("Checking samples first..."))
-        if _run_samples(folder, language, cases, quiet=True) != len(cases):
+        if _run_samples(folder, language, cases, quiet=True,
+                        meta=meta) != len(cases):
             print(red("  Samples fail.") + "  Run `piko test` to see why.")
             output.note("Pass --force to submit anyway.")
             return 1
@@ -363,11 +387,28 @@ def cmd_submit(args):
 
     if body.get("status") == "done":
         return _print_verdict(body)
-    
-    return _print_verdict(_await_verdict(body["submission_id"]))
 
+
+    verdict = _await_verdict(body["submission_id"])
+    if getattr(args, "notify", False):
+        from . import desktop
+
+        accepted = verdict.get("verdict") == "accepted"
+        desktop.notify(
+             "Piko - %s" % (verdict.get("label") or "done"),
+            "%s solved." % slug if accepted
+            else "%s  %d/%d tests" % (slug, verdict.get("passed", 0),
+                                      verdict.get("total", 0)))
+
+    if getattr(args, "commit", False) and verdict.get("verdict") == "accepted":
+        if _git_commit(folder, slug, meta.get("title"), language):
+            output.note("committed")
+
+    return _print_verdict(verdict)
+    
 def cmd_next(_args):
     data = api.next_up()
+    if output.as_json(data): return 0
     lesson_row, problem_row = data.get("lesson"), data.get("problem")
     site = config.api_base().replace("/api/v1", "")
 
@@ -400,6 +441,7 @@ def cmd_next(_args):
 
 def cmd_streak(_args):
     data = api.streak()
+    if output.as_json(data): return 0
     state = data.get("state") or {}
     output.header("Streak")
     output.row("days", "%s  (best %s)" % (data.get("streak_days", 0),
@@ -427,6 +469,7 @@ def cmd_streak(_args):
 
 def cmd_potd(_args):
     data = api.potd()
+    if output.as_json(data): return 0
     row = data["problem"]
     output.header("Problem of the day  %s" % dim(data["day"]))
     output.row(bold(row["slug"]), output.difficulty(row.get("difficulty")),
@@ -444,7 +487,7 @@ def cmd_lesson(args):
     if len(parts) != 3:
         raise Fail("Give it track/unit/lesson, as `piko next` prints it.")
     data = api.lesson(*parts)
-
+    if output.as_json(data): return 0
     output.header("%s  (%s, %s xp)"
                   % (data["title"], data.get("kind"), data.get("xp")))
     print()
@@ -506,7 +549,7 @@ def cmd_watch(args):
             output.header("%s  (%d sample%s)"
                           % (meta.get("title") or folder.name, len(cases),
                              "" if len(cases) == 1 else "s"))
-            passed = _run_samples(folder, language, cases)
+            passed = _run_samples(folder, language, cases, meta=meta)
             print()
             paint = green if passed == len(cases) else red
             print(paint("  %d/%d samples pass." % (passed, len(cases))))
@@ -529,6 +572,8 @@ def build_parser():
 
     p = subs.add_parser("login", help="save an API key")
     p.add_argument("--token")
+    p.add_argument("--device", action="store_true",
+                   help="sign in with a code instead of a browser redirect")
     p.set_defaults(fn=cmd_login)
 
     subs.add_parser("logout", help="forget the saved key").set_defaults(fn=cmd_logout)
@@ -554,6 +599,8 @@ def build_parser():
     p.add_argument("slug")
     p.add_argument("--lang", default="python", choices=tuple(runner.LANGUAGES))
     p.add_argument("--into")
+    p.add_argument("--edit", action="store_true",
+                   help="open the stub in $EDITOR straight away")
     p.set_defaults(fn=cmd_get)
 
     p = subs.add_parser("test", help="run the sample cases")
@@ -569,12 +616,11 @@ def build_parser():
                    help="submit even if the samples fail")
     p.add_argument("--check", type=int, metavar="ID",
                    help="print the verdict of an earlier submission")
+    p.add_argument("--notify", action="store_true",
+                   help="raise an OS notification when the verdict lands")
+    p.add_argument("--commit", action="store_true",
+                   help="git commit the solution once it is accepted")
     p.set_defaults(fn=cmd_submit)
-
-    p = subs.add_parser("watch", help="re-run samples whenever you save")
-    p.add_argument("folder", nargs="?")
-    p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
-    p.set_defaults(fn=cmd_watch)
 
     subs.add_parser("next", help="what to do right now").set_defaults(fn=cmd_next)
     subs.add_parser("streak", help="your streak and today's goal").set_defaults(fn=cmd_streak)
@@ -627,6 +673,8 @@ def build_parser():
     p.add_argument("--folder")
     p.add_argument("--stdin", metavar="FILE")
     p.add_argument("--expected", metavar="FILE")
+    p.add_argument("--checker", action="store_true",
+                   help="also write a checker.py stub")
     p.set_defaults(fn=cmd_case)
 
     subs.add_parser("mastery", help="your topic mastery, with decay"
@@ -648,6 +696,10 @@ def build_parser():
     p.add_argument("--unread", action="store_true")
     p.add_argument("--read", action="store_true", help="mark them all read")
     p.set_defaults(fn=cmd_inbox)
+
+    p = subs.add_parser("profile", help="someone else's public profile")
+    p.add_argument("username")
+    p.set_defaults(fn=cmd_profile)
 
     p = subs.add_parser("search", help="search problems and lessons")
     p.add_argument("query")
@@ -672,6 +724,20 @@ def build_parser():
     p.add_argument("--difficulty", choices=("easy", "medium", "hard"))
     p.set_defaults(fn=cmd_sync)
 
+    p = subs.add_parser("stress", help="generate cases until your code breaks")
+    p.add_argument("--folder")
+    p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
+    p.add_argument("--gen", default="gen.py")
+    p.add_argument("--brute", default="brute.py")
+    p.add_argument("--runs", type=int, default=200)
+    p.add_argument("--size", type=int,
+                   help="passed to the generator, and shrunk on a failure")
+    p.add_argument("--seed", type=int, help="start from this seed")
+    p.add_argument("--init", action="store_true",
+                   help="write gen.py and brute.py stubs")
+    p.set_defaults(fn=cmd_stress)
+
+
     p = subs.add_parser("ui", help="browse problems in a full-screen panel")
     p.add_argument("--lang", default="python", choices=tuple(runner.LANGUAGES))
     p.set_defaults(fn=cmd_ui)
@@ -683,6 +749,13 @@ def build_parser():
                    help="scrolling output instead of the panel")
     p.set_defaults(fn=cmd_watch)
 
+    parser.add_argument("--version", action="store_true")
+
+    parser.add_argument("--json", action="store_true",
+                        help="print the raw API response instead of a table")
+
+    subs.add_parser("doctor", help="check this machine's setup"
+                    ).set_defaults(fn=cmd_doctor)
 
     subs.add_parser("status", help="what's solved across the workspace"
                     ).set_defaults(fn=cmd_status)
@@ -694,6 +767,11 @@ def build_parser():
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
+    output.JSON = bool(getattr(args, "json", False))
+    if getattr(args, "version", False):
+        from . import version
+        print("piko-cli " + version.current())
+        return 0
     if not getattr(args, "fn", None):
         parser.print_help()
         return 0
@@ -703,6 +781,15 @@ def main(argv=None):
         code = args.fn(args)
         if api.STALE:
             print(dim("  (offline - showing a cached copy)"), file=sys.stderr)
+        if not output.JSON and sys.stderr.isatty():
+            from . import version
+
+            newer = version.newer_available()
+            if newer:
+                print(dim("  piko-cli %s is out (you have %s): "
+                          "pip install -U piko-cli"
+                          % (newer, version.current())), file=sys.stderr)
+
         return code
     except Fail as exc:
         print(red("error: ") + str(exc), file=sys.stderr)
@@ -842,14 +929,14 @@ def cmd_diff(args):
         if ran:
             output.side_by_side(runner.normalise(expected), runner.normalise(got))
 
-        return 1 if bad else 0
+    return 1 if bad else 0
 
 def cmd_case(args):
     folder = Path(args.folder or ".")
     box = folder / "samples"
     box.mkdir(parents=True, exist_ok=True)
 
-    taken = {p.item for p in box.glob("*.in")}
+    taken = {p.stem for p in box.glob("*.in")}
     n = 1
     while "%02d" % n in taken:
         n += 1
@@ -866,11 +953,21 @@ def cmd_case(args):
     (box / (stem + ".in")).write_text(text_in, encoding="utf-8")
     (box / (stem + ".out")).write_text(text_out, encoding="utf-8")
     output.ok("added sample %s" % stem)
+
+    if args.checker:
+        path = folder / "checker.py"
+        if path.exists():
+            output.note("kept your checker.py")
+        else:
+            path.write_text(runner.CHECKER_STUB, encoding="utf-8")
+            output.ok("wrote checker.py")
+
     output.note("`piko test` runs it alongside the official ones.")
     return 0
 
 def cmd_mastery(_args):
-    data = api.master()
+    data = api.mastery()
+    if output.as_json(data): return 0
     items = data.get("items") or []
     output.header("Topic Mastery")
     if not items:
@@ -892,7 +989,8 @@ def cmd_mastery(_args):
     return 0
 
 def cmd_top(args):
-    data = api.leaderboard(scopes=args.scope, limit= args.limit)
+    data = api.leaderboard(scope=args.scope, limit= args.limit)
+    if output.as_json(data): return 0
     output.header(data.get("label") or args.scope)
     for row in data.get("items") or []:
         delta = row.get("delta")
@@ -922,6 +1020,7 @@ def cmd_inbox(args):
         return 0
 
     data = api.notifications(unread=args.unread)
+    if output.as_json(data): return 0
     unread = data.get("unread", 0)
     output.header("Inbox  %s" % dim("%d unread" % unread))
     items = data.get("items") or []
@@ -941,6 +1040,7 @@ def cmd_inbox(args):
 
 def cmd_badges(_args):
     data = api.achievements()
+    if output.as_json(data): return 0
     earned = data.get("earned") or []
     output.header("Badges  %s" % dim("%d / %d" % (len(earned),
                                                   data.get("total", 0))))
@@ -959,6 +1059,7 @@ def cmd_badges(_args):
 
 def cmd_coins(_args):
     data = api.coins()
+    if output.as_json(data): return 0
     output.header("Coins")
     output.row("balance", bold(str(data.get("balance", 0))))
     costs = data.get("costs") or {}
@@ -977,6 +1078,7 @@ def cmd_coins(_args):
 
 def cmd_stats(_args):
     data = api.stats()
+    if output.as_json(data): return 0
     total = data.get("submissions", 0)
     output.header("Your numbers")
     if not total:
@@ -1012,8 +1114,23 @@ def cmd_stats(_args):
                            str(difficulty[name]))
     return 0
 
+def cmd_profile(args):
+    data = api.profile(args.username)
+    if output.as_json(data):
+        return 0
+    output.header(data.get("name") or data["username"])
+    output.row("handle", "@" + data["username"])
+    output.row("level", "%s  (%s XP)" % (data.get("level", 0),
+                                         data.get("xp_total", 0)))
+    output.row("solved", str(data.get("solved", 0)))
+    output.row("streak", "%s days (best %s)" % (data.get("streak_days", 0),
+                                                data.get("streak_best", 0)))
+    output.note("%s/u/%s/" % (config.site(), data["username"]))
+    return 0
+
 def cmd_search(args):
     data = api.search(args.query)
+    if output.as_json(data): return 0
     total = data.get("total" , 0)
     output.header('Search  "%s"  %s' % (args.query, dim("%d hits" % total)))
     if not total:
@@ -1034,6 +1151,7 @@ def cmd_search(args):
 
 def cmd_hint(args):
     data = api.hints(args.slug)
+    if output.as_json(data): return 0
     items = data.get("items") or []
     if not items:
         output.header(args.slug)
@@ -1213,3 +1331,206 @@ def _watch_tui(args):
     return cmd_submit(argparse.Namespace(
         slug=meta.get("slug"), folder=str(folder), lang=language,
         force=False, check=None, notify=False))
+
+
+def cmd_stress(args):
+    import random
+    import tempfile
+
+    from . import stress
+
+    folder = Path(args.folder or ".")
+
+    if args.init:
+        for name, text in (("gen.py", stress.GEN_STUB),
+                           ("brute.py", stress.BRUTE_STUB)):
+            path = folder / name
+            if path.exists():
+                output.note("kept your %s" % name)
+                continue
+            path.write_text(text, encoding="utf-8")
+            output.ok("wrote %s" % name)
+        output.note("edit both, then `piko stress`")
+        return 0
+
+    meta = _load_meta(folder)
+    language = _resolve_language(folder, meta, args.lang)
+    runner.compile_if_needed(folder, language)
+
+    with tempfile.TemporaryDirectory(prefix="piko-stress-") as tmp:
+        gen = stress.Program(folder / args.gen, tmp)
+        brute = stress.Program(folder / args.brute, tmp)
+
+        def attempt(seed, size):
+            extra = [size] if size else []
+            case, why = gen.run([seed] + stress)
+            if case is None:
+                raise Fail("The generator failed on seed %d: %s" % (seed, why))
+
+            expected, why = brute.run(stdin_text=case)
+            if expected is None:
+                raise Fail("The reference failed on seed %d: %s" % (seed, why))
+
+            ran, got, why = runner.run_case(folder, language, case)
+            if not ran:
+                return True, case, expected, got, why
+            same = runner.normalise(got) == runner.normalise(expected)
+            return (not same), case, expected, got, ""
+
+        output.header("Stress  %s vs %s  (%d run%s)"
+                      % (args.gen, args.brute, args.runs,
+                         "" if args.runs == 1 else "s"))
+
+        base = args.seed if args.seed is not None else random.randrange( 10 ** 6 )
+        for i in range(args.run):
+            seed = base + i
+            bad, case, expected, got, why = attempt(seed, args.size)
+            if not bad:
+                if sys.stdout.isatty():
+                    sys.stdout.write("\r  %d/%d  seed %d  "
+                                     % (i + 1, args.runs, seed))
+                    sys.stdout.flush()
+                continue
+
+            if sys.stdout.isatty():
+                sys.stdout.write("\r" + " " * 40 + "\r")
+
+            if args.size and args.size > 1:
+                smaller = stress.smallest_failing(
+                    lambda s, n: attempt(s, n)[0], seed, args.size)
+                if smaller < args.size:
+                    output.note("shrunk from size %d to %d"
+                                % (args.size, smaller))
+                    _, case, expected, got, why = attempt(seed, smaller)
+
+            print(red("  mismatch on seed %d" % seed))
+            print()
+            print(dim("  input"))
+            print(_indent(case))
+            if why:
+                output.bad(why)
+            else:
+                output.side_by_side(runner.normalise(expected),
+                                    runner.normalise(got))
+
+            box = folder / "samples"
+            box.mkdir(exist_ok=True)
+            taken = {p.stem for p in box.glob("*.in")}
+            n = 90
+            while "%02d" % n in taken and n < 99:
+                n += 1
+            stem = "%02d" % n
+            (box / (stem + ".in")).write_text(case, encoding="utf-8")
+            (box / (stem + ".out")).write_text(expected, encoding="utf-8")
+            print()
+            output.note("saved as samples/%s - `piko test` keeps checking it"
+                        % stem)
+            return 1
+
+        if sys.stdout.isatty():
+            sys.stdout.write("\r" + " " * 40 + "\r")
+        print(green("  %d runs, no disagreement." % args.runs))
+        output.note("Seeds %d-%d. Re-run with --seed to repeat exactly."
+                    % (base, base + args.runs - 1))
+        return 0
+
+def cmd_doctor(_args):
+    from . import doctor
+    groups = doctor.run_all()
+
+    if output.JSON:
+        output.as_json({name: [{"state": s, "check": k, "detail": d}
+                               for s, k, d in rows]
+                        for name, rows in groups})
+        return 0
+
+    worst = 0
+    for name,rows in groups:
+        output.header(name)
+        for state, key, detail in rows:
+            worst = max(worst, {"ok": 0, "warn": 1, "bad": 2}[state])
+            output.row(MARKS[state](), (key or "").ljust(11), detail)
+
+    print()
+    if worst == 0:
+        print(green("  Everything looks right."))
+        return 0
+    if worst == 1:
+        print(amber("  Usable, with warnings above."))
+        return 0
+    print(red("  Something is broken. See the lines marked bad."))
+    return 1
+
+
+def _login_device(args):
+    start = api.device_start(SCOPES)
+    deadline = time.time() + start.get("expires_in", 600)
+    interval = max(int(start.get("interval", 5)), 1)
+
+    print()
+    print("  Open " + bold(start["verification_uri"]))
+    print("  and enter " + bold(start["user_code"]))
+    print()
+    output.note("expires in %d minutes - Ctrl-C to stop"
+                % (start.get("expires_in", 600) // 60))
+
+    frames, i = "|/-\\", 0
+    while time.time() < deadline:
+        body, error = api.device_poll(start["device_code"])
+        if body is not None:
+            if sys.stdout.isatty():
+                sys.stdout.write("\r" + " " * 32 + "\r")
+            config.save_oauth(body["access_token"],
+                              body.get("refresh_token", ""),
+                              body.get("expires_in", 3600), api=args.api)
+            return _signed_in()
+
+        if error == "access_denied":
+            raise Fail("You declined the request.")
+        if error == "expired_token":
+            raise Fail("The code expired. Run `piko login --device` again.")
+        if error == "slow_down":
+            interval += 5
+        elif error not in ("authorization_pending", "network"):
+            raise Fail("Sign-in failed: %s" % error)
+
+        if sys.stdout.isatty():
+            sys.stdout.write("\r  waiting %s " % frames[i % 4])
+            sys.stdout.flush()
+        i += 1
+        time.sleep(interval)
+    raise Fail("Nobody approved it in time")
+
+
+def _git_commit(folder, slug, title, language):
+    import subprocess
+    source = folder / runner.LANGUAGES[language]["source"]
+    try:
+        inside = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"], cwd=str(folder),
+            capture_output=True, text=True, timeout=10)
+        if inside.returncode != 0:
+            return False
+        subprocess.run(["git", "add", "--", source.name], cwd=str(folder),
+                       capture_output=True, timeout=10, check=True)
+        subprocess.run(["git", "commit", "-m",
+                        "solve %s: %s" % (slug, title or slug)],
+                       cwd=str(folder), capture_output=True, timeout=20,
+                       check=True)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return True
+
+
+def _open_editor(path):
+    import subprocess
+
+    editor = (os.environ.get("PIKO_EDITOR") or os.environ.get("VISUAL")
+              or os.environ.get("EDITOR"))
+    if not editor:
+        editor = "notepad" if os.name == "nt" else "vi"
+    try:
+        subprocess.call(editor.split()) + [str(path)]
+    except OSError:
+        raise Fail("Couldn't start %r. Set $EDITOR." % editor)
+    return 0

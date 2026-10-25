@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Connect a device{% endblock %}
+
+{% block content %}
+<main class="auth">
+  {% if done %}
+    <h1>{{ "Connected" if approved else "Declined" }}</h1>
+    <p>
+      {% if approved %}
+        {{ client.name }} can now act as you. Go back to your terminal.
+      {% else %}
+        Nothing was granted. You can close this tab.
+      {% endif %}
+    </p>
+  {% else %}
+    <h1>Connect a device</h1>
+    {% if error %}<p class="form__error">{{ error }}</p>{% endif %}
+
+    {% if row %}
+      <p><strong>{{ client.name }}</strong> is asking to act as you.</p>
+      <ul class="scopes">
+        {% for scope in scopes %}
+          <li>{{ labels.get(scope, scope) }}</li>
+        {% endfor %}
+      </ul>
+      <form method="post">
+        {{ csrf_field() }}
+        <input type="hidden" name="user_code" value="{{ row.user_code }}">
+        <button class="btn btn--primary" name="answer" value="yes">Allow</button>
+        <button class="btn" name="answer" value="no">Decline</button>
+      </form>
+    {% else %}
+      <p>Type the code shown in your terminal.</p>
+      <form method="post">
+        {{ csrf_field() }}
+        <input name="user_code" value="{{ code }}" autocomplete="off"
+               autocapitalize="characters" placeholder="ABCD-2345" required>
+        <button class="btn btn--primary">Continue</button>
+      </form>
+    {% endif %}
+  {% endif %}
+</main>
+{% endblock content %}
