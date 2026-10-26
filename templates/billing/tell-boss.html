@@ -1,11 +1,91 @@
 {% extends "base-dashboard.html" %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='tell-boss.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='tell-boss.css') }}"> 
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 {% endblock head %}
 
 {% block content %}
 <main class="learn">
-  <h1>Tell your boss about Piko.im</h1>
+  <section class="section1" >
+      <h1 style="margin: 1rem;" >Your boss can pay for your Piko Pro</h1>
+      <h3>An average employer is ready to spend $1,000 per employee on training and upskilling</h3>
+      <a href="https://learnexperts.ai/blog/how-much-do-companies-spend-on-training-per-employee/">*source</a>
+  </section>
+  <section class="section2 card" >
+
+  <p>Managers love when employees work hard to improve their skills! Why pay for your Boot.dev membership when your company is happy to do it for you?</p>
+  <img src="https://www.boot.dev/img/creditcard.png" alt="">
+  
+  </section>
+
+  <section class=" section2 card" >
+    <h1>Its a win-win. Show initiative while saving money!</h1>
+    <ul>
+    <li>Show your boss that you care about your craft</li>
+    <li>Get acsess to everything on piko.im for free</li>
+    <li>Help support our ongoing development</li>
+    </ul>
+  
+  </section>
+  
+  <section class="card sec3" >
+    <h1>Unsure if your company has an L&D stipend ?</h1>
+    <p>Use this template to ask your boss:</p>
+    <div class="code-block" >
+        <div class="copy-header" >
+          <span>Piko.im training budget request</span>
+          <button type="button" class="copy-btn" >Copy</button>
+        </div>
+        <div class="copy-content" >
+            <pre><code>Hey [Boss's name]!
+            
+            In my free time, I've been taking programming courses on Piko.im to keep improving as a software engineer. Does the company have a training budget to cover the price of my membership?
+            
+            Here is a link to the pricing page: https://piko.aryan.my/pricing/
+            
+            I'm particuarly intrested in these courses:
+            - [cource 1]
+            - [cource 2]
+            - [cource 3]
+            - [cource 4]
+
+            I think they will help me work faster and tackle more projects around here.
+
+            If allowed, I could buy my own membership and then expense it to the company for a reimbursement. They also offer team plans if anyone else is intrested and finance approves using the company card.
+            Here's the link for org plans: https://www.boot.dev/organizations
+
+            Thanks for taking a look !
+            [Your Name]
+            </code>
+            </pre>
+        </div>
+    </div>
+  </section>
+  <section class="sec5">
+  
+  
+  </section>
 </main>
 {% endblock content %}
+
+
+{% block js %}
+<script>
+const copyBtn = document.querySelector(".copy-btn");
+const message = document.querySelector(".copy-content code");
+copyBtn.addEventListener("click", () => {
+    navigator.clipboard.writeText(message.innerText);
+    copyBtn.innerText = "Copied !"
+});
+
+
+
+
+</script>
+
+
+
+
+{% endblock js %}
