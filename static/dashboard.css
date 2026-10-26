@@ -18,6 +18,7 @@
 
 
 .map {
+    display: block;
     grid-column: 2 / 13;
     grid-row: 4 / 8;
 

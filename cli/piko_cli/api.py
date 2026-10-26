@@ -332,3 +332,15 @@ def admin_grant_xp(user_id, amount, reason):
 
 def admin_publish(slug):
     return post("/admin/problems/%s/publish" % slug, {})
+
+def review():
+    return get("/me/review", use_cache=False)
+
+def review_topic(topic, limit=5):
+    return get("/me/review", params={"topic": topic, "limit": limit})
+
+def solutions(slug, limit=10):
+    return get("/problems/%s/solutions" % slug, params={"limit": limit})
+
+def daily():
+    return get("/me/daily", use_cache=False)

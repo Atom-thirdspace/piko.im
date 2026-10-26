@@ -53,6 +53,8 @@ from server.raids import register_cli as register_raids_cli
 from server import traffic as traffic_mod
 from server import adminapi
 from server.playground import playground_bp
+from server import importer
+from server import dbgaurd
 
 
 load_dotenv()
@@ -119,6 +121,8 @@ app.jinja_env.globals["unread_notifications"] = lambda: _unread_cached(current_u
 _notify.register_cli(app)
 traffic_mod.install(app)
 traffic_mod.register_cli(app)
+importer.register_cli(app)
+dbgaurd.install(app)
 
 
 @app.errorhandler(404)

@@ -143,6 +143,11 @@
             </button>
           {% endif %}
           <span class="ws__spacer"></span>
+          <button type="button" class="ws__ghost" id="run-all"
+                  {{ 'hidden' if not samples }}>Run samples</button>
+          <button type="button" class="ws__ghost" id="stop" hidden>Stop</button>
+          <button type="button" class="ws__run" id="run">Run</button>
+
           <button type="button" class="ws__run" id="run">Run</button>
           <button type="button" class="ws__go" id="submit">Submit</button>
         </div>
@@ -165,10 +170,12 @@
             <textarea class="io__in" id="stdin" spellcheck="false"
                       aria-label="Custom input"></textarea>
             {% if samples %}
-              <div class="io__fills">
+              <div class="io__fills" id="sample-fills">
                 {% for test in samples %}
                   <button type="button" class="io__fill"
-                          data-fill="{{ test.stdin }}">Use sample {{ loop.index }}</button>
+                          data-fill="{{ test.stdin }}"
+                          data-expected="{{ test.expected_stdout }}"
+                          data-index="{{ loop.index }}">Use sample {{ loop.index }}</button>
                 {% endfor %}
               </div>
             {% endif %}
@@ -275,6 +282,25 @@
   function saveDraft(lang, text) {
     try { localStorage.setItem(key(lang), text); } catch (err) { /* ignore */ }
   }
+
+  /* --------------------------------------------------------- busy state */
+
+  var stopBtn = document.getElementById('stop');
+  var sampleRunBtn = document.getElementById('run-all');
+
+  function setBusy(on) {
+    runBtn.disabled = on;
+    subBtn.disabled = on;
+    if (sampleRunBtn) { sampleRunBtn.disabled = on; }
+    runBtn.textContent = on ? 'Running…' : 'Run';
+    /* Only offer Stop when the thing running is ours to kill. The judge
+       path has no cancel - the container finishes regardless. */
+    stopBtn.hidden = !(on && window.PikoRun && window.PikoRun.supports(lang));
+  }
+
+  stopBtn.addEventListener('click', function () {
+    if (window.PikoRun) { window.PikoRun.cancel(lang); }
+  });
 
   /* ------------------------------------------------------------ editor */
 
@@ -495,8 +521,7 @@
     var source = editor.getValue();
     if (!source.trim()) { return; }
 
-    runBtn.disabled = subBtn.disabled = true;
-    runBtn.textContent = 'Running…';
+    setBusy(true);
 
     try {
       if (window.PikoRun && window.PikoRun.supports(lang)) {
@@ -545,8 +570,7 @@
         fail('Lost contact with Piko. Check your connection and try again.');
       }
     } finally {
-      runBtn.disabled = subBtn.disabled = false;
-      runBtn.textContent = 'Run';
+      setBusy(false);
     }
   }
 
@@ -614,7 +638,9 @@
     var source = editor.getValue();
     if (!source.trim()) { return; }
 
-    runBtn.disabled = subBtn.disabled = true;
+    setBusy(true);
+    /* Submitting always goes to the judge, so there is nothing to stop. */
+    stopBtn.hidden = true;
     subBtn.textContent = 'Judging…';
     busy('Queued…');
 
@@ -644,7 +670,7 @@
            + 'check on it.');
       }
     } finally {
-      runBtn.disabled = subBtn.disabled = false;
+      setBusy(false);
       subBtn.textContent = 'Submit';
     }
   }

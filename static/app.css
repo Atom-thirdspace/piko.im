@@ -26,6 +26,29 @@ body {
     }
 }
 
+.skiplink {
+    position: absolute;
+    top: 0;
+    left: -9999px;
+    z-index: 2147483646;
+    padding: .6rem 1rem;
+    background: var(--brand);
+    color: var(--on-brand);
+    border-radius: 0 0 .4rem 0;
+    text-decoration: none;
+}
+
+/* Off-screen until tabbed to, then above the sticky nav. */
+.skiplink:focus {
+    left: 0;
+}
+
+/* #main only ever takes focus from the skip link, so skip the ring
+   that would otherwise outline the whole page. */
+#main:focus {
+    outline: none;
+}
+
 #custom-cursor {
     position: fixed;
     top: 0;
@@ -828,3 +851,44 @@ body {
         to   { opacity: 1; transform: none; }
     }
 }
+
+.skiplink {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 999;
+    padding: .6rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--brand);
+    border-radius: 0 0 8px 0;
+}
+
+.skiplink:focus {
+    left: 0;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+#main:focus { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .ribbon,
+    .fire { display: none; }
+}
+
+/* Anything that overflows the viewport on a phone causes the whole page
+   to scroll sideways, which is the single most common mobile defect. */
+html, body { overflow-x: hidden; }

@@ -371,7 +371,10 @@
   }
 
   AOS.init({
-    once: true
+    once: true,
+    disable: function () {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
   });
 </script>
 {% endblock js %}

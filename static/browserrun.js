@@ -1,11 +1,3 @@
-/* Runs the learner's code in their own tab instead of on the judge.
-   Nothing here is scored: Submit still goes to the server, because a
-   browser cannot be trusted to say whether a hidden test passed.
-
-   Python loads on intent (9.6MB). C++ always runs here too, but it is
-   fetched only when Run is actually pressed: clang and wasm-ld are
-   themselves WebAssembly, about 26MB over the wire and ~100MB resident
-   once unpacked. */
 (function () {
   var ENGINES = {
     python: {
@@ -30,6 +22,7 @@
   var OUTPUT_LIMIT = 256 * 1024;
   var OPT_IN_KEY = 'piko:browserrun:';
   var seq = 0;
+  var inflight = {};
 
   /* Languages cheap enough to fetch before the learner has asked for
      anything. C++ is not one of them: 26MB on hover is a hostile default
@@ -111,6 +104,20 @@
   
   }
 
+  function cancel(lang) {
+    var eng = engine(lang);
+    var pending = inflight[lang];
+    if (!eng || !eng.worker || !pending) { return false; }
+
+    eng.worker.terminate();
+    eng.worker = null;
+    eng.booting = null;
+    preload(lang);
+
+    pending.stop();
+    return true;
+  }
+
   function run(lang, source, stdin, onPhase) {
     var eng = engine(lang);
     if (!eng || !eng.url) {
@@ -146,6 +153,25 @@
           });
         }, ms);
       }
+
+      function finish(payload){
+        clearTimeout(timer);
+        w.removeEventListener('message', onMessage);
+        delete inflight[lang];
+        resolve(payload);
+      }
+
+      inflight[lang] = {
+        stop : function () {
+          clearTimeout(timer);
+          delete inflight[lang];
+          resolve({
+            status: 'done', verdict: 'stopped',
+            stdout: '', stderr: '', compile_output: '',
+            time_ms: 0, error: '', where: 'browser'
+          });
+        }
+      };
 
       function onMessage(ev) {
         var data = ev.data;
@@ -201,6 +227,8 @@
     enabled: enabled,
     setEnabled: setEnabled,
     preload: preload,
+    cancel: cancel,
+    running: function (lang) { return !!inflight[lang]; },
     run: run
   };
 })();

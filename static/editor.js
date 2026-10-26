@@ -131,7 +131,7 @@
   var STARTERS = {
     python: "import sys\n\ndef main():\n    data = sys.stdin.read().split()\n    \n\nmain()\n",
     cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    \n    return 0;\n}\n",
-    java: "import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) throws IOException {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n"
+    java: "import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) throws IOException {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n",
     c: "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n\nint main(void) {\n    \n    return 0;\n}\n",
     javascript: "const data = require('fs').readFileSync(0, 'utf8').split(/\\s+/);\n\nfunction main() {\n    \n}\n\nmain();\n",
     go: "package main\n\nimport (\n\t\"bufio\"\n\t\"fmt\"\n\t\"os\"\n)\n\nfunc main() {\n\treader := bufio.NewReader(os.Stdin)\n\twriter := bufio.NewWriter(os.Stdout)\n\tdefer writer.Flush()\n\t_ = reader\n\t\n\tfmt.Fprintln(writer)\n}\n",
@@ -283,7 +283,7 @@
     this.code = root.querySelector(".ed__hl code");
     this.area = root.querySelector(".ed__area");
 
-    if (options.label) { this.area.setAttribute("aria-label", options.label); }
+    this.area.setAttribute("aria-label", options.label || "Code editor");
     if (options.placeholder) { this.area.placeholder = options.placeholder; }
 
     this.onRun = options.onRun || null;

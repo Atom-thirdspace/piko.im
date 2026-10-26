@@ -78,6 +78,9 @@ This project also helped us understand how good python is for making backend and
 - fixed landing page delays. add/removed/changed the animartions of elements
 - added a new css terminal on the last of the landing page
 
+## About Piko API and Piko OAuth
+Along with Piko we are side developing the Piko CLI, a minimal version of Piko in your computer terminal, you can do most of the things on Piko CLI that you do on Piko but with less constraints and less graphics in the terminal. You can checkout Piko CLI and CLI docs<a href="https://github.com/Atom-thirdspace/piko.im/tree/main/cli">here</a>.
+
 
 ## Running Locally
 
