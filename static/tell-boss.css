@@ -111,3 +111,52 @@
 .sec5 {
     margin-top: 3%;
 }
+
+.email-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 1.25rem 1.25rem;
+}
+
+.gmail-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1.1rem;
+    border: 1px solid #77431d;
+    border-radius: 8px;
+    background: #77431d;
+    color: #fffdfb;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 180ms ease, transform 180ms ease;
+}
+
+.gmail-btn:hover{
+    background: #5e3417;
+    color: #fffdfb;
+    transform: translateY(-1px);
+
+}
+
+.gmail-btn:active{
+    transform: translateY(0);
+}
+
+.gmail-btn:focus-visible{
+    outline: 2px solid #77431d;
+    outline-offset: 3px ;
+
+}
+
+@media (max-width: 600px) {
+    .email-actions{
+        padding: 0 1rem 1rem;
+    }
+    .gmail-btn {
+        width: 100%;
+    }
+}
