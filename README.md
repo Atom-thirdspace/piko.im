@@ -31,7 +31,7 @@
 
 > [!NOTE]
 >
-> Aryan : My github copilot usage is 2 hours 24 min in hackatime but it shows around 5 hours of AI coding I suspect that either it is thinking that my terminal is AI or its thinking that me copy pasting is AI which is most of caase me copy passting old css to rewrite pages but i also agree that i used chatgpt at come places like the progress bar etc. 
+> Aryan : My github copilot usage is 2 hours 24 min in hackatime but it shows around 5 hours of AI coding I suspect that either it is thinking that my terminal is AI or its thinking that me copy pasting is AI which is most of caase me copy passting old css to rewrite pages but i also agree that i used chatgpt at come places like the progress bar etc. (note from last week but i still feel this a bit)
 > The Landing page is still under development
 > While the infrastructure is done we dont have good content right now. We have a author dashboard for that puspose
 > The dashboard is still under development so dont expect very good screen size responsiveness.
