@@ -20,7 +20,7 @@ def database_host():
     return url.split("@")[-1].split("/")[0] if "@" in url else "unknown"
 
 def install(app):
-    @app.cli.resultcallback()
+    @app.cli.result_callback()
     def _noop(*args, **kwargs):
         return None
 
