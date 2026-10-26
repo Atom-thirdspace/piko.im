@@ -37,6 +37,11 @@ def pricing():
                            student=is_verified_student(user) if user else False)
 
 
+@billing_bp.route("/pricing/tell-your-boss/")
+def tell_boss():
+    return render_template("billing/tell-boss.html")
+
+
 @billing_bp.route("/billing/checkout/<plan>", methods=["POST"])
 @login_required
 def checkout(plan):
