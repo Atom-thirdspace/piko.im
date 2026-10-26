@@ -3,6 +3,7 @@
 {% block head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='learn.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='pricing.css') }}">
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='classroom.css') }}">
 {% endblock head %}
 
@@ -40,16 +41,14 @@
     </section>
   {% endif %}
 
-  <ul class="price-perks">
-    {% for perk in perks %}<li>{{ perk }}</li>{% endfor %}
-  </ul>
+  
 
   {% if not configured %}
     <p class="learn-lede">Subscriptions are not switched on yet.</p>
   {% else %}
     <div class="price-grid">
       {% for plan in plans %}
-        <section class="price-card {{ 'is-pick' if plan.highlight }}">
+        <section data-aos="fade" class="price-card {{ 'is-pick' if plan.highlight }}">
           {% if plan.highlight %}<p class="price-flag">Best value</p>{% endif %}
           <h2>{{ plan.name }}</h2>
           <p class="price-amount">
@@ -140,11 +139,84 @@
       {% endfor %}
     </div>
 
-    <p class="price-fine">
+    <p data-aos="fade" data-aos-delay="200" class="price-fine">
       Payments are handled by Polar, who act as the merchant of record and
       charge any sales tax or VAT due. Cancel any time from the billing
       portal - you keep Pro until the period you have paid for runs out.
     </p>
+
+    <h2 data-aos="fade" data-aos-delay="400" >Compare the cost</h2>
+    <p data-aos="fade" data-aos-delay="400" >A full year at a traditional <span class="highlight">university costs ~$27,146 per year</span>, while Boot.dev costs about the same as a couple of college textbooks!</p>
+    <h2 data-aos="fade" data-aos-delay="600" >Money-Back</h2>
+    <p data-aos="fade" data-aos-delay="600" >If you don't like your membership, email us within 30 days and we'll refund you, no question asked.</p>
   {% endif %}
+
+    <section>
+    <ul class="price-perks gri">
+        {% for perk in perks %}
+            <li data-aos="fade" data-aos-delay="{{ loop.index0 * 100 }}">
+                {{ perk }}
+            </li>
+        {% endfor %}
+    </ul>
+</section>
+
 </main>
+
 {% endblock content %}
+
+{% block js %}
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+  const galleryTrack = document.querySelector("#companies .track");
+  if (galleryTrack && galleryTrack.children.length === 2) {
+    const thirdGallerySet = galleryTrack.children[0].cloneNode(true);
+    thirdGallerySet.setAttribute("aria-hidden", "true");
+    galleryTrack.appendChild(thirdGallerySet);
+  }
+
+  if (galleryTrack && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animationDuration = 18000;
+    let loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+    let offset = 0;
+    let previousTime;
+
+    const animateGallery = (time) => {
+      if (previousTime === undefined) previousTime = time;
+
+      const elapsed = Math.min(time - previousTime, 100);
+      previousTime = time;
+      loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+      offset -= elapsed * loopDistance / animationDuration;
+
+      if (offset <= -loopDistance) {
+        offset += loopDistance;
+        galleryTrack.appendChild(galleryTrack.firstElementChild);
+      }
+
+      galleryTrack.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(animateGallery);
+    };
+
+    requestAnimationFrame(animateGallery);
+  }
+
+  const landJobsLine = document.querySelector(".ght");
+  if (landJobsLine && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const landJobsObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          landJobsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.45 });
+
+    landJobsObserver.observe(landJobsLine);
+  }
+
+  AOS.init({
+    once: true
+  });
+</script>
+{% endblock js %}

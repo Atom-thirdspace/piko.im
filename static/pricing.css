@@ -14,13 +14,8 @@
 
 .price-perks { list-style: none; padding: 0; margin: 0 0 2rem; }
 .price-perks li { padding: .35rem 0 .35rem 1.5rem; position: relative; }
-.price-perks li::before {
-    content: "\2713";
-    position: absolute;
-    left: 0;
-    color: var(--good);
-    font-weight: 700;
-}
+
+
 
 .price-grid {
     display: grid;
@@ -68,3 +63,39 @@
     flex-wrap: wrap;
 }
 .billing-row form { margin: 0; }
+
+
+.gri {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    position: absolute;
+    top: 100vh;
+    right: 10vw;
+    left: 10vw;
+    height: 40vh;
+}
+
+.price-perks li {
+    border: 1px solid #ddd;
+    padding: 1rem;
+    background-color: var(--shadow); 
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.highlight {
+    background-color: var(--good-bg);
+    color: var(--good);
+}
+
+.learn-head {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
