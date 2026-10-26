@@ -40,6 +40,7 @@ LANGUAGES = {
     ),
     "c": Language(
         key="c",
+        label="C17",
         image="gcc:13",                 # already pulled for C++
         source_name="main.c",
         compile_cmd=("gcc", "-O2", "-std=c17", "-o", "/work/main",
