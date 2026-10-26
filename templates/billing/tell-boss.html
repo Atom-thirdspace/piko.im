@@ -75,6 +75,7 @@
 
 
 {% block js %}
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
 const copyBtn = document.querySelector(".copy-btn");
 const message = document.querySelector(".copy-content code");
@@ -82,7 +83,59 @@ copyBtn.addEventListener("click", () => {
     navigator.clipboard.writeText(message.innerText);
     copyBtn.innerText = "Copied !"
 });
+  const galleryTrack = document.querySelector("#companies .track");
+  if (galleryTrack && galleryTrack.children.length === 2) {
+    const thirdGallerySet = galleryTrack.children[0].cloneNode(true);
+    thirdGallerySet.setAttribute("aria-hidden", "true");
+    galleryTrack.appendChild(thirdGallerySet);
+  }
 
+  if (galleryTrack && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const animationDuration = 18000;
+    let loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+    let offset = 0;
+    let previousTime;
+
+    const animateGallery = (time) => {
+      if (previousTime === undefined) previousTime = time;
+
+      const elapsed = Math.min(time - previousTime, 100);
+      previousTime = time;
+      loopDistance = galleryTrack.firstElementChild.getBoundingClientRect().height;
+      offset -= elapsed * loopDistance / animationDuration;
+
+      if (offset <= -loopDistance) {
+        offset += loopDistance;
+        galleryTrack.appendChild(galleryTrack.firstElementChild);
+      }
+
+      galleryTrack.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(animateGallery);
+    };
+
+    requestAnimationFrame(animateGallery);
+  }
+
+  const landJobsLine = document.querySelector(".ght");
+  if (landJobsLine && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const landJobsObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          landJobsObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.45 });
+
+    landJobsObserver.observe(landJobsLine);
+  }
+
+  AOS.init({
+    once: true,
+    disable: function () {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+  });
 
 
 
