@@ -793,6 +793,32 @@ def build_parser():
                    help="refresh seconds for `admin watch`")
     p.set_defaults(fn=cmd_admin)
 
+    p = subs.add_parser("bench", help="time your code as the input grows")
+    p.add_argument("--folder")
+    p.add_argument("--lang", choices=tuple(runner.LANGUAGES))
+    p.add_argument("--gen", default="gen.py",
+                   help="generator, same convention as `piko stress`")
+    p.add_argument("--start", type=int, default=1000)
+    p.add_argument("--max", type=int, default=200000)
+    p.add_argument("--steps", type=int, default=8)
+    p.add_argument("--sizes", help="explicit comma-separated sizes")
+    p.add_argument("--repeat", type=int, default=3)
+    p.add_argument("--seed", type=int, default=1)
+    p.add_argument("--stop-after", type=float, metavar="MS")
+    p.set_defaults(fn=cmd_bench)
+
+    p = subs.add_parser("review", help="re-solve what is going cold")
+    p.add_argument("--topic")
+    p.add_argument("--limit", type=int, default=5)
+    p.set_defaults(fn=cmd_review)
+
+
+    subs.add_parser("mcp", help="run as a Model Context Protocol server"
+                    ).set_defaults(fn=cmd_mcp)
+
+    subs.add_parser("daily", help="your morning check-in, in one screen"
+                    ).set_defaults(fn=cmd_daily)
+
 
     parser.add_argument("--version", action="store_true")
 
@@ -1887,3 +1913,178 @@ ADMIN_ACTIONS = {
     "xp": _admin_xp,
     "watch": _admin_watch,
 }
+
+def cmd_mcp(_args):
+    from . import mcp
+
+    return mcp.serve()
+
+def cmd_bench(args):
+    import tempfile
+    from . import bench, stress
+
+    folder = Path(args.folder or ".")
+    meta = _load_meta(folder)
+    language = _resolve_language(folder, meta, args.lang)
+    runner.compile_if_needed(folder, language, meta)
+
+    sizes = ([int(s) for s in args.sizes.split(",")] if args.sizes
+             else bench.sizes_for(args.start, args.max, args.steps))
+    if len(sizes) < 2:
+        raise Fail("Give it at least two sizes to compare.")
+
+    with tempfile.TemporaryDirectory(prefix="piko-bench-") as tmp:
+        gen = stress.Program(folder / args.gen, tmp)
+
+        output.header("Bench  %s  (%s, best of %d)"
+                      % (meta.get("title") or folder.name,
+                         runner.LANGUAGES[language]["label"], args.repeat))
+
+        points, previous = {}, None
+        for n in sizes:
+            case, why = gen.run([args.seed, n])
+            if case is None:
+                raise Fail("The generator failed at size %d: %s" % (n, why))
+
+            best = None
+            for _ in range(args.repeat):
+                started = time.time()
+                ran, _out, why = runner.run_case(folder, language, case)
+                elapsed = (time.time() - started) * 1000
+                if not ran:
+                    raise Fail("The solution failed at size %d: %s" % (n, why))
+                best = elapsed if best is None else min(best, elapsed)
+
+            growth = ""
+            if previous is not None:
+                k = bench.exponent(previous[0], previous[1], n, best)
+                if k is not None:
+                    growth = dim("  n^%.2f  %s" % (k, bench.label(k)))
+            paint = red if best > 1000 else (amber if best > 250 else green)
+            output.row(("n=%d" % n).ljust(12), paint("%8.1f ms" % best), growth)
+
+            points.append((n, best))
+            previous = (n , best)
+            if args.stop_after and best > args.stop_after:
+                output.note("stopping: past --stop-after")
+                break
+
+        k, name = bench.verdict(points)
+        print()
+        if k is None:
+            output.note(name)
+            return 0
+
+        paint = red if k >= 1.7 else green
+        print("  looks " + paint(name) + dim("  (n^%.2f over the last step)" % k))
+        if k >= 1.7:
+            output.note("That will time out before the hidden tests do.")
+        return 0
+
+def cmd_review(args):
+    data = (api.review_topic(args.topic, args.limit) if args.topic
+            else api.review())
+    if output.as_json(data):
+        return 0
+
+    items = data.get("items") or []
+    topics = data.get("topics") or []
+    output.header("Review" + (dim("  " + ", ".join(topics)) if topics else ""))
+
+    if not items:
+        output.note("Nothing has faded yet. Mastery halves every %.0f days "
+                    "without practice." % data.get("half_life_days", 45))
+        return 0
+
+    for row in items:
+        since = str(row.get("solved_at") or "")[:10]
+        output.row(bold(row["slug"].ljust(26)),
+                   output.difficulty(row.get("difficulty")).ljust(16),
+                   dim((row.get("topic") or "-").ljust(14)),
+                   dim("solved " + since))
+        print()
+        output.note("Try one from scratch: piko get %s" % items[0]["slug"])
+    return 0
+
+def cmd_solutions(args):
+    data = api.solutions(args.slug, limit=args.limit)
+    if output.as_json(data):
+        return 0
+
+    items = data.get("items") or []
+    output.header("Solutions for %s  %s"
+                  % (args.slug, dim("%d shared" % len(items))))
+    if not items:
+        output.note("Nobody has shared one yet.")
+        return 0
+
+    if args.number is None:
+        for i, row in enumerate(items, 1):
+            output.row(dim("%2d." % i),
+                       bold((row.get("username") or "?").ljust(18)),
+                       row.get("language", "").ljust(12),
+                       dim("%s ms" % row.get("max_time_ms", 0)))
+        output.note("`piko solutions %s 1` prints the first one."
+                    % args.slug)
+        return 0
+
+    if not 1 <= args.number <= len(items):
+        raise Fail("There are %d shared solutions." % len(items))
+
+    pick = items[args.number - 1]
+    output.header("%s  (%s, %s ms)" % (pick["username"], pick["language"],
+                                       pick.get("max_time_ms", 0)))
+    print()
+    print(pick.get("source") or "")
+    return 0
+
+def cmd_daily(_args):
+    data = api.daily()
+    if output.as_json(data):
+        return 0
+
+    status = (data.get("state") or {}).get("status", "none")
+    paint = {"safe": green, "frozen": amber, "at_risk": amber,
+             "broken": red}.get(status, dim)
+
+    output.header("%s  %s" % (data.get("username") or "you",
+                              dim(data.get("day", ""))))
+    output.row("streak".ljust(10),
+               "%s days" % data.get("streak_days", 0),
+               paint(status))
+
+    goal, earned = data.get("goal_xp", 0), data.get("today_xp", 0)
+    left = data.get("remaining_xp", 0)
+    if goal:
+        output.row("today".ljust(10), _bar(earned / float(goal), 18),
+                   dim("%d / %d XP" % (earned, goal)))
+    else:
+        output.row("today".ljust(10), "%d XP" % earned)
+
+    potd = data.get("potd")
+    if potd:
+        output.header("Problem of the day")
+        output.row(bold(potd["slug"].ljust(26)),
+                   output.difficulty(potd.get("difficulty")),
+                   dim("%d XP +%d bonus" % (potd.get("xp", 0),
+                                            potd.get("bonus", 0))))
+        output.note("Already done." if potd.get("solved")
+                    else "piko get %s" % potd["slug"])
+
+    nxt = data.get("next")
+    if nxt and nxt.get("problem"):
+        output.header("Or try this")
+        output.row(bold(nxt["problem"]["slug"].ljust(26)),
+                   output.difficulty(nxt["problem"].get("difficulty")),
+                   dim(nxt.get("reason") or ""))
+
+    cold = data.get("going_cold") or []
+    if cold:
+        print()
+        output.note("going cold: " + ", ".join(cold)
+                    + "   (piko review)")
+    if data.get("unread"):
+        output.note("%d unread  (piko inbox)" % data["unread"])
+    if left and goal:
+        output.note("%d XP to hit today's goal." % left)
+    return 0

@@ -854,3 +854,132 @@ def public_user(username):
                 "streak_days": row.streak_days, "streak_best": row.streak_best,
                 "solved": solved, "joined": row.created_at,
                 "avatar_url": row.avatar_url})
+
+@api_bp.route("/me/review")
+@require_scope("progress:read")
+def my_review():
+    from . import mastery as mastery_mod
+    from .models import ProblemSolve
+
+    user = g.api_user
+    rows = mastery_mod.for_user(user)
+
+    wanted = request.args.get("topic")
+    if wanted:
+        topics = [wanted]
+    else:
+        topics = [r["topic"] for r in mastery_mod.rusty(user, limit=5,
+                                                        rows=rows)]
+    if not topics:
+        return _json({"topics": [], "items": []})
+
+    try:
+        limit = min(max(int(request.args.get("limit", 5)), 1), 25)
+    except (TypeError, ValueError):
+        limit = 5
+
+    found = db.session.execute(
+        db.select(Problem, ProblemSolve.solved_at, ProblemSolve.seconds)
+        .join(ProblemSolve, ProblemSolve.problem_id == Problem.id)
+        .where(ProblemSolve.user_id == user.id,
+               Problem.topic.in_(topics),
+               Problem.status == PUBLISHED)
+        .order_by(ProblemSolve.solved_at.asc())
+        .limit(limit)).all()
+
+    strength = {r["topic"]: r for r in rows}
+    return _json({
+        "topics": topics,
+        "half_life_days": mastery_mod.HALF_LIFE_DAYS,
+        "items": [dict(_problem_brief(p),
+                       solved_at=solved_at,
+                       first_took_seconds=seconds,
+                       band=(strength.get(p.topic) or {}).get("band"))
+                  for p, solved_at, seconds in found],
+    })
+
+@api_bp.route("/problems/<slug>/solutions")
+@require_scope("submissions:read")
+def problem_solutions():
+    from .models import User
+
+    problem = _published_problem(slug)
+    if problem is None:
+        return _error("not_found", "No problem %r." % slug, 404)
+
+    mine = db.session.execute(
+        db.select(Submission.id).filter_by(
+            user_id=g.api_user.id, problem_id=problem.id, verdict=V.AC
+        ).limit(1)).scalar_one_or_none()
+    if mine is None:
+        return _error("not_solved",
+                      "Solve it first - then the solutions open up.", 403)
+
+    try:
+        limit = min(max(int(request.args.get("limit", 10)), 1), 40)
+    except (TypeError, ValueError):
+        limit = 10
+
+    rows = db.session.execute(
+        db.select(Submission, User)
+        .join(User, User.id == Submission.user_id)
+        .where(Submission.problem_id == problem.id,
+               Submission.is_public.is_(True),
+               Submission.verdict == V.AC)
+        .order_by(Submission.max_time_ms.asc())
+        .limit(limit)).all()
+
+    return _json({
+        "problem": problem.slug,
+        "items": [{"username": u.username,
+                   "language": s.language,
+                   "max_time_ms": s.max_time_ms,
+                   "created_at": s.created_at,
+                   "source": s.source} for s, u in rows],
+    })
+
+@api_bp.route("/me/daily")
+@require_scope("me:read")
+def my_daily():
+    from . import mastery as mastery_mod
+    from . import potd as potd_mod
+    from . import recommend
+    from .activity import heatmap
+    from .models import Notification
+    from .progress import streak_state, user_today
+
+    user = g.api_user
+    today = user_today(user)
+    today_xp = heatmap(user).get("today_xp", 0)
+    goal = user.daily_goal_xp or 0
+
+    card = potd_mod.card(user)
+    pick = recommend.next_problem(user)
+    rows = mastery_mod.for_user(user)
+
+    unread = db.session.execute(
+        db.select(db.func.count()).select_from(Notification)
+        .where(Notification.user_id == user.id,
+               Notification.read_at.is_(None))).scalar() or 0
+
+    return _json({
+        "day": today.isoformat(),
+        "username": user.username,
+        "streak_days": user.streak_days or 0,
+        "streak_best": user.streak_best or 0,
+        "state": streak_state(user, today),
+        "today_xp": today_xp,
+        "goal_xp": goal,
+        "remaining_xp": max(goal - today_xp, 0),
+        "unread": unread,
+        "potd": ({"slug": card["problem"].slug,
+                  "title": card["problem"].title,
+                  "difficulty": card["problem"].difficulty,
+                  "xp": card["problem"].xp,
+                  "bonus": card["bonus"],
+                  "solved": card["solved"]} if card else None),
+        "next": ({"problem": _problem_brief(pick["problem"]),
+                  "reason": pick["reason"]} if pick else None),
+        "going_cold": [r["topic"]
+                       for r in mastery_mod.rusty(user, rows=rows)],
+    })
