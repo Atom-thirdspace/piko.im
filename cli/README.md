@@ -117,6 +117,14 @@ The CLI covers solving and progress, not the whole product. Open the site for:
 
 `piko open` opens the site in a browser when you need one.
 
+
+## How to install Piko CLI using PyPI (COMING SOON!)
+You can install piko cli by the pip command
+
+pip install piko-cli
+
+Using this command all the necessary packaged will be installed to run the Piko CLI
+
 ## Troubleshooting
 
 - **Anything odd** — `piko doctor` first. It reports the Python, compiler,
